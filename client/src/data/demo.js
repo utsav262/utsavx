@@ -1,0 +1,72 @@
+export const events = [
+    {
+        id: 'diwali-night-bazaar',
+        title: 'Diwali Night Bazaar',
+        category: 'Food & Drink',
+        city: 'Delhi',
+        date: 'Oct 18, 2026',
+        day: '18',
+        month: 'OCT',
+        time: '6:00 PM',
+        price: 499,
+        spots: 240,
+        tag: 'Trending',
+        image: 'https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?auto=format&fit=crop&w=1200&q=85',
+        color: 'coral',
+        description: 'Street food, crafts, and live folk sets under a canopy of diyas across Connaught Place.',
+        ticketTypes: [{ _id: 'demo-ga', name: 'General Admission', price: 499 }]
+    },
+    {
+        id: 'monsoon-melody-fest',
+        title: 'Monsoon Melody Fest',
+        category: 'Music',
+        city: 'Mumbai',
+        date: 'Oct 24, 2026',
+        day: '24',
+        month: 'OCT',
+        time: '5:00 PM',
+        price: 1499,
+        spots: 80,
+        tag: 'Almost gone',
+        image: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1200&q=85',
+        color: 'moss',
+        description: 'Indie bands and monsoon vibes at an open-air amphitheatre by the sea.',
+        ticketTypes: [{ _id: 'demo-ga', name: 'General Admission', price: 1499 }]
+    },
+    {
+        id: 'bangalore-maker-day',
+        title: 'Bangalore Maker Day',
+        category: 'Workshop',
+        city: 'Bengaluru',
+        date: 'Nov 01, 2026',
+        day: '01',
+        month: 'NOV',
+        time: '10:00 AM',
+        price: 799,
+        spots: 120,
+        tag: 'New',
+        image: 'https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?auto=format&fit=crop&w=1200&q=85',
+        color: 'butter',
+        description: 'Hands-on sessions for print, ceramics, and indie product design with local makers.',
+        ticketTypes: [{ _id: 'demo-ga', name: 'General Admission', price: 799 }]
+    },
+    {
+        id: 'jaipur-sunrise-run',
+        title: 'Jaipur Sunrise Run',
+        category: 'Wellness',
+        city: 'Jaipur',
+        date: 'Nov 08, 2026',
+        day: '08',
+        month: 'NOV',
+        time: '6:00 AM',
+        price: 399,
+        spots: 300,
+        tag: 'Community pick',
+        image: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?auto=format&fit=crop&w=1200&q=85',
+        color: 'sky',
+        description: 'A scenic 5K past the pink city walls, ending with chai and a community stretch.',
+        ticketTypes: [{ _id: 'demo-ga', name: 'General Admission', price: 399 }]
+    }
+];
+
+export const categories = ['All events', 'Music', 'Food & Drink', 'Workshop', 'Wellness'];
