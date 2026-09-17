@@ -17,7 +17,7 @@ export async function createOrder(req, res) {
         return { ticketTypeId: type._id, name: type.name, quantity: item.quantity, unitPrice: type.price };
     });
     const total = selected.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-    const demoCheckout = !env.stripeSecretKey;
+    const demoCheckout = env.allowDemoPayments && !env.stripeSecretKey;
     const order = await BookingOrder.create({
         orderNumber: `UTX-${crypto.randomBytes(4).toString('hex').toUpperCase()}`,
         user: req.user._id,
@@ -56,7 +56,11 @@ export async function legacyMyTickets(req, res) {
 }
 
 export async function ticketLookup(req, res) {
-    const tickets = await Ticket.find({ confirmationCode: req.params.confirmationId }).populate('event', 'title startsAt venue').lean();
+    // Public lookup returns only existence + event title — never owner PII.
+    const tickets = await Ticket.find({ confirmationCode: req.params.confirmationId })
+        .select('event confirmationCode')
+        .populate('event', 'title')
+        .lean();
     if (!tickets.length) return res.status(404).json({ message: 'Ticket not found', code: 404 });
     return success(res, {
         confirmation_id: req.params.confirmationId,

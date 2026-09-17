@@ -24,9 +24,8 @@ export async function register(req, res) {
 
 export async function login(req, res) {
     const user = await User.findOne({ email: req.body.email }).select('+passwordHash');
-    if (!user || !(await bcrypt.compare(req.body.password, user.passwordHash))) {
-        return failure(res, 'Invalid credentials', 400);
-    }
+    const valid = user && await bcrypt.compare(req.body.password, user.passwordHash);
+    if (!valid) return failure(res, 'Invalid credentials', 401);
     res.json({ message: 'Login successful', user: publicUser(user), token: tokenFor(user), result: publicUser(user), code: 200 });
 }
 

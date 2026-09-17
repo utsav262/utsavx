@@ -13,6 +13,15 @@ import { success } from '../utils/response.js';
 const eventFor = (req, eventId) => Event.findOne({ _id: eventId, ...(req.user.role === 'admin' ? {} : { organizer: req.user._id }) });
 const body = (req) => req.body || {};
 const ok = (res, result = null, message = 'Success') => success(res, result, message);
+const pick = (source, keys) => {
+    const out = {};
+    for (const key of keys) {
+        if (source[key] !== undefined) out[key] = source[key];
+    }
+    return out;
+};
+const EVENT_WRITABLE = ['title', 'slug', 'description', 'category', 'tags', 'venue', 'startsAt', 'endsAt', 'imageUrl', 'status', 'ticketTypes'];
+const TICKET_WRITABLE = ['name', 'price', 'quantity', 'currency', 'salesStatus', 'type'];
 const dashboardCurrency = (events) => { for (const event of events)
         for (const ticket of event.ticketTypes || [])
             if (ticket.currency) return ticket.currency;
@@ -46,9 +55,8 @@ export async function createOrUpdateEvent(req, res) {
     const data = body(req);
     const event = data.id ? await eventFor(req, data.id) : null;
     if (data.id && !event) return res.status(404).json({ message: 'Event not found', code: 404 });
-    const payload = { ...data };
-    delete payload.id;
-    delete payload.organizer;
+    const payload = pick(data, EVENT_WRITABLE);
+    if (req.user.role === 'admin' && data.featured !== undefined) payload.featured = Boolean(data.featured);
     if (!event || !payload.slug) {
         payload.slug = data.slug || `${String(data.title || event?.title || 'event').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}-${crypto.randomBytes(3).toString('hex')}`;
     }
@@ -59,15 +67,29 @@ export async function createOrUpdateEvent(req, res) {
         if (requested === 'published' || requested === 'sold-out') {
             const alreadyLive = event && (event.status === 'published' || event.status === 'sold-out');
             payload.status = alreadyLive && requested === 'sold-out' ? 'sold-out' : alreadyLive ? event.status : 'review_pending';
+        } else if (requested && !['draft', 'review_pending', 'cancelled'].includes(requested)) {
+            payload.status = event?.status || 'draft';
         }
     }
 
     if (Array.isArray(payload.ticketTypes)) {
-        payload.ticketTypes = payload.ticketTypes.map((ticket) => ({
-            ...ticket,
-            currency: ticket.currency || 'INR',
-            salesStatus: ticket.salesStatus || 'on-sale'
-        }));
+        const existingById = new Map((event?.ticketTypes || []).map((ticket) => [String(ticket._id), ticket]));
+        payload.ticketTypes = payload.ticketTypes.map((ticket) => {
+            const safe = pick(ticket, TICKET_WRITABLE);
+            const previous = ticket._id ? existingById.get(String(ticket._id)) : null;
+            if (ticket._id) safe._id = ticket._id;
+            return {
+                ...safe,
+                currency: safe.currency || previous?.currency || 'INR',
+                salesStatus: safe.salesStatus || previous?.salesStatus || 'on-sale',
+                price: Math.max(0, Number(safe.price ?? previous?.price) || 0),
+                quantity: Math.max(
+                    previous?.sold || 0,
+                    Math.max(0, Math.floor(Number(safe.quantity ?? previous?.quantity) || 0))
+                ),
+                sold: previous?.sold || 0
+            };
+        });
     }
 
     if (!event) {
@@ -123,7 +145,12 @@ export async function deleteEvent(req, res) {
 export async function upgradeEvent(req, res) {
     const event = await eventFor(req, req.params.id);
     if (!event) return res.status(404).json({ message: 'Event not found', code: 404 });
-    Object.assign(event, body(req));
+    const updates = pick(body(req), ['title', 'description', 'category', 'tags', 'venue', 'startsAt', 'endsAt', 'imageUrl']);
+    if (req.user.role === 'admin') {
+        const privileged = pick(body(req), ['status', 'featured', 'slug']);
+        Object.assign(updates, privileged);
+    }
+    Object.assign(event, updates);
     await event.save();
     return ok(res, event, 'Event upgraded successfully');
 }
@@ -135,12 +162,13 @@ export async function createTicket(req, res) {
     }
     const event = await eventFor(req, data.eventId);
     if (!event) return res.status(404).json({ message: 'Event not found', code: 404 });
+    const salesStatus = ['on-sale', 'paused', 'sold-out'].includes(data.salesStatus) ? data.salesStatus : 'on-sale';
     event.ticketTypes.push({
-        name: data.name,
-        price: data.price,
-        quantity: data.quantity,
-        salesStatus: data.salesStatus || 'on-sale',
-        currency: data.currency || 'INR'
+        name: String(data.name).slice(0, 120),
+        price: Math.max(0, Number(data.price) || 0),
+        quantity: Math.max(0, Math.floor(Number(data.quantity) || 0)),
+        salesStatus,
+        currency: String(data.currency || 'INR').slice(0, 8)
     });
     await event.save();
     return ok(res, event.ticketTypes.at(-1), 'Ticket type created successfully');
@@ -148,9 +176,16 @@ export async function createTicket(req, res) {
 export async function updateTicket(req, res) {
     const event = await Event.findOne({ 'ticketTypes._id': req.params.id, ...(req.user.role === 'admin' ? {} : { organizer: req.user._id }) });
     if (!event) return res.status(404).json({ message: 'Ticket type not found', code: 404 });
-    Object.assign(event.ticketTypes.id(req.params.id), body(req));
+    const ticket = event.ticketTypes.id(req.params.id);
+    const updates = pick(body(req), TICKET_WRITABLE);
+    if (updates.price !== undefined) updates.price = Math.max(0, Number(updates.price) || 0);
+    if (updates.quantity !== undefined) {
+        updates.quantity = Math.max(ticket.sold || 0, Math.max(0, Math.floor(Number(updates.quantity) || 0)));
+    }
+    if (updates.salesStatus && !['on-sale', 'paused', 'sold-out'].includes(updates.salesStatus)) delete updates.salesStatus;
+    Object.assign(ticket, updates);
     await event.save();
-    return ok(res, event.ticketTypes.id(req.params.id), 'Ticket type updated successfully');
+    return ok(res, ticket, 'Ticket type updated successfully');
 }
 export async function deleteTicket(req, res) {
     const event = await Event.findOne({ 'ticketTypes._id': req.params.id, ...(req.user.role === 'admin' ? {} : { organizer: req.user._id }) });

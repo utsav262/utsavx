@@ -80,7 +80,7 @@ export default function AdminSignIn() {
                     label="Password"
                     type="password"
                     autoComplete="current-password"
-                    minLength={6}
+                    minLength={8}
                     placeholder="Your password"
                     value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}

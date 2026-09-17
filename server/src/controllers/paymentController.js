@@ -20,6 +20,9 @@ export async function createIntent(req, res) {
 }
 
 export async function completeDemo(req, res) {
+    if (!env.allowDemoPayments) {
+        return res.status(403).json({ message: 'Demo checkout is disabled. Configure Stripe or set ALLOW_DEMO_PAYMENTS=true', code: 403 });
+    }
     if (stripe) return res.status(400).json({ message: 'Use Stripe checkout in this environment', code: 400 });
     const order = await BookingOrder.findOne({ _id: req.params.orderId, user: req.user._id });
     if (!order) return res.status(404).json({ message: 'Order not found' });

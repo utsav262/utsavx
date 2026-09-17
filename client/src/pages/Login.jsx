@@ -70,12 +70,12 @@ export default function Login() {
                 />
                 <input
                     required
-                    minLength="6"
+                    minLength="8"
                     type="password"
                     value={form.password}
                     onChange={(event) => setForm({ ...form, password: event.target.value })}
                     className="mt-4 w-full rounded-full border border-ink/20 bg-transparent px-5 py-3.5"
-                    placeholder="Password"
+                    placeholder={signup ? 'Password (8+ chars, letter + number)' : 'Password'}
                 />
                 {signup && (
                     <label className="mt-4 flex items-center gap-2 text-sm text-ink/70">

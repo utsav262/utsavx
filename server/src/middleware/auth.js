@@ -31,3 +31,5 @@ export async function optionalAuth(req, res, next) {
 export const requireRole = (...roles) => (req, res, next) => (
     roles.includes(req.user?.role) ? next() : res.status(403).json({ message: 'Insufficient permissions' })
 );
+
+export const requireAdmin = requireRole('admin');

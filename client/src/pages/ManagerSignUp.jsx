@@ -24,8 +24,8 @@ export default function ManagerSignUp() {
         event.preventDefault();
         setError('');
 
-        if (form.password.length < 6) {
-            setError('Password must be at least 6 characters.');
+        if (form.password.length < 8 || !/[A-Za-z]/.test(form.password) || !/[0-9]/.test(form.password)) {
+            setError('Password must be at least 8 characters and include a letter and a number.');
             return;
         }
         if (form.password !== form.confirmPassword) {
@@ -92,8 +92,8 @@ export default function ManagerSignUp() {
                     label="Password"
                     type="password"
                     autoComplete="new-password"
-                    minLength={6}
-                    placeholder="At least 6 characters"
+                    minLength={8}
+                    placeholder="8+ chars, letter + number"
                     value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
                 />
@@ -101,7 +101,7 @@ export default function ManagerSignUp() {
                     label="Confirm password"
                     type="password"
                     autoComplete="new-password"
-                    minLength={6}
+                    minLength={8}
                     placeholder="Repeat password"
                     value={form.confirmPassword}
                     onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}

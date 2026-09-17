@@ -4,13 +4,15 @@ A MERN event ticketing platform for India — customer, organizer, and admin wor
 
 ## Run locally
 
-1. Copy `.env.example` to `server/.env` and set at least `MONGO_URI` and `JWT_SECRET`.
+1. Copy `.env.example` to `server/.env` and set at least `MONGO_URI` and a **32+ character** `JWT_SECRET`.
 2. Start infrastructure: `docker compose up -d` (optional).
 3. Install dependencies: `npm run install:all`.
 4. Start both apps: `npm run dev`.
 5. Open `http://localhost:5173`.
 
 API: `http://localhost:5050/api/v1`.
+
+New accounts need passwords of **8+ characters with a letter and a number**. In production, set Stripe keys (or `ALLOW_DEMO_PAYMENTS=true` only if you intentionally want free checkout), a unique `JWT_SECRET`, and `CLIENT_URL`.
 
 ### Demo accounts
 

@@ -19,16 +19,28 @@ import { asyncHandler } from './middleware/asyncHandler.js';
 
 const app = express();
 let limiter = (req, res, next) => next();
+let authLimiter = (req, res, next) => next();
 
-app.use(helmet());
-app.use(cors({ origin: env.clientUrl, credentials: true }));
+if (env.isProduction) app.set('trust proxy', 1);
+
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: env.isProduction ? undefined : false
+}));
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || origin === env.clientUrl) return callback(null, true);
+        return callback(null, false);
+    },
+    credentials: true
+}));
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 app.post('/api/v1/payments/webhook', express.raw({ type: 'application/json' }), webhook);
 app.post('/api/v1/payment/webhook/stripe', express.raw({ type: 'application/json' }), webhook);
 app.use(express.json({ limit: '1mb' }));
 app.use((req, res, next) => limiter(req, res, next));
 app.get('/health', (req, res) => res.json({ ok: true, service: 'utsavx-api' }));
-app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/auth', (req, res, next) => authLimiter(req, res, next), authRoutes);
 app.get('/api/v1/getCountryList', asyncHandler(getCountryList));
 app.get('/api/v1/getCities/:country', asyncHandler(getCities));
 app.get('/api/v1/getCategories', asyncHandler(getCategories));
@@ -43,19 +55,32 @@ app.use(notFound);
 app.use(errorHandler);
 
 async function configureRateLimiter() {
-    const options = { windowMs: 15 * 60 * 1000, limit: 300, standardHeaders: true, legacyHeaders: false };
+    const base = { windowMs: 15 * 60 * 1000, standardHeaders: true, legacyHeaders: false };
+    let redis = null;
     if (env.redisUrl) {
-        const redis = new Redis(env.redisUrl, { lazyConnect: true, maxRetriesPerRequest: 1, enableOfflineQueue: false });
+        redis = new Redis(env.redisUrl, { lazyConnect: true, maxRetriesPerRequest: 1, enableOfflineQueue: false });
         try {
             await redis.connect();
-            options.store = new RedisStore({ sendCommand: (...args) => redis.call(...args) });
             console.log('Rate limiter using Redis');
         } catch {
             console.warn('Redis unavailable, using in-memory rate limiter');
             try { redis.disconnect(); } catch { /* ignore */ }
+            redis = null;
         }
     }
-    limiter = rateLimit(options);
+
+    const sendCommand = redis ? (...args) => redis.call(...args) : null;
+    limiter = rateLimit({
+        ...base,
+        limit: env.isProduction ? 200 : 400,
+        ...(sendCommand ? { store: new RedisStore({ sendCommand, prefix: 'rl:api:' }) } : {})
+    });
+    authLimiter = rateLimit({
+        ...base,
+        limit: 20,
+        message: { message: 'Too many auth attempts, try again later', code: 429 },
+        ...(sendCommand ? { store: new RedisStore({ sendCommand, prefix: 'rl:auth:' }) } : {})
+    });
 }
 
 async function start() {

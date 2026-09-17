@@ -6,8 +6,13 @@ const serverRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.
 dotenv.config({ path: path.join(serverRoot, '.env') });
 dotenv.config({ path: path.join(serverRoot, '../.env') });
 
+const isProduction = (process.env.NODE_ENV || 'development') === 'production';
+const allowDemoPayments = process.env.ALLOW_DEMO_PAYMENTS === 'true'
+    || (!isProduction && !process.env.STRIPE_SECRET_KEY);
+
 export const env = {
     nodeEnv: process.env.NODE_ENV || 'development',
+    isProduction,
     port: Number(process.env.PORT || 5050),
     clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
     mongoUri: process.env.MONGO_URI,
@@ -15,10 +20,28 @@ export const env = {
     jwtSecret: process.env.JWT_SECRET,
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
     stripeSecretKey: process.env.STRIPE_SECRET_KEY,
-    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET
+    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+    allowDemoPayments
 };
 
 if (!env.mongoUri || !env.jwtSecret) {
     console.error('MONGO_URI and JWT_SECRET must be set. Copy server/.env.example to server/.env');
     process.exit(1);
+}
+
+if (env.jwtSecret.length < 32) {
+    console.error('JWT_SECRET must be at least 32 characters');
+    process.exit(1);
+}
+
+if (isProduction) {
+    const weakSecrets = ['replace-with-a-long-random-secret', 'utsavx-dev-secret-change-me-please-32chars', 'changeme', 'secret'];
+    if (weakSecrets.includes(env.jwtSecret) || /^(password|test|dev)/i.test(env.jwtSecret)) {
+        console.error('JWT_SECRET looks weak — set a unique random value in production');
+        process.exit(1);
+    }
+    if (!process.env.CLIENT_URL) {
+        console.error('CLIENT_URL must be set in production');
+        process.exit(1);
+    }
 }
