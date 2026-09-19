@@ -31,6 +31,7 @@ export default function Header() {
     const isManager = role === 'organizer';
     const isCustomer = role === 'customer';
     const isStaff = Boolean(user?.staffRole || user?.staffEvents?.length);
+    const hasPendingInvites = Number(user?.pendingInviteCount || 0) > 0;
     const isGuest = !user;
     const displayRole = roleLabel(user);
 
@@ -60,7 +61,9 @@ export default function Header() {
             links.push({ to: '/dashboard', label: 'Dashboard' });
             links.push({ to: '/invitations', label: 'Requests' });
         } else {
-            links.push({ to: '/invitations', label: 'Invitations' });
+            if (hasPendingInvites) {
+                links.push({ to: '/invitations', label: 'Invitations' });
+            }
             links.push({ to: '/organizer', label: 'Host events' });
         }
     } else {

@@ -27,24 +27,34 @@ async function enrichUser(user) {
     const base = publicUser(user);
     const email = String(user.email || '').trim().toLowerCase();
     if (!email) {
-        return { ...base, staffRole: null, staffRoleLabel: null, staffEvents: [] };
+        return { ...base, staffRole: null, staffRoleLabel: null, staffEvents: [], pendingInviteCount: 0 };
     }
 
-    const handlers = await EventHandler.find({ email, invitationStatus: 'A' })
-        .populate('event', 'title startsAt endsAt venue imageUrl status')
-        .sort({ updatedAt: -1 })
-        .lean();
+    const [accepted, pendingCount] = await Promise.all([
+        EventHandler.find({ email, invitationStatus: 'A' })
+            .populate('event', 'title startsAt endsAt venue imageUrl status')
+            .sort({ updatedAt: -1 })
+            .lean(),
+        EventHandler.countDocuments({ email, invitationStatus: 'P' })
+    ]);
 
-    if (!handlers.length) {
-        return { ...base, staffRole: null, staffRoleLabel: null, staffEvents: [] };
+    if (!accepted.length) {
+        return {
+            ...base,
+            staffRole: null,
+            staffRoleLabel: null,
+            staffEvents: [],
+            pendingInviteCount: pendingCount
+        };
     }
 
-    const primary = handlers.find((row) => row.userType === 'Event_Scanner') || handlers[0];
+    const primary = accepted.find((row) => row.userType === 'Event_Scanner') || accepted[0];
     return {
         ...base,
         staffRole: primary.userType,
         staffRoleLabel: STAFF_ROLE_LABELS[primary.userType] || primary.userType,
-        staffEvents: handlers.map((row) => ({
+        pendingInviteCount: pendingCount,
+        staffEvents: accepted.map((row) => ({
             handlerId: row._id,
             userType: row.userType,
             roleLabel: STAFF_ROLE_LABELS[row.userType] || row.userType,

@@ -32,26 +32,35 @@ export async function createIntent(req, res) {
             return success(res, { status: 'paid', orderId: order._id }, 'Free order completed');
         }
 
-        const rpOrder = await razorpay.orders.create({
-            amount,
-            currency: (order.currency || 'INR').toUpperCase(),
-            receipt: String(order.orderNumber || order._id).slice(0, 40),
-            notes: {
-                bookingOrderId: String(order._id),
-                userId: String(req.user._id)
-            }
-        });
+        let rpOrderId = order.paymentIntentId;
+        let amountPaise = amount;
+        let currency = (order.currency || 'INR').toUpperCase();
 
-        order.paymentIntentId = rpOrder.id;
-        await order.save();
+        // Reuse existing Razorpay order on retry (stable checkout)
+        if (!rpOrderId || !String(rpOrderId).startsWith('order_')) {
+            const rpOrder = await razorpay.orders.create({
+                amount,
+                currency,
+                receipt: String(order.orderNumber || order._id).slice(0, 40),
+                notes: {
+                    bookingOrderId: String(order._id),
+                    userId: String(req.user._id)
+                }
+            });
+            rpOrderId = rpOrder.id;
+            amountPaise = rpOrder.amount;
+            currency = rpOrder.currency;
+            order.paymentIntentId = rpOrderId;
+            await order.save();
+        }
 
         return success(res, {
             provider: 'razorpay',
             keyId: env.razorpayKeyId,
             testMode: String(env.razorpayKeyId || '').startsWith('rzp_test_'),
-            razorpayOrderId: rpOrder.id,
-            amount: rpOrder.amount,
-            currency: rpOrder.currency,
+            razorpayOrderId: rpOrderId,
+            amount: amountPaise,
+            currency,
             bookingOrderId: order._id,
             orderNumber: order.orderNumber,
             name: req.user.name || '',
@@ -109,7 +118,9 @@ export async function verifyRazorpay(req, res) {
     if (!order) return res.status(404).json({ message: 'Order not found', code: 404 });
 
     if (order.status === 'paid') {
-        return success(res, order, 'Order already paid');
+        await issueTickets(order);
+        const fresh = await BookingOrder.findById(order._id).populate('event', 'title startsAt venue imageUrl');
+        return success(res, fresh, 'Order already paid');
     }
 
     if (order.paymentIntentId && order.paymentIntentId !== razorpayOrderId) {
@@ -121,17 +132,19 @@ export async function verifyRazorpay(req, res) {
         .update(`${razorpayOrderId}|${razorpayPaymentId}`)
         .digest('hex');
 
-    const valid = expected.length === razorpaySignature.length
-        && crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(razorpaySignature));
+    const a = Buffer.from(expected);
+    const b = Buffer.from(String(razorpaySignature));
+    const valid = a.length === b.length && crypto.timingSafeEqual(a, b);
 
     if (!valid) {
         return res.status(400).json({ message: 'Invalid payment signature', code: 400 });
     }
 
-    order.status = 'paid';
-    order.paymentIntentId = razorpayPaymentId;
-    await order.save();
     await issueTickets(order);
+    order.status = 'paid';
+    if (!order.paymentIntentId) order.paymentIntentId = razorpayOrderId;
+    order.razorpayPaymentId = razorpayPaymentId;
+    await order.save();
     const fresh = await BookingOrder.findById(order._id).populate('event', 'title startsAt venue imageUrl');
     return success(res, fresh, 'Payment verified');
 }

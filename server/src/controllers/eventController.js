@@ -83,7 +83,9 @@ function publicTicketTypes(ticketTypes = []) {
         price: ticket.price,
         quantity: ticket.quantity,
         sold: ticket.sold || 0,
-        quantity_left: Math.max(0, (ticket.quantity || 0) - (ticket.sold || 0)),
+        quantity_left: Number(ticket.quantity || 0) === 0
+            ? null
+            : Math.max(0, (ticket.quantity || 0) - (ticket.sold || 0)),
         currency: ticket.currency || 'INR',
         salesStatus: ticket.salesStatus,
         type: ticket.type || null

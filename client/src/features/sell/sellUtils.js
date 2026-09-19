@@ -29,7 +29,12 @@ export function sellEntryMode(event) {
 export function filterTicketsForMode(tickets, mode) {
     const rows = Array.isArray(tickets) ? tickets : [];
     if (mode === 'complimentary') {
-        return rows.filter((tier) => tier.is_complimentary || /complimentary/i.test(tier.name) || Number(tier.price) === 0);
+        return rows.filter(
+            (tier) =>
+                tier.is_complimentary
+                || /apsession.?complimentary/i.test(String(tier.name || ''))
+                || String(tier.type || '').toLowerCase() === 'apsession_complimentary'
+        );
     }
     if (mode === 'gate') {
         return rows.filter(
@@ -52,7 +57,9 @@ export function unitPriceForMode(tier, mode) {
 export function maxQtyForMode(tier, mode) {
     if (mode === 'gate') return 20;
     if (mode === 'complimentary') return Math.max(1, Number(tier.remaining ?? 20));
-    return Math.max(0, Number(tier.remaining ?? 0));
+    const remaining = Number(tier.remaining);
+    if (!Number.isFinite(remaining) || remaining >= 999999) return 20;
+    return Math.max(0, remaining);
 }
 
 export function buildSellPayload({ eventId, mode, selections, attendees, country = 'IN' }) {

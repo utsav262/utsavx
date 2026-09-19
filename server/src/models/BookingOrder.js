@@ -14,7 +14,8 @@ const bookingOrderSchema = new mongoose.Schema({
     currency: { type: String, default: 'INR' },
     status: { type: String, enum: ['pending', 'paid', 'cancelled', 'refunded'], default: 'pending', index: true },
     idempotencyKey: { type: String, required: true, index: true },
-    paymentIntentId: String
+    paymentIntentId: String,
+    razorpayPaymentId: String
 }, { timestamps: true });
 
 bookingOrderSchema.index({ user: 1, idempotencyKey: 1 }, { unique: true });

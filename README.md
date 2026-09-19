@@ -12,6 +12,8 @@ A MERN event ticketing platform for India — customer, organizer, and admin wor
 
 API: `http://localhost:5050/api/v1`.
 
+Swagger UI: [http://localhost:5050/api-docs](http://localhost:5050/api-docs) · raw OpenAPI JSON: `/api-docs.json`.
+
 New accounts need passwords of **8+ characters with a letter and a number**. In production, set Razorpay keys (or `ALLOW_DEMO_PAYMENTS=true` only if you intentionally want free checkout), a unique `JWT_SECRET`, and `CLIENT_URL`.
 
 ### Demo accounts
@@ -64,4 +66,6 @@ Without Razorpay (or Stripe) keys in development, checkout completes locally as 
 
 ## Documentation
 
+- Swagger UI: [http://localhost:5050/api-docs](http://localhost:5050/api-docs)
+- OpenAPI JSON: [http://localhost:5050/api-docs.json](http://localhost:5050/api-docs.json)
 - Manager APIs (A–Z): [docs/MANAGER_API.md](docs/MANAGER_API.md)

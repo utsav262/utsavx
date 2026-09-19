@@ -156,10 +156,11 @@ export async function createOrUpdateEvent(req, res) {
                 currency: safe.currency || previous?.currency || 'INR',
                 salesStatus: safe.salesStatus || previous?.salesStatus || 'on-sale',
                 price: Math.max(0, Number(safe.price ?? previous?.price) || 0),
-                quantity: Math.max(
-                    previous?.sold || 0,
-                    Math.max(0, Math.floor(Number(safe.quantity ?? previous?.quantity) || 0))
-                ),
+                quantity: (() => {
+                    const qty = Math.max(0, Math.floor(Number(safe.quantity ?? previous?.quantity) || 0));
+                    if (qty === 0) return 0; // unlimited
+                    return Math.max(previous?.sold || 0, qty);
+                })(),
                 sold: previous?.sold || 0
             };
         });
@@ -272,9 +273,10 @@ export async function updateTicket(req, res) {
         return res.status(422).json({ message: 'System complimentary tickets cannot be edited', code: 422 });
     }
     const updates = normalizeTicketPayload({ ...ticket.toObject(), ...body(req) });
-    if (updates.quantity !== undefined) {
+    if (updates.quantity !== undefined && Number(updates.quantity) > 0) {
         updates.quantity = Math.max(ticket.sold || 0, updates.quantity);
     }
+    // quantity === 0 means unlimited — keep as 0 even if some tickets were already sold
     if (updates.ticketType === 'paid' && updates.price <= 0) {
         return res.status(422).json({ message: 'Paid tickets must have price > 0', code: 422 });
     }
@@ -573,6 +575,20 @@ export async function addHandler(req, res) {
     const email = String(data.email || '').trim().toLowerCase();
     if (!email) return res.status(422).json({ message: 'email is required', code: 422 });
     const userType = mapHandlerUserType(data.userType || data.user_type || data.type);
+
+    const existing = await EventHandler.findOne({
+        event: event._id,
+        email,
+        invitationStatus: { $in: ['P', 'A'] }
+    });
+    if (existing) {
+        return res.status(409).json({
+            message: existing.invitationStatus === 'A'
+                ? 'This person is already on the team for this event'
+                : 'An invite is already pending for this email',
+            code: 409
+        });
+    }
 
     const allotments = [];
     if (Array.isArray(data.tickets)) {

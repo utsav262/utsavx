@@ -46,22 +46,30 @@ async function applyInventory(event, lines, { gate = false } = {}, attempt = 0) 
             error.statusCode = 404;
             throw error;
         }
+        const unlimited = Number(ticket.quantity || 0) === 0;
         if (!gate) {
-            const remaining = Number(ticket.quantity || 0) - Number(ticket.sold || 0);
-            if (ticket.salesStatus === 'paused' || remaining < line.quantity) {
+            if (ticket.salesStatus === 'paused') {
                 const error = new Error(`Insufficient inventory for ${ticket.name}`);
                 error.statusCode = 409;
                 throw error;
             }
+            if (!unlimited) {
+                const remaining = Number(ticket.quantity || 0) - Number(ticket.sold || 0);
+                if (remaining < line.quantity) {
+                    const error = new Error(`Insufficient inventory for ${ticket.name}`);
+                    error.statusCode = 409;
+                    throw error;
+                }
+            }
         }
         ticket.sold = Number(ticket.sold || 0) + line.quantity;
-        if (!gate && ticket.sold >= ticket.quantity) ticket.salesStatus = 'sold-out';
+        if (!gate && !unlimited && ticket.sold >= ticket.quantity) ticket.salesStatus = 'sold-out';
     }
 
     if (
         !gate &&
         event.ticketTypes.length &&
-        event.ticketTypes.every((ticket) => ticket.sold >= ticket.quantity)
+        event.ticketTypes.every((ticket) => Number(ticket.quantity) > 0 && ticket.sold >= ticket.quantity)
     ) {
         event.status = 'sold-out';
     }

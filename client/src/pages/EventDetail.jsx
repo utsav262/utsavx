@@ -48,7 +48,7 @@ export default function EventDetail() {
     const title = event.title || event.name;
     const tickets = event.tickets || event.ticketTypes || [];
     const selected = tickets.find((ticket) => String(ticket._id || ticket.id) === String(ticketTypeId)) || tickets[0];
-    const price = event.price ?? selected?.price ?? 0;
+    const price = selected?.price ?? event.price ?? 0;
     const liveTicket = selected && String(selected._id || selected.id).length > 12;
     const cover = event.cover_image || event.image || event.imageUrl || event.horizontal_flyer;
     const fees = event._fee_settings;

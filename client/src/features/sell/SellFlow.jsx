@@ -47,18 +47,25 @@ export default function SellFlow() {
                 const list = Array.isArray(tiers) ? tiers : [];
                 payload = {
                     event: eventItem || { _id: eventId, title: seed.name },
-                    tickets: list.map((tier) => ({
-                        _id: tier._id,
-                        id: tier._id,
-                        name: tier.name,
-                        price: tier.price,
-                        door_price: tier.price,
-                        quantity: tier.quantity,
-                        sold: tier.sold || 0,
-                        remaining: Math.max(0, Number(tier.quantity || 0) - Number(tier.sold || 0)),
-                        salesStatus: tier.salesStatus,
-                        is_complimentary: /complimentary/i.test(String(tier.name || '')) || Number(tier.price) === 0
-                    }))
+                    tickets: list.map((tier) => {
+                        const qty = Number(tier.quantity || 0);
+                        const sold = Number(tier.sold || 0);
+                        return {
+                            _id: tier._id,
+                            id: tier._id,
+                            name: tier.name,
+                            price: tier.price,
+                            door_price: tier.door_price ?? tier.doorPrice ?? 0,
+                            quantity: qty,
+                            sold,
+                            remaining: qty === 0 ? 999999 : Math.max(0, qty - sold),
+                            salesStatus: tier.salesStatus,
+                            is_complimentary:
+                                Boolean(tier.is_complimentary)
+                                || /apsession.?complimentary/i.test(String(tier.name || ''))
+                                || String(tier.type || '').toLowerCase() === 'apsession_complimentary'
+                        };
+                    })
                 };
             } else {
                 const response = await apiClient.staffSellableTickets(eventId);

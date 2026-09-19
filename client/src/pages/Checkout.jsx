@@ -94,10 +94,16 @@ export default function Checkout() {
             }
 
             for (const [eventId, group] of groups) {
+                const fingerprint = group
+                    .map((item) => `${item.ticketTypeId}:${item.quantity}`)
+                    .sort()
+                    .join('|');
+                const idemKey = `checkout:${user.id || user._id || user.email}:${eventId}:${fingerprint}`;
+
                 const response = await apiClient.createOrder({
                     eventId,
                     items: group.map((item) => ({ ticketTypeId: item.ticketTypeId, quantity: item.quantity })),
-                    idempotencyKey: crypto.randomUUID()
+                    idempotencyKey: idemKey
                 });
                 const order = unwrap(response, response.data?.order);
                 const orderId = order?._id || order?.id;

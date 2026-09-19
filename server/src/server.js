@@ -17,6 +17,7 @@ import { notFound, errorHandler } from './middleware/error.js';
 import { webhook } from './controllers/paymentController.js';
 import { seedIfEmpty } from './scripts/seed.js';
 import { asyncHandler } from './middleware/asyncHandler.js';
+import { setupSwagger } from './docs/swagger.js';
 
 const app = express();
 let limiter = (req, res, next) => next();
@@ -41,6 +42,7 @@ app.post('/api/v1/payment/webhook/stripe', express.raw({ type: 'application/json
 app.use(express.json({ limit: '1mb' }));
 app.use((req, res, next) => limiter(req, res, next));
 app.get('/health', (req, res) => res.json({ ok: true, service: 'utsavx-api' }));
+setupSwagger(app);
 app.use('/api/v1/auth', (req, res, next) => authLimiter(req, res, next), authRoutes);
 app.get('/api/v1/getCountryList', asyncHandler(getCountryList));
 app.get('/api/v1/getCities/:country', asyncHandler(getCities));
@@ -110,7 +112,10 @@ async function start() {
     await mongoose.connect(env.mongoUri);
     if (env.nodeEnv !== 'production') await seedIfEmpty();
     await configureRateLimiter();
-    app.listen(env.port, () => console.log(`UTSAVX API listening on ${env.port}`));
+    app.listen(env.port, () => {
+        console.log(`UTSAVX API listening on ${env.port}`);
+        console.log(`Swagger docs: http://localhost:${env.port}/api-docs`);
+    });
 }
 
 start().catch((error) => {

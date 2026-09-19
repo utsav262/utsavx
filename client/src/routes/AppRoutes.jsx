@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Route, Routes } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { setUser, signOut } from '../store/index.js';
 import { apiClient } from '../api/index.js';
 import { unwrap } from '../lib/unwrap.js';
@@ -28,16 +28,22 @@ import AddTeamMember from '../features/team/AddTeamMember.jsx';
 import Sell from '../pages/Sell.jsx';
 
 export default function AppRoutes() {
-    const user = useSelector((state) => state.auth.user);
     const dispatch = useDispatch();
 
     useEffect(() => {
         if (!localStorage.getItem('utsavx_token')) return;
         apiClient.me()
-            .then((response) => dispatch(setUser({
-                user: unwrap(response, user),
-                token: localStorage.getItem('utsavx_token')
-            })))
+            .then((response) => {
+                const profile = unwrap(response, null);
+                if (!profile || typeof profile !== 'object' || Array.isArray(profile)) {
+                    dispatch(signOut());
+                    return;
+                }
+                dispatch(setUser({
+                    user: profile,
+                    token: localStorage.getItem('utsavx_token')
+                }));
+            })
             .catch(() => dispatch(signOut()));
     }, [dispatch]);
 
