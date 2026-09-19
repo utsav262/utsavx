@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import {
     ArrowLeft,
@@ -15,6 +15,14 @@ import {
 import { apiClient } from '../../api/index.js';
 import { money } from '../../lib/money.js';
 import { formatDateTime } from '../../lib/datetime.js';
+import { unwrap, unwrapList } from '../../lib/unwrap.js';
+import TicketFlow from '../tickets/TicketFlow.jsx';
+import {
+    formatQty,
+    formatTicketPrice,
+    isNonComplimentary,
+    ticketFromApi
+} from '../tickets/ticketUtils.js';
 
 const input =
     'w-full border-0 border-b border-ink/20 bg-transparent px-0 py-3 text-base outline-none transition placeholder:text-ink/35 focus:border-coral';
@@ -23,7 +31,7 @@ const label = 'block text-[11px] font-extrabold uppercase tracking-[0.16em] text
 const STEPS = [
     { id: 'basics', label: 'Basics', hint: 'Name, when, where' },
     { id: 'media', label: 'Look', hint: 'Cover & gallery' },
-    { id: 'tickets', label: 'Tickets', hint: 'Tiers & capacity' },
+    { id: 'tickets', label: 'Event type', hint: 'Tickets & capacity' },
     { id: 'people', label: 'People', hint: 'Guests & team' },
     { id: 'coupons', label: 'Offers', hint: 'Promo codes' },
     { id: 'review', label: 'Submit', hint: 'Admin approval' }
@@ -39,12 +47,13 @@ const emptyBasics = {
     featured: false
 };
 
-const emptyTicket = () => ({
-    name: 'General Admission',
-    price: '499',
-    quantity: '100',
-    salesStatus: 'on-sale'
-});
+function toLocalDateTime(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
 
 function formatWhen(value) {
     return formatDateTime(value) || 'Date TBA';
@@ -87,7 +96,7 @@ function LivePreview({ basics, imageUrl, tickets, capacity, minPrice, guests, ha
                     <p className="flex items-start gap-2">
                         <Ticket size={15} className="mt-0.5 shrink-0 text-butter" />
                         <span>
-                            {tickets.length} tier{tickets.length === 1 ? '' : 's'} · {capacity} seats · from{' '}
+                            {tickets.length} tier{tickets.length === 1 ? '' : 's'} · {capacity || '∞'} seats · from{' '}
                             {money(minPrice)}
                         </span>
                     </p>
@@ -104,15 +113,17 @@ function LivePreview({ basics, imageUrl, tickets, capacity, minPrice, guests, ha
     );
 }
 
-export default function CreateEventFlow({ reload, notice, onCreated, onCancel }) {
+export default function CreateEventFlow({ reload, notice, onCreated, onCancel, eventId: seedEventId }) {
     const user = useSelector((state) => state.auth.user);
     const isAdmin = user?.role === 'admin';
     const [step, setStep] = useState(0);
     const [busy, setBusy] = useState(false);
+    const [eventId, setEventId] = useState(seedEventId || null);
     const [basics, setBasics] = useState(emptyBasics);
     const [imageUrl, setImageUrl] = useState('');
     const [extraImages, setExtraImages] = useState([]);
-    const [tickets, setTickets] = useState([emptyTicket()]);
+    const [tickets, setTickets] = useState([]);
+    const [ticketFlowOpen, setTicketFlowOpen] = useState(false);
     const [guests, setGuests] = useState([]);
     const [handlers, setHandlers] = useState([]);
     const [coupons, setCoupons] = useState([]);
@@ -124,15 +135,67 @@ export default function CreateEventFlow({ reload, notice, onCreated, onCancel })
         discount_value: '10'
     });
     const [extraImageDraft, setExtraImageDraft] = useState('');
+    const [hydrating, setHydrating] = useState(Boolean(seedEventId));
 
     const capacity = useMemo(
-        () => tickets.reduce((sum, ticket) => sum + Number(ticket.quantity || 0), 0),
+        () =>
+            tickets.reduce((sum, ticket) => {
+                const qty = Number(ticket.quantity || 0);
+                return sum + (qty > 0 ? qty : 0);
+            }, 0),
         [tickets]
     );
     const minPrice = useMemo(() => {
-        const prices = tickets.map((ticket) => Number(ticket.price)).filter((price) => !Number.isNaN(price));
+        const prices = tickets
+            .filter(isNonComplimentary)
+            .map((ticket) => Number(ticket.price))
+            .filter((price) => !Number.isNaN(price));
         return prices.length ? Math.min(...prices) : 0;
     }, [tickets]);
+
+    useEffect(() => {
+        if (!seedEventId) return;
+        let cancelled = false;
+        (async () => {
+            setHydrating(true);
+            try {
+                const [detail, ticketRows] = await Promise.all([
+                    apiClient.managerEvent(seedEventId),
+                    apiClient.managerTickets(seedEventId)
+                ]);
+                if (cancelled) return;
+                const event = unwrap(detail, null);
+                if (!event) throw new Error('Event not found');
+                setEventId(event._id || seedEventId);
+                setBasics({
+                    title: event.title || '',
+                    description: event.description || '',
+                    category: event.category || 'Music',
+                    startsAt: toLocalDateTime(event.startsAt),
+                    endsAt: toLocalDateTime(event.endsAt),
+                    venue: {
+                        name: event.venue?.name || '',
+                        address: event.venue?.address || '',
+                        city: event.venue?.city || '',
+                        country: event.venue?.country || 'India'
+                    },
+                    featured: Boolean(event.featured)
+                });
+                setImageUrl(event.imageUrl || '');
+                const rows = unwrapList(ticketRows);
+                setTickets(
+                    (rows.length ? rows : event.ticketTypes || []).map((row) => ticketFromApi(row))
+                );
+            } catch (failure) {
+                notice(failure.response?.data?.message || 'Could not load event for editing.');
+            } finally {
+                if (!cancelled) setHydrating(false);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [seedEventId]);
 
     const validateStep = () => {
         if (step === 0) {
@@ -145,16 +208,95 @@ export default function CreateEventFlow({ reload, notice, onCreated, onCancel })
             }
         }
         if (step === 2) {
-            if (!tickets.length) return 'Add at least one ticket type.';
-            for (const ticket of tickets) {
-                if (!ticket.name.trim()) return 'Every ticket needs a name.';
-                if (ticket.price === '' || Number(ticket.price) < 0) return 'Every ticket needs a valid price.';
-                if (!ticket.quantity || Number(ticket.quantity) < 1) {
-                    return 'Every ticket needs quantity of at least 1.';
-                }
+            const sellable = tickets.filter(isNonComplimentary);
+            if (!sellable.length) return 'Add at least one non-complimentary ticket before continuing.';
+            for (const ticket of sellable) {
+                if (!String(ticket.name || '').trim()) return 'Every ticket needs a name.';
             }
         }
         return '';
+    };
+
+    const ensureDraftEvent = async () => {
+        if (eventId) return eventId;
+        if (!basics.title.trim()) {
+            notice('Event title is required.');
+            setStep(0);
+            throw new Error('Event title is required.');
+        }
+        if (!basics.description.trim()) {
+            notice('Description is required.');
+            setStep(0);
+            throw new Error('Description is required.');
+        }
+        if (!basics.startsAt) {
+            notice('Start date and time are required.');
+            setStep(0);
+            throw new Error('Start date and time are required.');
+        }
+        if (!basics.venue.city.trim()) {
+            notice('City is required.');
+            setStep(0);
+            throw new Error('City is required.');
+        }
+
+        const payload = {
+            title: basics.title.trim(),
+            description: basics.description.trim(),
+            category: basics.category,
+            startsAt: new Date(basics.startsAt).toISOString(),
+            endsAt: basics.endsAt ? new Date(basics.endsAt).toISOString() : undefined,
+            venue: {
+                name: basics.venue.name.trim() || basics.venue.city.trim(),
+                address: basics.venue.address.trim() || undefined,
+                city: basics.venue.city.trim(),
+                country: basics.venue.country.trim() || 'India'
+            },
+            imageUrl: imageUrl.trim() || undefined,
+            featured: Boolean(basics.featured),
+            status: 'draft',
+            ticketTypes: []
+        };
+        const created = await apiClient.managerCreateEvent(payload);
+        const event = created.data.result;
+        setEventId(event._id);
+        notice(`Draft “${event.title}” saved — add tickets next.`);
+        return event._id;
+    };
+
+    const openTicketFlow = async () => {
+        try {
+            setBusy(true);
+            const id = await ensureDraftEvent();
+            const locals = tickets.filter((row) => String(row._id || '').startsWith('local-'));
+            for (const local of locals) {
+                await apiClient.managerCreateTicket({
+                    eventId: id,
+                    event_id: id,
+                    name: local.name,
+                    description: local.description,
+                    hide_description: local.hideDescription,
+                    ticket_type: local.ticketType,
+                    price: local.price,
+                    door_price: local.doorPrice,
+                    quantity: local.quantity,
+                    currency: local.currency || 'INR',
+                    type: local.type || 'gate',
+                    sale_start: local.saleStartsAt || undefined,
+                    sale_end: local.saleEndsAt || undefined,
+                    pass_service_fee_to_buyer: local.passServiceFeeToBuyer,
+                    pass_payment_fee_to_buyer: local.passPaymentFeeToBuyer
+                });
+            }
+            const response = await apiClient.managerTickets(id);
+            setTickets(unwrapList(response).map(ticketFromApi));
+            setTicketFlowOpen(true);
+        } catch (failure) {
+            if (failure.message && !failure.response) return;
+            notice(failure.response?.data?.message || 'Could not open ticket editor.');
+        } finally {
+            setBusy(false);
+        }
     };
 
     const next = () => {
@@ -169,16 +311,14 @@ export default function CreateEventFlow({ reload, notice, onCreated, onCancel })
         setStep((current) => Math.max(current - 1, 0));
     };
 
-    const updateTicket = (index, patch) => {
-        setTickets((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
-    };
-
     const resetFlow = () => {
         setStep(0);
+        setEventId(null);
         setBasics(emptyBasics);
         setImageUrl('');
         setExtraImages([]);
-        setTickets([emptyTicket()]);
+        setTickets([]);
+        setTicketFlowOpen(false);
         setGuests([]);
         setHandlers([]);
         setCoupons([]);
@@ -194,7 +334,9 @@ export default function CreateEventFlow({ reload, notice, onCreated, onCancel })
         setBusy(true);
         notice('');
         try {
+            const id = eventId || (await ensureDraftEvent());
             const payload = {
+                id,
                 title: basics.title.trim(),
                 description: basics.description.trim(),
                 category: basics.category,
@@ -208,43 +350,37 @@ export default function CreateEventFlow({ reload, notice, onCreated, onCancel })
                 },
                 imageUrl: imageUrl.trim() || undefined,
                 featured: Boolean(basics.featured),
-                status,
-                ticketTypes: tickets.map((ticket) => ({
-                    name: ticket.name.trim(),
-                    price: Number(ticket.price),
-                    quantity: Number(ticket.quantity),
-                    salesStatus: ticket.salesStatus || 'on-sale'
-                }))
+                status
             };
 
-            const created = await apiClient.managerCreateEvent(payload);
-            const event = created.data.result;
-            const eventId = event._id;
+            const updated = await apiClient.managerCreateEvent(payload);
+            const event = updated.data.result;
+            const finalId = event._id || id;
 
             for (const url of extraImages) {
-                await apiClient.managerCreateImage({ eventId, url, type: 'flyer', sortOrder: 0 });
+                await apiClient.managerCreateImage({ eventId: finalId, url, type: 'flyer', sortOrder: 0 });
             }
             if (imageUrl.trim()) {
                 await apiClient.managerCreateImage({
-                    eventId,
+                    eventId: finalId,
                     url: imageUrl.trim(),
                     type: 'cover',
                     sortOrder: 0
                 });
             }
             for (const guest of guests) {
-                await apiClient.managerCreateGuest({ eventId, name: guest.name, email: guest.email });
+                await apiClient.managerCreateGuest({ eventId: finalId, name: guest.name, email: guest.email });
             }
             for (const handler of handlers) {
                 await apiClient.managerAddHandler({
-                    eventId,
+                    eventId: finalId,
                     email: handler.email,
                     type: handler.type
                 });
             }
             for (const coupon of coupons) {
                 await apiClient.managerCreateCoupon({
-                    event_id: eventId,
+                    event_id: finalId,
                     code: coupon.code,
                     discount_type: coupon.discount_type,
                     discount_value: Number(coupon.discount_value)
@@ -253,7 +389,7 @@ export default function CreateEventFlow({ reload, notice, onCreated, onCancel })
 
             await reload();
             if (onCreated) onCreated(event);
-            resetFlow();
+            if (!seedEventId) resetFlow();
             notice(
                 status === 'review_pending'
                     ? `“${event.title}” was submitted for admin approval. It goes live after approval.`
@@ -262,11 +398,34 @@ export default function CreateEventFlow({ reload, notice, onCreated, onCancel })
                         : `“${event.title}” saved as draft. You can submit it for approval later.`
             );
         } catch (failure) {
-            notice(failure.response?.data?.message || 'Event could not be created.');
+            notice(failure.response?.data?.message || 'Event could not be saved.');
         } finally {
             setBusy(false);
         }
     };
+
+    if (hydrating) {
+        return (
+            <section className="mt-8 border border-ink/10 px-6 py-16 text-center text-ink/50">
+                Loading event…
+            </section>
+        );
+    }
+
+    if (ticketFlowOpen) {
+        return (
+            <section className="mt-8">
+                <TicketFlow
+                    eventId={eventId}
+                    eventTitle={basics.title || 'Event'}
+                    tickets={tickets}
+                    onTicketsChange={setTickets}
+                    notice={notice}
+                    onClose={() => setTicketFlowOpen(false)}
+                />
+            </section>
+        );
+    }
 
     return (
         <section className="mt-8">
@@ -282,9 +441,11 @@ export default function CreateEventFlow({ reload, notice, onCreated, onCancel })
                         </button>
                     )}
                     <p className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-coral">
-                        New event
+                        {seedEventId ? 'Edit event' : 'New event'}
                     </p>
-                    <h2 className="serif mt-2 text-4xl leading-none sm:text-5xl">Build the night.</h2>
+                    <h2 className="serif mt-2 text-4xl leading-none sm:text-5xl">
+                        {seedEventId ? 'Update the night.' : 'Build the night.'}
+                    </h2>
                     <p className="mt-3 max-w-lg text-sm leading-6 text-ink/60">
                         Fill the left. Watch the buyer preview update on the right.
                     </p>
@@ -478,7 +639,7 @@ export default function CreateEventFlow({ reload, notice, onCreated, onCancel })
                                     Paste a hosted image URL. Direct S3 upload is not enabled in this build.
                                 </p>
                             </div>
-                            {imageUrl && (
+                            {imageUrl ? (
                                 <div className="overflow-hidden border border-ink/10">
                                     <img
                                         src={imageUrl}
@@ -489,7 +650,7 @@ export default function CreateEventFlow({ reload, notice, onCreated, onCancel })
                                         }}
                                     />
                                 </div>
-                            )}
+                            ) : null}
                             <div>
                                 <label className={label}>Gallery images</label>
                                 <div className="mt-2 flex gap-2">
@@ -532,90 +693,55 @@ export default function CreateEventFlow({ reload, notice, onCreated, onCancel })
                     )}
 
                     {step === 2 && (
-                        <div className="space-y-5">
-                            <div className="flex items-end justify-between gap-4">
-                                <div>
-                                    <p className={label}>Inventory</p>
-                                    <p className="mt-2 text-sm text-ink/55">
-                                        {capacity} seats · from {money(minPrice)}
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    className="inline-flex items-center gap-2 border border-ink/20 px-4 py-2 text-xs font-extrabold uppercase tracking-wider"
-                                    onClick={() => setTickets((rows) => [...rows, emptyTicket()])}
-                                >
-                                    <Plus size={14} /> Tier
-                                </button>
+                        <div className="space-y-6">
+                            <div>
+                                <p className={label}>Event type</p>
+                                <h3 className="serif mt-2 text-3xl">Tickets</h3>
+                                <p className="mt-2 text-sm text-ink/55">
+                                    Submit for review needs at least one non-complimentary ticket. Sell and team
+                                    allotments use these tiers later.
+                                </p>
                             </div>
-                            <div className="space-y-4">
-                                {tickets.map((ticket, index) => (
-                                    <div key={index} className="border border-ink/15 bg-white p-5">
-                                        <div className="mb-4 flex items-center justify-between">
-                                            <p className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider text-coral">
-                                                <Ticket size={14} /> Tier {index + 1}
-                                            </p>
-                                            {tickets.length > 1 && (
-                                                <button
-                                                    type="button"
-                                                    className="text-ink/40 hover:text-coral"
-                                                    onClick={() =>
-                                                        setTickets((rows) => rows.filter((_, i) => i !== index))
-                                                    }
-                                                >
-                                                    <Trash2 size={15} />
-                                                </button>
-                                            )}
-                                        </div>
-                                        <div className="grid gap-4 sm:grid-cols-2">
-                                            <div>
-                                                <label className={label}>Name</label>
-                                                <input
-                                                    className={input}
-                                                    value={ticket.name}
-                                                    onChange={(e) => updateTicket(index, { name: e.target.value })}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className={label}>Status</label>
-                                                <select
-                                                    className={input}
-                                                    value={ticket.salesStatus}
-                                                    onChange={(e) =>
-                                                        updateTicket(index, { salesStatus: e.target.value })
-                                                    }
-                                                >
-                                                    <option value="on-sale">On sale</option>
-                                                    <option value="paused">Paused</option>
-                                                    <option value="sold-out">Sold out</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className={label}>Price</label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    step="0.01"
-                                                    className={input}
-                                                    value={ticket.price}
-                                                    onChange={(e) => updateTicket(index, { price: e.target.value })}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className={label}>Quantity</label>
-                                                <input
-                                                    type="number"
-                                                    min="1"
-                                                    className={input}
-                                                    value={ticket.quantity}
-                                                    onChange={(e) =>
-                                                        updateTicket(index, { quantity: e.target.value })
-                                                    }
-                                                />
-                                            </div>
-                                        </div>
+
+                            <div className="border border-ink/10 bg-white p-5">
+                                <div className="flex items-center justify-between gap-3">
+                                    <div>
+                                        <p className="text-sm font-bold">
+                                            {tickets.length
+                                                ? `${tickets.length} ticket tier${tickets.length === 1 ? '' : 's'}`
+                                                : 'No tickets yet'}
+                                        </p>
+                                        <p className="mt-1 text-xs text-ink/50">
+                                            {capacity ? `${capacity} seats` : 'Unlimited / unset'} · from{' '}
+                                            {money(minPrice)}
+                                        </p>
                                     </div>
-                                ))}
+                                    <button
+                                        type="button"
+                                        disabled={busy}
+                                        onClick={openTicketFlow}
+                                        className="inline-flex items-center gap-2 bg-coral px-4 py-3 text-xs font-extrabold uppercase tracking-wider text-white disabled:opacity-60"
+                                    >
+                                        <Plus size={14} />
+                                        {tickets.length ? 'Manage tickets' : 'Add tickets'}
+                                    </button>
+                                </div>
+
+                                {tickets.length ? (
+                                    <ul className="mt-5 divide-y divide-ink/10 border-t border-ink/10">
+                                        {tickets.map((ticket) => (
+                                            <li
+                                                key={ticket._id || ticket.name}
+                                                className="flex justify-between py-3 text-sm"
+                                            >
+                                                <span className="font-medium">{ticket.name}</span>
+                                                <span className="text-ink/55">
+                                                    {formatTicketPrice(ticket)} · {formatQty(ticket.quantity)}
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : null}
                             </div>
                         </div>
                     )}
@@ -884,7 +1010,7 @@ export default function CreateEventFlow({ reload, notice, onCreated, onCancel })
                                     <div>
                                         <dt className="text-ink/40">Tickets</dt>
                                         <dd className="mt-1 font-bold">
-                                            {tickets.length} tiers · {capacity} capacity
+                                            {tickets.length} tiers · {capacity || '∞'} capacity
                                         </dd>
                                     </div>
                                     <div>
@@ -913,8 +1039,8 @@ export default function CreateEventFlow({ reload, notice, onCreated, onCancel })
                                             ? 'Publishing…'
                                             : 'Submitting…'
                                         : isAdmin
-                                            ? 'Publish event'
-                                            : 'Submit for approval'}
+                                          ? 'Publish event'
+                                          : 'Submit for approval'}
                                 </button>
                             </div>
                         </div>

@@ -37,7 +37,9 @@ export default function Header() {
     };
 
     const links = [];
-    links.push({ to: '/events', label: 'Discover' });
+    if (!isManager) {
+        links.push({ to: '/events', label: 'Discover' });
+    }
 
     if (isAdmin) {
         links.push({ to: '/admin', label: 'Admin' });

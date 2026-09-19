@@ -3,6 +3,7 @@ import EventHandler from '../models/EventHandler.js';
 import Ticket from '../models/Ticket.js';
 import BookingOrder from '../models/BookingOrder.js';
 import { success } from '../utils/response.js';
+import { listSellableTickets, sellTicketOrders } from '../services/sellService.js';
 
 const emailOf = (req) => String(req.user?.email || '').trim().toLowerCase();
 const EVENT_POPULATE = 'title slug description category startsAt endsAt venue imageUrl status ticketTypes featured';
@@ -358,4 +359,35 @@ export async function scanAsStaff(req, res) {
             ticket_type: ticket.ticketType
         }
     });
+}
+
+export async function staffSellTickets(req, res) {
+    try {
+        const data = req.body || {};
+        const result = await sellTicketOrders({
+            user: req.user,
+            eventId: data.event_id || data.eventId,
+            tickets: data.tickets || [],
+            purchaseSource: data.purchase_source || data.purchaseSource,
+            complimentary: Boolean(data.complimentary)
+        });
+        return success(res, result, 'Tickets sold successfully');
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({
+            message: error.message || 'Sell failed',
+            code: error.statusCode || 500
+        });
+    }
+}
+
+export async function staffSellableTickets(req, res) {
+    try {
+        const result = await listSellableTickets(req.user, req.params.eventId);
+        return success(res, result, 'Sellable tickets fetched successfully');
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({
+            message: error.message || 'Could not load tickets',
+            code: error.statusCode || 500
+        });
+    }
 }

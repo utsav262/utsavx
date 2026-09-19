@@ -9,6 +9,7 @@ import EventHandler from '../models/EventHandler.js';
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
 import { success } from '../utils/response.js';
+import { sellTicketOrders } from '../services/sellService.js';
 
 const eventFor = (req, eventId) => Event.findOne({ _id: eventId, ...(req.user.role === 'admin' ? {} : { organizer: req.user._id }) });
 const body = (req) => req.body || {};
@@ -21,7 +22,78 @@ const pick = (source, keys) => {
     return out;
 };
 const EVENT_WRITABLE = ['title', 'slug', 'description', 'category', 'tags', 'venue', 'startsAt', 'endsAt', 'imageUrl', 'status', 'ticketTypes'];
-const TICKET_WRITABLE = ['name', 'price', 'quantity', 'currency', 'salesStatus', 'type'];
+const TICKET_WRITABLE = [
+    'name',
+    'description',
+    'hideDescription',
+    'price',
+    'doorPrice',
+    'quantity',
+    'currency',
+    'salesStatus',
+    'type',
+    'ticketType',
+    'saleStartsAt',
+    'saleEndsAt',
+    'passServiceFeeToBuyer',
+    'passPaymentFeeToBuyer'
+];
+
+function normalizeTicketPayload(data = {}) {
+    const ticketTypeRaw = String(data.ticket_type || data.ticketType || '').toLowerCase();
+    const ticketType = ticketTypeRaw === 'free' || Number(data.price) === 0 ? 'free' : 'paid';
+    const price = ticketType === 'free' ? 0 : Math.max(0, Number(data.price) || 0);
+    const doorRaw = data.door_price ?? data.doorPrice;
+    const quantityRaw = data.quantity;
+    // 0 = unlimited inventory (stored as 0; sell/inventory treat 0 as unlimited)
+    const quantity = Math.max(0, Math.floor(Number(quantityRaw) || 0));
+
+    const saleStartsAt = data.sale_start || data.saleStartsAt || data.sale_starts_at || null;
+    const saleEndsAt = data.sale_end || data.saleEndsAt || data.sale_ends_at || null;
+
+    return {
+        name: String(data.name || '').trim().slice(0, 120),
+        description: String(data.description || '').slice(0, 2000),
+        hideDescription: Boolean(data.hide_description ?? data.hideDescription),
+        price,
+        doorPrice: doorRaw === undefined || doorRaw === null || doorRaw === ''
+            ? 0
+            : Math.max(0, Number(doorRaw) || 0),
+        quantity,
+        currency: String(data.currency || 'INR').slice(0, 8),
+        salesStatus: ['on-sale', 'paused', 'sold-out'].includes(data.salesStatus || data.sales_status)
+            ? (data.salesStatus || data.sales_status)
+            : 'on-sale',
+        type: data.type || 'gate',
+        ticketType,
+        saleStartsAt: saleStartsAt ? new Date(saleStartsAt) : null,
+        saleEndsAt: saleEndsAt ? new Date(saleEndsAt) : null,
+        passServiceFeeToBuyer: Boolean(
+            data.pass_service_fee_to_buyer ?? data.passServiceFeeToBuyer
+        ),
+        passPaymentFeeToBuyer: Boolean(
+            data.pass_payment_fee_to_buyer ?? data.passPaymentFeeToBuyer
+        )
+    };
+}
+
+function serializeTicket(ticket) {
+    if (!ticket) return null;
+    const row = typeof ticket.toObject === 'function' ? ticket.toObject() : ticket;
+    return {
+        ...row,
+        id: row._id,
+        door_price: row.doorPrice ?? 0,
+        ticket_type: row.ticketType || (Number(row.price) === 0 ? 'free' : 'paid'),
+        hide_description: Boolean(row.hideDescription),
+        sale_start: row.saleStartsAt || null,
+        sale_end: row.saleEndsAt || null,
+        pass_service_fee_to_buyer: Boolean(row.passServiceFeeToBuyer),
+        pass_payment_fee_to_buyer: Boolean(row.passPaymentFeeToBuyer),
+        is_complimentary: /apsession.?complimentary|complimentary/i.test(String(row.name || ''))
+            || String(row.type || '').toLowerCase() === 'apsession_complimentary'
+    };
+}
 const dashboardCurrency = (events) => { for (const event of events)
         for (const ticket of event.ticketTypes || [])
             if (ticket.currency) return ticket.currency;
@@ -75,8 +147,9 @@ export async function createOrUpdateEvent(req, res) {
     if (Array.isArray(payload.ticketTypes)) {
         const existingById = new Map((event?.ticketTypes || []).map((ticket) => [String(ticket._id), ticket]));
         payload.ticketTypes = payload.ticketTypes.map((ticket) => {
-            const safe = pick(ticket, TICKET_WRITABLE);
+            const normalized = normalizeTicketPayload(ticket);
             const previous = ticket._id ? existingById.get(String(ticket._id)) : null;
+            const safe = pick({ ...previous?.toObject?.() || previous || {}, ...normalized }, TICKET_WRITABLE);
             if (ticket._id) safe._id = ticket._id;
             return {
                 ...safe,
@@ -154,45 +227,79 @@ export async function upgradeEvent(req, res) {
     await event.save();
     return ok(res, event, 'Event upgraded successfully');
 }
-export async function getTickets(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); return ok(res, event.ticketTypes); }
+export async function getTickets(req, res) {
+    const event = await eventFor(req, req.params.id);
+    if (!event) return res.status(404).json({ message: 'Event not found', code: 404 });
+    const role = String(req.params.type || 'all').toLowerCase();
+    let rows = event.ticketTypes || [];
+    if (role === 'gate') {
+        rows = rows.filter((ticket) => Number(ticket.doorPrice || 0) > 0);
+    } else if (role === 'paid') {
+        rows = rows.filter((ticket) => (ticket.ticketType || 'paid') === 'paid' && Number(ticket.price) > 0);
+    } else if (role === 'free') {
+        rows = rows.filter((ticket) => (ticket.ticketType || '') === 'free' || Number(ticket.price) === 0);
+    }
+    return ok(res, rows.map(serializeTicket));
+}
 export async function createTicket(req, res) {
     const data = body(req);
-    if (!data.eventId || !data.name || data.price === undefined || data.quantity === undefined) {
-        return res.status(422).json({ message: 'eventId, name, price, and quantity are required', code: 422 });
+    const eventId = data.eventId || data.event_id;
+    if (!eventId || !data.name) {
+        return res.status(422).json({ message: 'eventId and name are required', code: 422 });
     }
-    const event = await eventFor(req, data.eventId);
+    if (data.price === undefined && data.ticket_type !== 'free' && data.ticketType !== 'free') {
+        return res.status(422).json({ message: 'price is required for paid tickets', code: 422 });
+    }
+    if (data.quantity === undefined) {
+        return res.status(422).json({ message: 'quantity is required', code: 422 });
+    }
+    const event = await eventFor(req, eventId);
     if (!event) return res.status(404).json({ message: 'Event not found', code: 404 });
-    const salesStatus = ['on-sale', 'paused', 'sold-out'].includes(data.salesStatus) ? data.salesStatus : 'on-sale';
-    event.ticketTypes.push({
-        name: String(data.name).slice(0, 120),
-        price: Math.max(0, Number(data.price) || 0),
-        quantity: Math.max(0, Math.floor(Number(data.quantity) || 0)),
-        salesStatus,
-        currency: String(data.currency || 'INR').slice(0, 8)
-    });
+    const ticket = normalizeTicketPayload(data);
+    if (!ticket.name) return res.status(422).json({ message: 'name is required', code: 422 });
+    if (ticket.ticketType === 'paid' && ticket.price <= 0) {
+        return res.status(422).json({ message: 'Paid tickets must have price > 0', code: 422 });
+    }
+    event.ticketTypes.push(ticket);
     await event.save();
-    return ok(res, event.ticketTypes.at(-1), 'Ticket type created successfully');
+    return ok(res, serializeTicket(event.ticketTypes.at(-1)), 'Ticket type created successfully');
 }
 export async function updateTicket(req, res) {
     const event = await Event.findOne({ 'ticketTypes._id': req.params.id, ...(req.user.role === 'admin' ? {} : { organizer: req.user._id }) });
     if (!event) return res.status(404).json({ message: 'Ticket type not found', code: 404 });
     const ticket = event.ticketTypes.id(req.params.id);
-    const updates = pick(body(req), TICKET_WRITABLE);
-    if (updates.price !== undefined) updates.price = Math.max(0, Number(updates.price) || 0);
-    if (updates.quantity !== undefined) {
-        updates.quantity = Math.max(ticket.sold || 0, Math.max(0, Math.floor(Number(updates.quantity) || 0)));
+    if (isSystemComplimentary(ticket)) {
+        return res.status(422).json({ message: 'System complimentary tickets cannot be edited', code: 422 });
     }
-    if (updates.salesStatus && !['on-sale', 'paused', 'sold-out'].includes(updates.salesStatus)) delete updates.salesStatus;
+    const updates = normalizeTicketPayload({ ...ticket.toObject(), ...body(req) });
+    if (updates.quantity !== undefined) {
+        updates.quantity = Math.max(ticket.sold || 0, updates.quantity);
+    }
+    if (updates.ticketType === 'paid' && updates.price <= 0) {
+        return res.status(422).json({ message: 'Paid tickets must have price > 0', code: 422 });
+    }
     Object.assign(ticket, updates);
     await event.save();
-    return ok(res, ticket, 'Ticket type updated successfully');
+    return ok(res, serializeTicket(ticket), 'Ticket type updated successfully');
 }
 export async function deleteTicket(req, res) {
     const event = await Event.findOne({ 'ticketTypes._id': req.params.id, ...(req.user.role === 'admin' ? {} : { organizer: req.user._id }) });
     if (!event) return res.status(404).json({ message: 'Ticket type not found', code: 404 });
+    const ticket = event.ticketTypes.id(req.params.id);
+    if (isSystemComplimentary(ticket)) {
+        return res.status(422).json({ message: 'System complimentary tickets cannot be deleted', code: 422 });
+    }
     event.ticketTypes.pull(req.params.id);
     await event.save();
     return ok(res, null, 'Ticket type deleted successfully');
+}
+
+function isSystemComplimentary(ticket) {
+    if (!ticket) return false;
+    const name = String(ticket.name || '');
+    const type = String(ticket.type || '');
+    return /apsession.?complimentary/i.test(name)
+        || type.toLowerCase() === 'apsession_complimentary';
 }
 const money = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 const feeBreakdown = (pricePaid, paymentFee = 0, serviceFee = 0) => ({ configuration: null, label: null, fees: [{ type: 'payment', name: 'Payment Fee', amount: money(paymentFee), paid_by: 'host' }, { type: 'service', name: 'Service Fee', amount: money(serviceFee), paid_by: 'host' }, { type: 'commission', name: 'Commission', amount: 0, paid_by: 'host' }], price_paid: money(pricePaid), buyer_fee: 0, buyer_paid_total: money(pricePaid), host_fee: money(paymentFee + serviceFee), host_payout: money(pricePaid - paymentFee - serviceFee) });
@@ -284,7 +391,24 @@ export async function scanTicket(req, res) {
         }
     });
 }
-export async function sell(req, res) { return res.status(501).json({ message: 'Staff sales require a payment method and are not enabled for this deployment', code: 501 }); }
+export async function sell(req, res) {
+    try {
+        const data = body(req);
+        const result = await sellTicketOrders({
+            user: req.user,
+            eventId: data.event_id || data.eventId,
+            tickets: data.tickets || [],
+            purchaseSource: data.purchase_source || data.purchaseSource,
+            complimentary: Boolean(data.complimentary)
+        });
+        return ok(res, result, 'Tickets sold successfully');
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({
+            message: error.message || 'Sell failed',
+            code: error.statusCode || 500
+        });
+    }
+}
 const normalizeCoupon = (input, requireEvent = true) => {
     const value = {...input };
     const event = value.event_id || value.eventId || value.event;
@@ -435,7 +559,12 @@ export async function handlers(req, res) {
     if (!event) return res.status(404).json({ message: 'Event not found', code: 404 });
     const query = { event: event._id };
     if (req.params.type && req.params.type !== 'all') query.userType = mapHandlerUserType(req.params.type);
-    return ok(res, await EventHandler.find(query).lean());
+    const rows = await EventHandler.find(query).lean();
+    return ok(res, rows.map((row) => ({
+        ...row,
+        type: row.userType,
+        status: row.invitationStatus
+    })));
 }
 export async function addHandler(req, res) {
     const data = body(req);
@@ -444,15 +573,37 @@ export async function addHandler(req, res) {
     const email = String(data.email || '').trim().toLowerCase();
     if (!email) return res.status(422).json({ message: 'email is required', code: 422 });
     const userType = mapHandlerUserType(data.userType || data.user_type || data.type);
+
+    const allotments = [];
+    if (Array.isArray(data.tickets)) {
+        for (const row of data.tickets) {
+            const ticketTypeId = row.event_ticket_id || row.ticketTypeId || row.ticket_type_id;
+            const quantity = Math.max(0, Math.floor(Number(row.quantity) || 0));
+            if (ticketTypeId && quantity > 0) allotments.push({ ticketTypeId, quantity });
+        }
+    } else if (Array.isArray(data.allotments)) {
+        for (const row of data.allotments) {
+            const ticketTypeId = row.event_ticket_id || row.ticketTypeId;
+            const quantity = Math.max(0, Math.floor(Number(row.quantity) || 0));
+            if (ticketTypeId && quantity > 0) allotments.push({ ticketTypeId, quantity });
+        }
+    }
+
+    const scannerPermission = ['scan_only', 'sell_only', 'both'].includes(data.scannerPermission || data.scanner_permission)
+        ? (data.scannerPermission || data.scanner_permission)
+        : (userType === 'Event_Scanner' ? 'scan_only' : 'both');
+
     const handler = await EventHandler.create({
         email,
         event: event._id,
         userType,
         invitationStatus: 'P',
-        scannerPermission: data.scannerPermission || (userType === 'Event_Scanner' ? 'scan_only' : 'both'),
-        commissionPercentage: Number(data.commissionPercentage || data.commission || 0) || 0,
+        scannerPermission,
+        commissionPercentage: Number(data.commissionPercentage || data.commission_percentage || data.commission || 0) || 0,
         firstName: data.firstName || data.first_name || undefined,
-        lastName: data.lastName || data.last_name || undefined
+        lastName: data.lastName || data.last_name || undefined,
+        verified: Boolean(data.verified),
+        allotments
     });
     return res.status(201).json({
         message: 'Handler invited successfully',

@@ -24,6 +24,8 @@ import ManagerWorkspace from '../features/manager/ManagerWorkspace.jsx';
 import Invitations from '../pages/Invitations.jsx';
 import Dashboard from '../pages/Dashboard.jsx';
 import EventDashboard from '../pages/EventDashboard.jsx';
+import AddTeamMember from '../features/team/AddTeamMember.jsx';
+import Sell from '../pages/Sell.jsx';
 
 export default function AppRoutes() {
     const user = useSelector((state) => state.auth.user);
@@ -59,6 +61,8 @@ export default function AppRoutes() {
                 <Route path="/invitations" element={<RequireAuth><Invitations /></RequireAuth>} />
                 <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
                 <Route path="/dashboard/events/:eventId" element={<RequireAuth><EventDashboard /></RequireAuth>} />
+                <Route path="/dashboard/events/:eventId/team/add" element={<RequireAuth><AddTeamMember /></RequireAuth>} />
+                <Route path="/dashboard/sell/:eventId" element={<RequireAuth><Sell /></RequireAuth>} />
                 <Route path="/manager" element={<RequireManager><ManagerWorkspace /></RequireManager>} />
                 <Route path="/admin" element={<RequireAdmin><ManagerWorkspace /></RequireAdmin>} />
                 <Route path="*" element={<Home />} />

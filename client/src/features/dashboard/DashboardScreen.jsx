@@ -7,6 +7,8 @@ import { unwrapList } from '../../lib/unwrap.js';
 import { useToast } from '../../components/ui/Toast.jsx';
 import DashboardEventCard from './DashboardEventCard.jsx';
 import { dashboardNavPayload, matchesSearch } from './dashboardUtils.js';
+import SellTicketsModal from '../sell/SellTicketsModal.jsx';
+import { sellEntryMode } from '../sell/sellUtils.js';
 
 const TABS = [
     { id: 'live', label: 'Live' },
@@ -29,6 +31,7 @@ export default function DashboardScreen() {
     const [tab, setTab] = useState('live');
     const [query, setQuery] = useState('');
     const [pendingInvites, setPendingInvites] = useState(0);
+    const [sellEvent, setSellEvent] = useState(null);
     const [tabs, setTabs] = useState({
         live: emptyTab(),
         past: emptyTab(),
@@ -121,8 +124,27 @@ export default function DashboardScreen() {
         });
     };
 
-    const openSell = () => {
-        toast.info('Sell flow is available from the event door tools soon. Use Dashboard for now.');
+    const startSellFlow = (event, mode) => {
+        navigate(`/dashboard/sell/${event._id || event.id}`, {
+            state: {
+                mode,
+                eventItem: event,
+                name: event.title || event.name
+            }
+        });
+    };
+
+    const openSell = (event) => {
+        const entry = sellEntryMode(event);
+        if (!entry) {
+            toast.error('Sell is not available for this role.');
+            return;
+        }
+        if (entry === 'modal') {
+            setSellEvent(event);
+            return;
+        }
+        startSellFlow(event, entry === 'gate' ? 'gate' : 'digital');
     };
 
     const openEdit = (event) => {
@@ -276,6 +298,17 @@ export default function DashboardScreen() {
                     </button>
                 </div>
             ) : null}
+
+            <SellTicketsModal
+                event={sellEvent}
+                open={Boolean(sellEvent)}
+                onClose={() => setSellEvent(null)}
+                onSelect={(mode) => {
+                    const event = sellEvent;
+                    setSellEvent(null);
+                    if (event) startSellFlow(event, mode);
+                }}
+            />
         </main>
     );
 }

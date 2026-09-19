@@ -244,7 +244,41 @@ export default function EventDashboardPage() {
         if (seed.focus === 'checkin') setHubTab('checkins');
     }, [seed.focus]);
 
+    useEffect(() => {
+        if (!seed.refreshHandlers || !eventId) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const handlers = await apiClient.managerHandlers(eventId);
+                if (cancelled) return;
+                setOwnerData((prev) => ({ ...prev, handlers: unwrapList(handlers) }));
+                setHubTab('overview');
+                setNotice('Team invite sent. Lists refreshed.');
+            } catch {
+                /* ignore refresh errors */
+            } finally {
+                navigate(location.pathname, { replace: true, state: { ...seed, refreshHandlers: false } });
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [seed.refreshHandlers, eventId]);
+
     const goHome = () => navigate('/dashboard');
+
+    const openAddMember = (type) => {
+        navigate(`/dashboard/events/${eventId}/team/add`, {
+            state: {
+                type,
+                eventId,
+                eventTitle: eventItem?.title || eventItem?.name || seed.name || 'Event',
+                ticketTypes: ownerData.tickets?.length
+                    ? ownerData.tickets
+                    : eventItem?.ticketTypes || []
+            }
+        });
+    };
 
     const inviteForCheckIn = useMemo(() => {
         if (staffData?.handler) {
@@ -295,6 +329,16 @@ export default function EventDashboardPage() {
                         data={ownerData}
                         loading={loading}
                         onBack={goHome}
+                        onAddMember={openAddMember}
+                        onEdit={() =>
+                            navigate('/manager', {
+                                state: { view: 'create', eventId }
+                            })
+                        }
+                        canAddManagers={
+                            Boolean(eventItem?.is_owner || eventItem?.event_handler_type === 'Owner') ||
+                            user?.role === 'admin'
+                        }
                         onGo={(view) => {
                             if (view === 'gate') setHubTab('checkins');
                             else if (view === 'sales') setHubTab('sales');

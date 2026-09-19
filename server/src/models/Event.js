@@ -2,12 +2,22 @@ import mongoose from 'mongoose';
 
 const ticketTypeSchema = new mongoose.Schema({
     name: { type: String, required: true, trim: true },
+    description: { type: String, default: '', maxlength: 2000 },
+    hideDescription: { type: Boolean, default: false },
     price: { type: Number, min: 0, required: true },
+    doorPrice: { type: Number, min: 0, default: 0 },
     quantity: { type: Number, min: 0, required: true },
     sold: { type: Number, default: 0, min: 0 },
     currency: { type: String, default: 'INR' },
     salesStatus: { type: String, enum: ['on-sale', 'paused', 'sold-out'], default: 'on-sale' },
-    type: { type: String, default: null }
+    /** gate | complimentary | null */
+    type: { type: String, default: 'gate' },
+    /** paid | free */
+    ticketType: { type: String, enum: ['paid', 'free'], default: 'paid' },
+    saleStartsAt: { type: Date, default: null },
+    saleEndsAt: { type: Date, default: null },
+    passServiceFeeToBuyer: { type: Boolean, default: false },
+    passPaymentFeeToBuyer: { type: Boolean, default: false }
 }, { _id: true });
 
 const eventSchema = new mongoose.Schema({

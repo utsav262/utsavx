@@ -45,12 +45,69 @@ function Section({ title, action, children }) {
     );
 }
 
+const TEAM_SECTIONS = [
+    { type: 'Manager', title: 'Event Managers', empty: 'No managers invited yet.' },
+    { type: 'Ambassador', title: 'Ticket Ambassadors', empty: 'No ambassadors invited yet.' },
+    { type: 'Outlet', title: 'Ticket Outlets', empty: 'No outlets invited yet.' },
+    { type: 'Event_Scanner', title: 'Gate Staff', empty: 'No gate staff invited yet.' }
+];
+
+function handlerRoleLabel(type) {
+    if (type === 'Event_Scanner') return 'Gate Staff';
+    if (type === 'Manager') return 'Manager';
+    if (type === 'Ambassador') return 'Ambassador';
+    if (type === 'Outlet') return 'Outlet';
+    return type || 'Staff';
+}
+
+function handlerStatusLabel(status) {
+    if (status === 'A') return 'Accepted';
+    if (status === 'D') return 'Declined';
+    if (status === 'P') return 'Pending';
+    return null;
+}
+
+function TeamMemberList({ handlers, empty }) {
+    if (!handlers.length) {
+        return <p className="text-sm text-ink/50">{empty}</p>;
+    }
+    return (
+        <ul className="divide-y divide-ink/10">
+            {handlers.map((handler) => {
+                const type = handler.type || handler.userType || 'staff';
+                const status = handlerStatusLabel(handler.invitationStatus || handler.status);
+                const name = [handler.firstName, handler.lastName].filter(Boolean).join(' ');
+                return (
+                    <li key={handler._id || handler.email} className="flex justify-between gap-3 py-3 text-sm">
+                        <div>
+                            <p className="font-medium">{name || handler.email || 'Team member'}</p>
+                            {name && handler.email ? (
+                                <p className="text-xs text-ink/45">{handler.email}</p>
+                            ) : null}
+                        </div>
+                        <span className="shrink-0 text-right text-xs font-bold uppercase tracking-wider text-ink/45">
+                            {handlerRoleLabel(type)}
+                            {type === 'Event_Scanner' && handler.scannerPermission
+                                ? ` · ${String(handler.scannerPermission).replace('_', ' ')}`
+                                : ''}
+                            {status ? ` · ${status}` : ''}
+                        </span>
+                    </li>
+                );
+            })}
+        </ul>
+    );
+}
+
 export default function EventDashboard({
     event,
     data,
     loading,
     onBack,
-    onGo
+    onGo,
+    onAddMember,
+    onEdit,
+    canAddManagers = true
 }) {
     if (loading) {
         return (
@@ -143,6 +200,15 @@ export default function EventDashboard({
                             )}
                         </div>
                         <div className="mt-8 grid grid-cols-2 gap-2">
+                            {onEdit ? (
+                                <button
+                                    type="button"
+                                    onClick={onEdit}
+                                    className="col-span-2 border border-white/20 px-3 py-3 text-[11px] font-extrabold uppercase tracking-wider"
+                                >
+                                    Edit event
+                                </button>
+                            ) : null}
                             <button
                                 type="button"
                                 onClick={() => onGo('sales')}
@@ -152,7 +218,7 @@ export default function EventDashboard({
                             </button>
                             <button
                                 type="button"
-                                onClick={() => onGo('tickets')}
+                                onClick={() => (onEdit ? onEdit() : onGo('tickets'))}
                                 className="border border-white/20 px-3 py-3 text-[11px] font-extrabold uppercase tracking-wider"
                             >
                                 Tickets
@@ -277,47 +343,39 @@ export default function EventDashboard({
                     )}
                 </Section>
 
-                <Section
-                    title="Team"
-                    action={
-                        <button type="button" onClick={() => onGo('people')} className="text-xs font-extrabold uppercase tracking-wider text-coral">
-                            Manage
-                        </button>
-                    }
-                >
-                    {handlers.length ? (
-                        <ul className="divide-y divide-ink/10">
-                            {handlers.map((handler) => {
-                                const type = handler.type || handler.userType || 'staff';
-                                const role =
-                                    type === 'Event_Scanner'
-                                        ? 'Event Scanner'
-                                        : type === 'Manager'
-                                            ? 'Event Manager'
-                                            : type;
-                                const status =
-                                    handler.invitationStatus === 'A'
-                                        ? 'Accepted'
-                                        : handler.invitationStatus === 'D'
-                                            ? 'Declined'
-                                            : handler.invitationStatus === 'P'
-                                                ? 'Pending'
-                                                : null;
-                                return (
-                                    <li key={handler._id || handler.email} className="flex justify-between py-3 text-sm">
-                                        <span>{handler.email || handler.firstName || 'Team member'}</span>
-                                        <span className="text-right text-xs font-bold uppercase tracking-wider text-ink/45">
-                                            {role}
-                                            {status ? ` · ${status}` : ''}
-                                        </span>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    ) : (
-                        <p className="text-sm text-ink/50">No team invites yet.</p>
-                    )}
-                </Section>
+                <div className="space-y-4">
+                    <div className="flex items-end justify-between gap-3">
+                        <div>
+                            <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-coral">Team</p>
+                            <h2 className="serif mt-1 text-3xl">Event handlers</h2>
+                        </div>
+                    </div>
+                    <div className="grid gap-4 lg:grid-cols-2">
+                        {TEAM_SECTIONS.filter((section) => section.type !== 'Manager' || canAddManagers || handlers.some((h) => (h.type || h.userType) === 'Manager')).map((section) => {
+                            const rows = handlers.filter((handler) => (handler.type || handler.userType) === section.type);
+                            const canAdd = section.type === 'Manager' ? canAddManagers : Boolean(onAddMember);
+                            return (
+                                <Section
+                                    key={section.type}
+                                    title={section.title}
+                                    action={
+                                        canAdd ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => onAddMember?.(section.type)}
+                                                className="text-xs font-extrabold uppercase tracking-wider text-coral"
+                                            >
+                                                + Add Member
+                                            </button>
+                                        ) : null
+                                    }
+                                >
+                                    <TeamMemberList handlers={rows} empty={section.empty} />
+                                </Section>
+                            );
+                        })}
+                    </div>
+                </div>
 
                 <Section
                     title="Coupons"

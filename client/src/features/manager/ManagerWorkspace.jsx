@@ -10,6 +10,8 @@ import { useToast } from '../../components/ui/Toast.jsx';
 import CreateEventFlow from './CreateEventFlow.jsx';
 import EventDashboard from './EventDashboard.jsx';
 import AdminHome from './AdminHome.jsx';
+import TicketFlow from '../tickets/TicketFlow.jsx';
+import { ticketFromApi } from '../tickets/ticketUtils.js';
 
 function Stat({ label, value, Icon }) {
     return <div className="bg-cream p-5"><Icon size={17} className="text-coral" /><p className="mt-4 text-[10px] font-extrabold uppercase tracking-[.18em] text-ink/50">{label}</p><p className="serif mt-1 text-3xl">{value}</p></div>;
@@ -119,6 +121,7 @@ export default function ManagerWorkspace() {
     const navigate = useNavigate();
     const isAdmin = user?.role === 'admin';
     const [view, setView] = useState(location.state?.view === 'create' ? 'create' : 'home');
+    const [editEventId, setEditEventId] = useState(location.state?.eventId || null);
     const [dashboard, setDashboard] = useState(null);
     const [events, setEvents] = useState([]);
     const [pending, setPending] = useState([]);
@@ -166,7 +169,10 @@ export default function ManagerWorkspace() {
     }, [isAdmin]);
 
     useEffect(() => {
-        if (location.state?.view === 'create') setView('create');
+        if (location.state?.view === 'create') {
+            setView('create');
+            setEditEventId(location.state?.eventId || null);
+        }
     }, [location.state]);
 
     const reviewEvent = async (eventId, action) => {
@@ -264,22 +270,24 @@ export default function ManagerWorkspace() {
                 <div className="flex flex-col justify-between gap-5 border-b border-ink/15 pb-8 md:flex-row md:items-end">
                     <div>
                         <p className="text-xs font-extrabold uppercase tracking-[.2em] text-coral">
-                            {isAdmin ? 'UTSAVX admin' : 'UTSAVX manager'}
+                            {isAdmin ? 'UTSAVX admin' : 'Create / tools'}
                         </p>
-                        <h1 className="serif mt-2 text-6xl">{isAdmin ? 'Full access.' : 'Run the room.'}</h1>
+                        <h1 className="serif mt-2 text-6xl">{isAdmin ? 'Full access.' : 'Build & ship.'}</h1>
                         <p className="mt-3 max-w-xl text-sm text-ink/60">
                             {isAdmin
                                 ? 'Approve events, manage every host catalog, change roles, and open any event dashboard.'
-                                : 'Pick an event to open its dashboard — sales, tickets, people, and check-in live there.'}
+                                : 'Create events and use hosting tools here. Your event list lives on Dashboard.'}
                         </p>
                     </div>
-                    <button
-                        type="button"
-                        onClick={() => setView('create')}
-                        className="inline-flex items-center justify-center gap-2 bg-coral px-5 py-3.5 text-xs font-extrabold uppercase tracking-wider text-white"
-                    >
-                        <Plus size={15} /> Create event
-                    </button>
+                    {!isAdmin ? (
+                        <button
+                            type="button"
+                            onClick={() => setView('create')}
+                            className="inline-flex items-center justify-center gap-2 bg-coral px-5 py-3.5 text-xs font-extrabold uppercase tracking-wider text-white"
+                        >
+                            <Plus size={15} /> Create event
+                        </button>
+                    ) : null}
                 </div>
             )}
 
@@ -301,26 +309,31 @@ export default function ManagerWorkspace() {
                         onSetRole={setUserRole}
                     />
                 ) : (
-                    <HomeScreen
+                    <ToolsHome
                         dashboard={dashboard}
-                        events={events}
-                        selected={selected}
-                        onOpen={openEventDashboard}
-                        onCreate={() => setView('create')}
+                        onCreate={() => {
+                            setEditEventId(null);
+                            setView('create');
+                        }}
+                        onOpenDashboard={() => navigate('/dashboard')}
                     />
                 )
             )}
 
             {view === 'create' && (
                 <CreateEventFlow
+                    key={editEventId || 'new'}
+                    eventId={editEventId}
                     reload={load}
                     notice={setNotice}
                     onCancel={() => {
                         setView('home');
+                        setEditEventId(null);
                         navigate('/dashboard', { replace: true });
                     }}
                     onCreated={async (event) => {
                         await load();
+                        setEditEventId(null);
                         navigate(`/dashboard/events/${event._id || event.id}`, {
                             state: {
                                 eventId: event._id || event.id,
@@ -339,6 +352,21 @@ export default function ManagerWorkspace() {
                     loading={eventLoading}
                     onBack={goHome}
                     onGo={(next) => setView(next)}
+                    canAddManagers
+                    onEdit={() => {
+                        setEditEventId(selected._id);
+                        setView('create');
+                    }}
+                    onAddMember={(type) => {
+                        navigate(`/dashboard/events/${selected._id}/team/add`, {
+                            state: {
+                                type,
+                                eventId: selected._id,
+                                eventTitle: selected.title || selected.name || 'Event',
+                                ticketTypes: data.tickets?.length ? data.tickets : selected.ticketTypes || []
+                            }
+                        });
+                    }}
                 />
             )}
 
@@ -347,9 +375,21 @@ export default function ManagerWorkspace() {
                     <Sales event={selected} orders={data.orders} />
                 </SubView>
             )}
-            {view === 'tickets' && (
+            {view === 'tickets' && selected && (
                 <SubView title="Tickets" onBack={() => setView('event')}>
-                    <Tickets event={selected} rows={data.tickets} reload={reloadSelected} notice={setNotice} />
+                    <TicketFlow
+                        eventId={selected._id}
+                        eventTitle={selected.title || 'Event'}
+                        tickets={(data.tickets || []).map(ticketFromApi)}
+                        onTicketsChange={async (rows) => {
+                            if (Array.isArray(rows)) {
+                                setData((prev) => ({ ...prev, tickets: rows }));
+                            }
+                            await reloadSelected();
+                        }}
+                        notice={setNotice}
+                        onClose={() => setView('event')}
+                    />
                 </SubView>
             )}
             {view === 'people' && (
@@ -384,6 +424,45 @@ function SubView({ title, onBack, children }) {
             <p className="mt-4 text-[11px] font-extrabold uppercase tracking-[0.18em] text-coral">{title}</p>
             {children}
         </div>
+    );
+}
+
+function ToolsHome({ dashboard, onCreate, onOpenDashboard }) {
+    const revenue = dashboard?.revenue || {};
+    return (
+        <section className="mt-8">
+            <div className="grid gap-px bg-ink/15 sm:grid-cols-4">
+                <Stat label="Revenue" value={money(revenue.total)} Icon={Coins} />
+                <Stat label="Tickets sold" value={revenue.tickets_sold || 0} Icon={Ticket} />
+                <Stat label="Capacity" value={revenue.ticket_cap || 0} Icon={BarChart3} />
+                <Stat label="Live events" value={dashboard?.events?.live?.total || 0} Icon={CalendarDays} />
+            </div>
+
+            <div className="mt-10 grid gap-4 sm:grid-cols-2">
+                <button
+                    type="button"
+                    onClick={onCreate}
+                    className="border border-ink/15 bg-white p-6 text-left transition hover:border-ink/30"
+                >
+                    <Plus size={18} className="text-coral" />
+                    <p className="serif mt-4 text-3xl">Create event</p>
+                    <p className="mt-2 text-sm text-ink/55">
+                        Start a new draft, add tickets and team, then submit for approval.
+                    </p>
+                </button>
+                <button
+                    type="button"
+                    onClick={onOpenDashboard}
+                    className="border border-ink/15 bg-white p-6 text-left transition hover:border-ink/30"
+                >
+                    <CalendarDays size={18} className="text-coral" />
+                    <p className="serif mt-4 text-3xl">Open dashboard</p>
+                    <p className="mt-2 text-sm text-ink/55">
+                        View Live / Past / Draft events and open each event dashboard from there.
+                    </p>
+                </button>
+            </div>
+        </section>
     );
 }
 
@@ -448,33 +527,6 @@ function Sales({ event, orders }) {
                 <Stat label="Payout due" value={money(orders?.payout_due)} Icon={BarChart3} />
             </div>
             <Table rows={orders?.table_data} columns={['ticket_type', 'confirmation_id', 'payment_status', 'price_paid']} />
-        </Panel>
-    );
-}
-
-function Tickets({ event, rows, reload, notice }) {
-    const [form, setForm] = useState({ name: '', price: '', quantity: '' });
-    if (!event) return <Panel title="Ticket types"><p className="mt-8 text-sm text-ink/55">Select an event first.</p></Panel>;
-    const save = async (e) => {
-        e.preventDefault();
-        try {
-            await apiClient.managerCreateTicket({ eventId: event._id, name: form.name, price: Number(form.price), quantity: Number(form.quantity) });
-            notice('Ticket type created.');
-            setForm({ name: '', price: '', quantity: '' });
-            reload();
-        } catch (error) {
-            notice(error.response?.data?.message || 'Ticket type could not be created.');
-        }
-    };
-    return (
-        <Panel title="Ticket types">
-            <Table rows={rows} columns={['name', 'price', 'quantity', 'sold', 'salesStatus']} />
-            <form onSubmit={save} className="mt-6 flex flex-wrap gap-2">
-                <input required className="border border-ink/15 bg-transparent px-3 py-2" placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                <input required type="number" className="w-28 border border-ink/15 bg-transparent px-3 py-2" placeholder="Price" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
-                <input required type="number" className="w-28 border border-ink/15 bg-transparent px-3 py-2" placeholder="Qty" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
-                <button className="rounded bg-ink px-4 py-2 text-sm font-bold text-white">Add tier</button>
-            </form>
         </Panel>
     );
 }

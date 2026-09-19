@@ -8,14 +8,21 @@ export async function reserveInventory(eventId, items, attempt = 0) {
 
     for (const item of items) {
         const ticket = event.ticketTypes.id(item.ticketTypeId);
-        if (!ticket || ticket.salesStatus !== 'on-sale' || ticket.quantity - ticket.sold < item.quantity) {
+        const unlimited = Number(ticket?.quantity || 0) === 0;
+        if (!ticket || ticket.salesStatus !== 'on-sale') {
+            throw Object.assign(new Error(`Insufficient inventory for ${ticket?.name || 'ticket'}`), { statusCode: 409 });
+        }
+        if (!unlimited && ticket.quantity - ticket.sold < item.quantity) {
             throw Object.assign(new Error(`Insufficient inventory for ${ticket?.name || 'ticket'}`), { statusCode: 409 });
         }
         ticket.sold += item.quantity;
-        if (ticket.sold >= ticket.quantity) ticket.salesStatus = 'sold-out';
+        if (!unlimited && ticket.sold >= ticket.quantity) ticket.salesStatus = 'sold-out';
     }
 
-    if (event.ticketTypes.length && event.ticketTypes.every((ticket) => ticket.sold >= ticket.quantity)) {
+    if (
+        event.ticketTypes.length &&
+        event.ticketTypes.every((ticket) => Number(ticket.quantity) > 0 && ticket.sold >= ticket.quantity)
+    ) {
         event.status = 'sold-out';
     }
 
