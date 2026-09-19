@@ -17,7 +17,7 @@ export default function Organizer() {
         try {
             const response = await apiClient.becomeOrganizer();
             dispatch(setUser(response.data));
-            navigate('/manager');
+            navigate('/manager', { replace: true });
         } catch (failure) {
             setError(failure.response?.data?.message || 'Could not enable hosting.');
         } finally {

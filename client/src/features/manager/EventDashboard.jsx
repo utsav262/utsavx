@@ -287,14 +287,32 @@ export default function EventDashboard({
                 >
                     {handlers.length ? (
                         <ul className="divide-y divide-ink/10">
-                            {handlers.map((handler) => (
-                                <li key={handler._id || handler.email} className="flex justify-between py-3 text-sm">
-                                    <span>{handler.email || handler.firstName || 'Team member'}</span>
-                                    <span className="text-xs font-bold uppercase tracking-wider text-ink/45">
-                                        {handler.type || handler.userType || 'staff'}
-                                    </span>
-                                </li>
-                            ))}
+                            {handlers.map((handler) => {
+                                const type = handler.type || handler.userType || 'staff';
+                                const role =
+                                    type === 'Event_Scanner'
+                                        ? 'Event Scanner'
+                                        : type === 'Manager'
+                                            ? 'Event Manager'
+                                            : type;
+                                const status =
+                                    handler.invitationStatus === 'A'
+                                        ? 'Accepted'
+                                        : handler.invitationStatus === 'D'
+                                            ? 'Declined'
+                                            : handler.invitationStatus === 'P'
+                                                ? 'Pending'
+                                                : null;
+                                return (
+                                    <li key={handler._id || handler.email} className="flex justify-between py-3 text-sm">
+                                        <span>{handler.email || handler.firstName || 'Team member'}</span>
+                                        <span className="text-right text-xs font-bold uppercase tracking-wider text-ink/45">
+                                            {role}
+                                            {status ? ` · ${status}` : ''}
+                                        </span>
+                                    </li>
+                                );
+                            })}
                         </ul>
                     ) : (
                         <p className="text-sm text-ink/50">No team invites yet.</p>

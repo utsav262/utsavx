@@ -12,6 +12,7 @@ import eventRoutes, { getCategories, getCities, getCountryList } from './routes/
 import orderRoutes from './routes/orders.js';
 import paymentRoutes from './routes/payments.js';
 import managerRoutes from './routes/manager.js';
+import invitationRoutes from './routes/invitations.js';
 import { notFound, errorHandler } from './middleware/error.js';
 import { webhook } from './controllers/paymentController.js';
 import { seedIfEmpty } from './scripts/seed.js';
@@ -48,6 +49,7 @@ app.use('/api/v1/events', eventRoutes);
 app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/manager', managerRoutes);
+app.use('/api/v1/invitations', invitationRoutes);
 app.use('/api/v1/event', eventRoutes);
 app.use('/api/v1/payment', paymentRoutes);
 app.use('/api/v1', orderRoutes);
@@ -75,12 +77,33 @@ async function configureRateLimiter() {
         limit: env.isProduction ? 200 : 400,
         ...(sendCommand ? { store: new RedisStore({ sendCommand, prefix: 'rl:api:' }) } : {})
     });
-    authLimiter = rateLimit({
-        ...base,
-        limit: 20,
-        message: { message: 'Too many auth attempts, try again later', code: 429 },
-        ...(sendCommand ? { store: new RedisStore({ sendCommand, prefix: 'rl:auth:' }) } : {})
-    });
+
+    // Keep auth brute-force protection in production; stay out of the way while developing.
+    if (env.isProduction) {
+        authLimiter = rateLimit({
+            ...base,
+            limit: 20,
+            message: { message: 'Too many auth attempts, try again later', code: 429 },
+            ...(sendCommand ? { store: new RedisStore({ sendCommand, prefix: 'rl:auth:' }) } : {})
+        });
+    } else {
+        authLimiter = rateLimit({
+            windowMs: 60 * 1000,
+            limit: 300,
+            standardHeaders: true,
+            legacyHeaders: false,
+            message: { message: 'Too many auth attempts, try again later', code: 429 }
+        });
+        if (sendCommand) {
+            try {
+                const keys = await redis.keys('rl:auth:*');
+                if (keys.length) await redis.del(...keys);
+                console.log('Cleared auth rate-limit keys for development');
+            } catch {
+                /* ignore */
+            }
+        }
+    }
 }
 
 async function start() {

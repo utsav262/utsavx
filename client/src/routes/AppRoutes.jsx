@@ -21,6 +21,9 @@ import ManagerSignIn from '../pages/ManagerSignIn.jsx';
 import ManagerSignUp from '../pages/ManagerSignUp.jsx';
 import AdminSignIn from '../pages/AdminSignIn.jsx';
 import ManagerWorkspace from '../features/manager/ManagerWorkspace.jsx';
+import Invitations from '../pages/Invitations.jsx';
+import Dashboard from '../pages/Dashboard.jsx';
+import EventDashboard from '../pages/EventDashboard.jsx';
 
 export default function AppRoutes() {
     const user = useSelector((state) => state.auth.user);
@@ -53,6 +56,9 @@ export default function AppRoutes() {
                 <Route path="/admin/login" element={<AdminSignIn />} />
                 <Route path="/admin/signin" element={<AdminSignIn />} />
                 <Route path="/tickets" element={<RequireAuth><Tickets /></RequireAuth>} />
+                <Route path="/invitations" element={<RequireAuth><Invitations /></RequireAuth>} />
+                <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
+                <Route path="/dashboard/events/:eventId" element={<RequireAuth><EventDashboard /></RequireAuth>} />
                 <Route path="/manager" element={<RequireManager><ManagerWorkspace /></RequireManager>} />
                 <Route path="/admin" element={<RequireAdmin><ManagerWorkspace /></RequireAdmin>} />
                 <Route path="*" element={<Home />} />

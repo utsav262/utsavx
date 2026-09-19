@@ -4,10 +4,13 @@ import { LogOut, Menu, ShoppingBag, Ticket, UserRound, X } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { signOut } from '../../store/index.js';
 
-function roleLabel(role) {
-    if (role === 'admin') return 'Admin';
-    if (role === 'organizer') return 'Manager';
-    if (role === 'customer') return 'Customer';
+function roleLabel(user) {
+    if (!user) return 'Guest';
+    if (user.staffRoleLabel) return user.staffRoleLabel;
+    if (user.staffRole === 'Event_Scanner') return 'Event Scanner';
+    if (user.role === 'admin') return 'Admin';
+    if (user.role === 'organizer') return 'Manager';
+    if (user.role === 'customer') return 'Customer';
     return 'Guest';
 }
 
@@ -22,7 +25,9 @@ export default function Header() {
     const isAdmin = role === 'admin';
     const isManager = role === 'organizer';
     const isCustomer = role === 'customer';
+    const isStaff = Boolean(user?.staffRole || user?.staffEvents?.length);
     const isGuest = !user;
+    const displayRole = roleLabel(user);
 
     const close = () => setOpen(false);
     const logout = () => {
@@ -36,15 +41,27 @@ export default function Header() {
 
     if (isAdmin) {
         links.push({ to: '/admin', label: 'Admin' });
+        links.push({ to: '/dashboard', label: 'Dashboard' });
         links.push({ to: '/tickets', label: 'My tickets' });
     } else if (isManager) {
-        links.push({ to: '/manager', label: 'Manager' });
+        links.push({ to: '/dashboard', label: 'Dashboard' });
+        links.push({ to: '/manager', label: 'Create / tools' });
         links.push({ to: '/tickets', label: 'My tickets' });
     } else if (isCustomer) {
         links.push({ to: '/tickets', label: 'My tickets' });
-        links.push({ to: '/organizer', label: 'Host events' });
+        if (isStaff) {
+            links.push({ to: '/dashboard', label: 'Dashboard' });
+            links.push({ to: '/invitations', label: 'Requests' });
+        } else {
+            links.push({ to: '/invitations', label: 'Invitations' });
+            links.push({ to: '/organizer', label: 'Host events' });
+        }
     } else {
         links.push({ to: '/organizer', label: 'For organizers' });
+    }
+
+    if ((isAdmin || isManager) && !links.some((link) => link.to === '/invitations')) {
+        links.push({ to: '/invitations', label: 'Requests' });
     }
 
     return (
@@ -76,9 +93,9 @@ export default function Header() {
 
                     {user ? (
                         <div className="hidden items-center gap-2 sm:flex">
-                            <span className="max-w-[10rem] truncate rounded-full border border-ink/10 px-3 py-2 text-xs font-bold text-ink/70">
+                            <span className="max-w-[12rem] truncate rounded-full border border-ink/10 px-3 py-2 text-xs font-bold text-ink/70">
                                 {user.name || user.email}
-                                <span className="ml-1 text-ink/40">· {roleLabel(role)}</span>
+                                <span className="ml-1 text-ink/40">· {displayRole}</span>
                             </span>
                             <button
                                 type="button"
@@ -113,7 +130,7 @@ export default function Header() {
                     <div className="flex flex-col gap-4 text-sm font-bold">
                         {user && (
                             <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-coral">
-                                {roleLabel(role)} · {user.name || user.email}
+                                {displayRole} · {user.name || user.email}
                             </p>
                         )}
                         {links.map((link) => (

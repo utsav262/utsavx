@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { BarChart3, CalendarDays, Check, Coins, Plus, ScanLine, Settings2, Ticket, Users } from 'lucide-react';
 import { apiClient } from '../../api/index.js';
 import { money } from '../../lib/money.js';
 import { formatDateTime } from '../../lib/datetime.js';
 import { unwrap, unwrapList as list } from '../../lib/unwrap.js';
+import { useToast } from '../../components/ui/Toast.jsx';
 import CreateEventFlow from './CreateEventFlow.jsx';
 import EventDashboard from './EventDashboard.jsx';
 import AdminHome from './AdminHome.jsx';
@@ -113,8 +115,10 @@ function EventCard({ event, active, onOpen }) {
 
 export default function ManagerWorkspace() {
     const user = useSelector((state) => state.auth.user);
+    const location = useLocation();
+    const navigate = useNavigate();
     const isAdmin = user?.role === 'admin';
-    const [view, setView] = useState('home');
+    const [view, setView] = useState(location.state?.view === 'create' ? 'create' : 'home');
     const [dashboard, setDashboard] = useState(null);
     const [events, setEvents] = useState([]);
     const [pending, setPending] = useState([]);
@@ -160,6 +164,10 @@ export default function ManagerWorkspace() {
     useEffect(() => {
         load();
     }, [isAdmin]);
+
+    useEffect(() => {
+        if (location.state?.view === 'create') setView('create');
+    }, [location.state]);
 
     const reviewEvent = async (eventId, action) => {
         try {
@@ -307,10 +315,19 @@ export default function ManagerWorkspace() {
                 <CreateEventFlow
                     reload={load}
                     notice={setNotice}
-                    onCancel={goHome}
+                    onCancel={() => {
+                        setView('home');
+                        navigate('/dashboard', { replace: true });
+                    }}
                     onCreated={async (event) => {
                         await load();
-                        await openEventDashboard(event);
+                        navigate(`/dashboard/events/${event._id || event.id}`, {
+                            state: {
+                                eventId: event._id || event.id,
+                                eventItem: { ...event, is_owner: true, event_handler_type: 'Owner' },
+                                name: event.title
+                            }
+                        });
                     }}
                 />
             )}
@@ -489,7 +506,7 @@ function Coupons({ event, rows, reload, notice }) {
 
 function People({ event, data, reload, notice }) {
     const [guest, setGuest] = useState({ name: '', email: '' });
-    const [handler, setHandler] = useState({ email: '', type: 'staff' });
+    const [handler, setHandler] = useState({ email: '', type: 'Event_Scanner' });
     if (!event) return <Panel title="People"><p className="mt-8 text-sm text-ink/55">Select an event first.</p></Panel>;
     const addGuest = async (e) => {
         e.preventDefault();
@@ -505,14 +522,23 @@ function People({ event, data, reload, notice }) {
     const addHandler = async (e) => {
         e.preventDefault();
         try {
-            await apiClient.managerAddHandler({ ...handler, eventId: event._id });
-            setHandler({ email: '', type: 'staff' });
+            await apiClient.managerAddHandler({ ...handler, eventId: event._id, type: handler.type || 'Event_Scanner' });
+            setHandler({ email: '', type: 'Event_Scanner' });
             notice('Team invite created.');
             reload();
         } catch (error) {
             notice(error.response?.data?.message || 'Team invite failed.');
         }
     };
+    const teamRows = (data.handlers || []).map((row) => ({
+        ...row,
+        role: row.userType === 'Event_Scanner'
+            ? 'Event Scanner'
+            : row.userType === 'Manager'
+                ? 'Event Manager'
+                : row.userType || 'Staff',
+        status: row.invitationStatus === 'A' ? 'Accepted' : row.invitationStatus === 'D' ? 'Declined' : 'Pending'
+    }));
     return (
         <Panel title="Guests & team">
             <div className="grid gap-10 lg:grid-cols-2">
@@ -531,7 +557,7 @@ function People({ event, data, reload, notice }) {
                         <input required type="email" className="min-w-0 flex-1 border border-ink/15 bg-transparent px-2 py-2" placeholder="Email" value={handler.email} onChange={(e) => setHandler({ ...handler, email: e.target.value })} />
                         <button className="bg-ink px-3 text-white"><Plus size={15} /></button>
                     </form>
-                    <Table rows={data.handlers} columns={['email', 'userType', 'invitationStatus']} />
+                    <Table rows={teamRows} columns={['email', 'role', 'status']} />
                 </div>
             </div>
         </Panel>
@@ -553,27 +579,75 @@ function normalizeScanCode(raw) {
 }
 
 function Gate({ event, notice }) {
+    const toast = useToast();
     const [code, setCode] = useState('');
+    const [fieldError, setFieldError] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [result, setResult] = useState(null);
+
     const scan = async (action) => {
-        if (!event) return notice('Select an event first.');
+        setFieldError('');
+        setResult(null);
+        if (!event) {
+            setFieldError('Select an event first.');
+            return notice('Select an event first.');
+        }
         const normalized = normalizeScanCode(code);
-        if (!normalized) return notice('Enter or scan a confirmation code.');
+        if (!normalized) {
+            setFieldError('Enter or scan a confirmation code.');
+            return;
+        }
+        setBusy(true);
         try {
             const response = await apiClient.scanTicket({ event_id: event._id, code: normalized, action });
-            notice(response.data.message);
-            setCode('');
+            const message = response.data.message || 'Ticket processed.';
+            setResult({ ok: true, message, status: response.data.ticket_status || response.data.status });
+            toast.success(message);
+            notice('');
+            if (action === 'scan') setCode('');
         } catch (error) {
-            notice(error.response?.data?.message || 'Ticket scan failed.');
+            const data = error.response?.data || {};
+            const status = data.ticket_status || data.status;
+            const message =
+                status === 'invalid'
+                    ? 'Invalid ticket — confirmation code not found for this event.'
+                    : status === 'already_claimed'
+                        ? 'Ticket already claimed.'
+                        : data.message || 'Ticket scan failed.';
+            setFieldError(message);
+            setResult({ ok: false, message, status });
+            notice('');
+        } finally {
+            setBusy(false);
         }
     };
+
     return (
         <Panel title="Gate check-in">
             <p className="mt-6 text-sm text-ink/55">Paste or type the QR confirmation code, then validate or claim.</p>
             <div className="mt-5 flex max-w-lg gap-2">
-                <input className="min-w-0 flex-1 border border-ink/15 bg-transparent px-3 py-3" placeholder="Scan or paste confirmation code" value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') scan('scan'); }} />
-                <button type="button" onClick={() => scan('validate')} className="border border-ink/15 px-4"><ScanLine size={18} /></button>
-                <button type="button" onClick={() => scan('scan')} className="bg-coral px-4 text-white"><Check size={18} /></button>
+                <input
+                    className={`min-w-0 flex-1 border bg-transparent px-3 py-3 ${
+                        fieldError ? 'border-coral' : 'border-ink/15'
+                    }`}
+                    placeholder="Scan or paste confirmation code"
+                    value={code}
+                    disabled={busy}
+                    onChange={(e) => {
+                        setCode(e.target.value);
+                        if (fieldError) setFieldError('');
+                    }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') scan('scan'); }}
+                />
+                <button type="button" disabled={busy} onClick={() => scan('validate')} className="border border-ink/15 px-4 disabled:opacity-60">
+                    <ScanLine size={18} />
+                </button>
+                <button type="button" disabled={busy} onClick={() => scan('scan')} className="bg-coral px-4 text-white disabled:opacity-60">
+                    <Check size={18} />
+                </button>
             </div>
+            {fieldError ? <p className="mt-3 text-sm text-coral">{fieldError}</p> : null}
+            {result?.ok ? <p className="mt-3 text-sm text-moss">{result.message}</p> : null}
         </Panel>
     );
 }

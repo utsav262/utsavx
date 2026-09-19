@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import { setUser } from '../store/index.js';
 import { apiClient } from '../api/index.js';
 import ManagerAuthShell, {
@@ -11,9 +11,13 @@ import ManagerAuthShell, {
 export default function AdminSignIn() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const user = useSelector((state) => state.auth.user);
     const [form, setForm] = useState({ email: '', password: '' });
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
+
+    if (user?.role === 'admin') return <Navigate to="/admin" replace />;
+    if (user?.role === 'organizer') return <Navigate to="/manager" replace />;
 
     const submit = async (event) => {
         event.preventDefault();
@@ -31,7 +35,7 @@ export default function AdminSignIn() {
                 return;
             }
             dispatch(setUser(response.data));
-            navigate('/admin');
+            navigate('/admin', { replace: true });
         } catch (failure) {
             setError(failure.response?.data?.message || 'Admin sign in failed.');
         } finally {

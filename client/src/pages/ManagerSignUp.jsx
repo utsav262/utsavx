@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import { setUser } from '../store/index.js';
 import { apiClient } from '../api/index.js';
 import ManagerAuthShell, {
@@ -11,6 +11,7 @@ import ManagerAuthShell, {
 export default function ManagerSignUp() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const user = useSelector((state) => state.auth.user);
     const [form, setForm] = useState({
         name: '',
         email: '',
@@ -19,6 +20,9 @@ export default function ManagerSignUp() {
     });
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
+
+    if (user?.role === 'organizer') return <Navigate to="/dashboard" replace />;
+    if (user?.role === 'admin') return <Navigate to="/admin" replace />;
 
     const submit = async (event) => {
         event.preventDefault();
@@ -42,7 +46,7 @@ export default function ManagerSignUp() {
                 role: 'organizer'
             });
             dispatch(setUser(response.data));
-            navigate('/manager');
+            navigate('/dashboard', { replace: true });
         } catch (failure) {
             setError(failure.response?.data?.message || 'Could not create manager account.');
         } finally {

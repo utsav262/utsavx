@@ -24,6 +24,12 @@ New accounts need passwords of **8+ characters with a letter and a number**. In 
 
 ## User flows
 
+### Dashboard (organizer + staff)
+1. Login → `/dashboard` (Live / Past / Draft event list)
+2. Tap **Dashboard** on a card → `/dashboard/events/:id` (role-based hub)
+3. Roles are **per event** (`Owner`, `Manager`, `Event Scanner`, `Ambassador`…)
+4. Scanners get check-ins; owners get full overview; invites land via **Requests**
+
 ### Guest / Customer
 1. Browse `/` or `/events`
 2. Open an event → **Get tickets** → Cart → Checkout
@@ -32,9 +38,9 @@ New accounts need passwords of **8+ characters with a letter and a number**. In 
 
 ### Manager (organizer)
 1. `/manager/login` or `/manager/signup` (or customer → Host events → **Become a manager**)
-2. `/manager` → **Create event** → **Submit for approval**
-3. After admin approval, event is public and sellable
-4. Event dashboard: sales, tickets, people, coupons, check-in scan
+2. Lands on `/dashboard` → **Create event** → submit for approval
+3. After admin approval, event is Live and sellable
+4. Event dashboard: sales, tickets, people, check-in
 
 ### Admin
 1. `/admin/login` → `/admin`

@@ -3,12 +3,25 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { setUser } from '../store/index.js';
 import { apiClient } from '../api/index.js';
+import { unwrapList } from '../lib/unwrap.js';
 
 function homeForRole(role, from) {
     if (from && from !== '/login') return from;
     if (role === 'admin') return '/admin';
-    if (role === 'organizer') return '/manager';
+    if (role === 'organizer') return '/dashboard';
     return '/tickets';
+}
+
+async function destinationAfterAuth(user, from) {
+    if (user?.staffEvents?.length) return '/dashboard';
+    try {
+        const response = await apiClient.myInvitations({ status: 'P' });
+        if (unwrapList(response).length) return '/invitations';
+    } catch {
+        /* fall through to role home */
+    }
+    if (user?.role === 'organizer' || user?.role === 'admin') return homeForRole(user?.role, from);
+    return homeForRole(user?.role, from);
 }
 
 export default function Login() {
@@ -26,7 +39,8 @@ export default function Login() {
             const payload = signup ? form : { email: form.email, password: form.password };
             const response = signup ? await apiClient.register(payload) : await apiClient.login(payload);
             dispatch(setUser(response.data));
-            navigate(homeForRole(response.data.user?.role, from), { replace: true });
+            const next = await destinationAfterAuth(response.data.user, from);
+            navigate(next, { replace: true });
         } catch (failure) {
             setError(failure.response?.data?.message || 'Could not authenticate.');
         }
