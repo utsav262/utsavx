@@ -19,6 +19,7 @@ export const apiClient = {
     createOrder: (payload) => api.post('/orders', payload),
     createIntent: (orderId) => api.post(`/payments/${orderId}/intent`),
     completeDemo: (orderId) => api.post(`/payments/${orderId}/complete-demo`),
+    verifyRazorpay: (payload) => api.post('/payments/razorpay/verify', payload),
     managerDashboard: (range = 'week') => api.get('/manager/dashboard/home', { params: { range } }),
     managerEvents: () => api.get('/manager/events'),
     managerEvent: (eventId) => api.get(`/manager/events/${eventId}`),

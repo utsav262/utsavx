@@ -17,7 +17,8 @@ export async function createOrder(req, res) {
         return { ticketTypeId: type._id, name: type.name, quantity: item.quantity, unitPrice: type.price };
     });
     const total = selected.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-    const demoCheckout = env.allowDemoPayments && !env.stripeSecretKey;
+    const onlinePayments = env.hasRazorpay || env.hasStripe;
+    const demoCheckout = env.allowDemoPayments && !onlinePayments;
     const order = await BookingOrder.create({
         orderNumber: `UTX-${crypto.randomBytes(4).toString('hex').toUpperCase()}`,
         user: req.user._id,
@@ -26,17 +27,18 @@ export async function createOrder(req, res) {
         total,
         currency: 'INR',
         idempotencyKey,
-        status: demoCheckout ? 'paid' : 'pending'
+        status: demoCheckout || total === 0 ? 'paid' : 'pending'
     });
 
-    if (demoCheckout) await issueTickets(order);
+    if (order.status === 'paid') await issueTickets(order);
 
     res.status(201).json({
         order,
         result: order,
-        paymentRequired: !demoCheckout,
+        paymentRequired: order.status !== 'paid',
         demoPayment: demoCheckout,
-        ticketsIssued: demoCheckout
+        provider: env.hasRazorpay ? 'razorpay' : env.hasStripe ? 'stripe' : demoCheckout ? 'demo' : null,
+        ticketsIssued: order.status === 'paid'
     });
 }
 

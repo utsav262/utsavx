@@ -12,7 +12,7 @@ A MERN event ticketing platform for India — customer, organizer, and admin wor
 
 API: `http://localhost:5050/api/v1`.
 
-New accounts need passwords of **8+ characters with a letter and a number**. In production, set Stripe keys (or `ALLOW_DEMO_PAYMENTS=true` only if you intentionally want free checkout), a unique `JWT_SECRET`, and `CLIENT_URL`.
+New accounts need passwords of **8+ characters with a letter and a number**. In production, set Razorpay keys (or `ALLOW_DEMO_PAYMENTS=true` only if you intentionally want free checkout), a unique `JWT_SECRET`, and `CLIENT_URL`.
 
 ### Demo accounts
 
@@ -34,7 +34,7 @@ New accounts need passwords of **8+ characters with a letter and a number**. In 
 1. Browse `/` or `/events`
 2. Open an event → **Get tickets** → Cart → Checkout
 3. Sign in / sign up at `/login` if needed (returns to checkout)
-4. Demo pay → tickets + QR at `/tickets`
+4. Pay with Razorpay → tickets + QR at `/tickets`
 
 ### Manager (organizer)
 1. `/manager/login` or `/manager/signup` (or customer → Host events → **Become a manager**)
@@ -51,7 +51,16 @@ New accounts need passwords of **8+ characters with a letter and a number**. In 
 
 ## Payments
 
-Without Stripe keys, checkout completes locally in ₹ and issues tickets immediately.
+Configure **Razorpay** in `server/.env`:
+
+```
+RAZORPAY_KEY_ID=rzp_test_…
+RAZORPAY_KEY_SECRET=…
+```
+
+Checkout creates a Razorpay order, opens Checkout.js (UPI / card / netbanking), then verifies the signature server-side before issuing tickets.
+
+Without Razorpay (or Stripe) keys in development, checkout completes locally as a demo pay.
 
 ## Documentation
 

@@ -6,11 +6,16 @@ import { signOut } from '../../store/index.js';
 
 function roleLabel(user) {
     if (!user) return 'Guest';
-    if (user.staffRoleLabel) return user.staffRoleLabel;
-    if (user.staffRole === 'Event_Scanner') return 'Event Scanner';
+    // Account role wins — staff handler labels must not look like organizer "Manager".
     if (user.role === 'admin') return 'Admin';
     if (user.role === 'organizer') return 'Manager';
-    if (user.role === 'customer') return 'Customer';
+    if (user.role === 'customer') {
+        if (user.staffRole && user.staffRole !== 'Manager') {
+            return user.staffRoleLabel || user.staffRole;
+        }
+        if (user.staffRole === 'Manager') return 'Event Manager';
+        return 'Customer';
+    }
     return 'Guest';
 }
 

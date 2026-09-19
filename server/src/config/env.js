@@ -7,8 +7,10 @@ dotenv.config({ path: path.join(serverRoot, '.env') });
 dotenv.config({ path: path.join(serverRoot, '../.env') });
 
 const isProduction = (process.env.NODE_ENV || 'development') === 'production';
+const hasRazorpay = Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
+const hasStripe = Boolean(process.env.STRIPE_SECRET_KEY);
 const allowDemoPayments = process.env.ALLOW_DEMO_PAYMENTS === 'true'
-    || (!isProduction && !process.env.STRIPE_SECRET_KEY);
+    || (!isProduction && !hasRazorpay && !hasStripe);
 
 export const env = {
     nodeEnv: process.env.NODE_ENV || 'development',
@@ -21,6 +23,10 @@ export const env = {
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
     stripeSecretKey: process.env.STRIPE_SECRET_KEY,
     stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+    razorpayKeyId: process.env.RAZORPAY_KEY_ID || '',
+    razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || '',
+    hasRazorpay,
+    hasStripe,
     allowDemoPayments
 };
 

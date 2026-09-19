@@ -9,18 +9,25 @@ function homeForRole(role, from) {
     if (from && from !== '/login') return from;
     if (role === 'admin') return '/admin';
     if (role === 'organizer') return '/dashboard';
-    return '/tickets';
+    return '/';
 }
 
 async function destinationAfterAuth(user, from) {
-    if (user?.staffEvents?.length) return '/dashboard';
-    try {
-        const response = await apiClient.myInvitations({ status: 'P' });
-        if (unwrapList(response).length) return '/invitations';
-    } catch {
-        /* fall through to role home */
+    // Customer accounts stay on the customer surface unless they have staff work.
+    if (user?.role === 'customer') {
+        if (from && from !== '/login') return from;
+        if (user?.staffEvents?.length) return '/dashboard';
+        try {
+            const response = await apiClient.myInvitations({ status: 'P' });
+            if (unwrapList(response).length) return '/invitations';
+        } catch {
+            /* fall through */
+        }
+        return '/';
     }
-    if (user?.role === 'organizer' || user?.role === 'admin') return homeForRole(user?.role, from);
+    if (user?.role === 'organizer' || user?.role === 'admin') {
+        return homeForRole(user.role, from);
+    }
     return homeForRole(user?.role, from);
 }
 

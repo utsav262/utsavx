@@ -2,7 +2,11 @@
     "name": "utsavx-api",
     "version": "1.0.0",
     "type": "module",
-    "scripts": { "dev": "node --watch src/server.js", "start": "node src/server.js", "seed": "node src/scripts/seed.js" },
+    "scripts": {
+        "dev": "node --watch src/server.js",
+        "start": "node src/server.js",
+        "seed": "node src/scripts/seed.js"
+    },
     "dependencies": {
         "bcryptjs": "^2.4.3",
         "cors": "^2.8.5",
@@ -15,6 +19,7 @@
         "mongoose": "^8.9.5",
         "morgan": "^1.10.0",
         "rate-limit-redis": "^4.2.0",
+        "razorpay": "^2.9.8",
         "stripe": "^17.5.0",
         "zod": "^3.24.1"
     }
