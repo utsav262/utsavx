@@ -1,7 +1,9 @@
 import crypto from 'node:crypto';
+import bcrypt from 'bcryptjs';
 import Event from '../models/Event.js';
 import EventHandler from '../models/EventHandler.js';
 import BookingOrder from '../models/BookingOrder.js';
+import User from '../models/User.js';
 import { issueTickets } from './ticketService.js';
 import { reserveInventory, releaseInventory } from './inventoryService.js';
 
@@ -40,8 +42,37 @@ export async function assertSellAccess(user, eventId) {
 }
 
 /**
+ * Resolve the buyer account for a sold ticket.
+ * Prefers an existing user by attendee email so "My tickets" on web shows the sale.
+ * Creates a customer account when the email is new.
+ */
+async function resolveBuyerUser(attendee, fallbackSeller) {
+    const email = String(attendee?.email || '').trim().toLowerCase();
+    if (!email) return fallbackSeller;
+
+    const existing = await User.findOne({ email });
+    if (existing) return existing;
+
+    const name = [attendee.first_name, attendee.last_name]
+        .map((part) => String(part || '').trim())
+        .filter(Boolean)
+        .join(' ') || email.split('@')[0];
+    const tempPassword = `Tix${crypto.randomBytes(4).toString('hex')}1a`;
+    return User.create({
+        name,
+        email,
+        passwordHash: await bcrypt.hash(tempPassword, 12),
+        passwordPlain: tempPassword,
+        role: 'customer'
+    });
+}
+
+/**
  * Cash / door sell used by owner and accepted handlers.
  * tickets[]: { event_ticket_id, first_name, last_name, delivery_method, email, phone, price? }
+ *
+ * Tickets are owned by the attendee (buyer email), not the selling manager,
+ * so they appear under that user's My tickets on web/app.
  */
 export async function sellTicketOrders({ user, eventId, tickets, purchaseSource, complimentary = false }) {
     if (!eventId || !Array.isArray(tickets) || !tickets.length) {
@@ -58,7 +89,7 @@ export async function sellTicketOrders({ user, eventId, tickets, purchaseSource,
     }
 
     const isGate = String(purchaseSource || '').toUpperCase().includes('GATE');
-    const grouped = new Map();
+    const rows = [];
 
     for (const row of tickets) {
         const ticketTypeId = row.event_ticket_id || row.ticketTypeId || row.ticket_type_id;
@@ -80,58 +111,101 @@ export async function sellTicketOrders({ user, eventId, tickets, purchaseSource,
                 ? Math.max(0, Number(row.price) || 0)
                 : Math.max(0, Number(type.price) || 0);
 
-        const key = String(type._id);
-        const existing = grouped.get(key) || {
-            ticketTypeId: type._id,
-            name: type.name,
-            quantity: 0,
-            unitPrice,
-            attendees: []
-        };
-        existing.quantity += 1;
-        existing.attendees.push({
+        const attendee = {
             first_name: row.first_name || row.firstName || 'Guest',
             last_name: row.last_name || row.lastName || '',
             delivery_method: row.delivery_method || row.deliveryMethod || 'email',
-            email: row.email || '',
+            email: String(row.email || '').trim().toLowerCase(),
             phone: row.phone || ''
+        };
+
+        const buyer = await resolveBuyerUser(attendee, user);
+        rows.push({
+            buyer,
+            ticketTypeId: type._id,
+            name: type.name,
+            unitPrice,
+            attendee
         });
-        grouped.set(key, existing);
     }
 
-    const lines = [...grouped.values()];
-    await reserveInventory(eventId, lines, { gate: isGate || complimentary });
+    // Inventory is reserved once for the full sale quantity.
+    const inventoryLines = [];
+    const byType = new Map();
+    for (const row of rows) {
+        const key = String(row.ticketTypeId);
+        const existing = byType.get(key) || {
+            ticketTypeId: row.ticketTypeId,
+            name: row.name,
+            quantity: 0,
+            unitPrice: row.unitPrice
+        };
+        existing.quantity += 1;
+        byType.set(key, existing);
+    }
+    inventoryLines.push(...byType.values());
+    await reserveInventory(eventId, inventoryLines, { gate: isGate || complimentary });
 
-    let order;
+    // One booking per buyer so each account owns its tickets.
+    const byBuyer = new Map();
+    for (const row of rows) {
+        const key = String(row.buyer._id);
+        const bucket = byBuyer.get(key) || { buyer: row.buyer, lines: [], attendees: [] };
+        const typeKey = String(row.ticketTypeId);
+        let line = bucket.lines.find((item) => String(item.ticketTypeId) === typeKey && item.unitPrice === row.unitPrice);
+        if (!line) {
+            line = {
+                ticketTypeId: row.ticketTypeId,
+                name: row.name,
+                quantity: 0,
+                unitPrice: row.unitPrice
+            };
+            bucket.lines.push(line);
+        }
+        line.quantity += 1;
+        bucket.attendees.push(row.attendee);
+        byBuyer.set(key, bucket);
+    }
+
+    const createdOrders = [];
+    const issuedAll = [];
+    const purchase_source = isGate ? 'GATE SALE' : complimentary ? 'COMPLIMENTARY' : 'CASH SALE';
+
     try {
-        const total = lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0);
-        order = await BookingOrder.create({
-            orderNumber: `CASH-${crypto.randomBytes(4).toString('hex').toUpperCase()}`,
-            user: user._id,
-            event: event._id,
-            items: lines.map((line) => ({
-                ticketTypeId: line.ticketTypeId,
-                name: line.name,
-                quantity: line.quantity,
-                unitPrice: line.unitPrice
-            })),
-            total,
-            currency: 'INR',
-            idempotencyKey: `sell-${user._id}-${event._id}-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
-            status: 'paid',
-            paymentIntentId: isGate ? 'GATE SALE' : complimentary ? 'COMPLIMENTARY' : 'CASH SALE'
-        });
+        for (const bucket of byBuyer.values()) {
+            const total = bucket.lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0);
+            const order = await BookingOrder.create({
+                orderNumber: `CASH-${crypto.randomBytes(4).toString('hex').toUpperCase()}`,
+                user: bucket.buyer._id,
+                soldBy: user._id,
+                event: event._id,
+                items: bucket.lines.map((line) => ({
+                    ticketTypeId: line.ticketTypeId,
+                    name: line.name,
+                    quantity: line.quantity,
+                    unitPrice: line.unitPrice
+                })),
+                total,
+                currency: 'INR',
+                idempotencyKey: `sell-${user._id}-${bucket.buyer._id}-${event._id}-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
+                status: 'paid',
+                paymentIntentId: purchase_source
+            });
+            const issued = await issueTickets(order);
+            createdOrders.push(order);
+            issuedAll.push(...issued);
+        }
     } catch (error) {
-        await releaseInventory(eventId, lines);
+        await releaseInventory(eventId, inventoryLines);
         throw error;
     }
 
-    const issued = await issueTickets(order);
     return {
-        order,
-        tickets: issued,
-        purchase_source: isGate ? 'GATE SALE' : complimentary ? 'COMPLIMENTARY' : 'CASH SALE',
-        attendees: lines.flatMap((line) => line.attendees)
+        order: createdOrders[0] || null,
+        orders: createdOrders,
+        tickets: issuedAll,
+        purchase_source,
+        attendees: rows.map((row) => row.attendee)
     };
 }
 

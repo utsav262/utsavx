@@ -151,9 +151,18 @@ export default function SellFlow() {
 
     const confirmSale = async () => {
         if (mode !== 'gate') {
-            const invalid = attendees.some((row) => !String(row.first_name || '').trim());
-            if (invalid) {
+            const missingName = attendees.some((row) => !String(row.first_name || '').trim());
+            if (missingName) {
                 setError('Each attendee needs a first name.');
+                return;
+            }
+            const missingEmail = attendees.some((row) => {
+                const method = row.delivery_method || 'email';
+                if (method !== 'email') return false;
+                return !String(row.email || '').trim();
+            });
+            if (missingEmail) {
+                setError('Each guest needs an email so the ticket appears in their account.');
                 return;
             }
         }

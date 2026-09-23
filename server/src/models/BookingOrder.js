@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 const bookingOrderSchema = new mongoose.Schema({
     orderNumber: { type: String, required: true, unique: true },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    /** Set on cash/gate/complimentary sells — the manager/staff who completed the sale. */
+    soldBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
     event: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true, index: true },
     items: [{
         ticketTypeId: mongoose.Schema.Types.ObjectId,

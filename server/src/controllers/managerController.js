@@ -315,7 +315,27 @@ function isSystemComplimentary(ticket) {
 }
 const money = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 const feeBreakdown = (pricePaid, paymentFee = 0, serviceFee = 0) => ({ configuration: null, label: null, fees: [{ type: 'payment', name: 'Payment Fee', amount: money(paymentFee), paid_by: 'host' }, { type: 'service', name: 'Service Fee', amount: money(serviceFee), paid_by: 'host' }, { type: 'commission', name: 'Commission', amount: 0, paid_by: 'host' }], price_paid: money(pricePaid), buyer_fee: 0, buyer_paid_total: money(pricePaid), host_fee: money(paymentFee + serviceFee), host_payout: money(pricePaid - paymentFee - serviceFee) });
-const orderRows = (orders, search = '') => orders.flatMap((order) => order.items.map((item, index) => ({ id: `${order._id}-${index}`, order_id: order._id, event_id: order.event, confirmation_id: order.orderNumber, ticket_type: item.name, username: order.user?.name || '', email: order.user?.email || '', payment_status: order.status === 'paid' ? 'Paid' : order.status, payment_type: 'UPI / Card', purchase_source: 'Online', price_paid: money(item.unitPrice * item.quantity), quantity: item.quantity, created_on: order.createdAt, parent_id: index === 0 ? 0 : String(order._id), all_tickets_count: order.items.reduce((sum, line) => sum + line.quantity, 0), fee_breakdown: feeBreakdown(item.unitPrice * item.quantity, 0, item.unitPrice * item.quantity * 0.05), group_fee_breakdown: feeBreakdown(order.total, 0, order.total * 0.05) }))).filter((row) => !search || [row.confirmation_id, row.ticket_type, row.username, row.email].some((value) => String(value).toLowerCase().includes(search.toLowerCase())));
+const orderRows = (orders, search = '') => orders.flatMap((order) => order.items.map((item, index) => ({
+    id: `${order._id}-${index}`,
+    order_id: order._id,
+    event_id: order.event,
+    confirmation_id: order.orderNumber,
+    ticket_type: item.name,
+    username: order.user?.name || '',
+    email: order.user?.email || '',
+    payment_status: order.status === 'paid' ? 'Paid' : order.status,
+    payment_type: order.soldBy || /SALE|COMPLIMENTARY/i.test(String(order.paymentIntentId || '')) ? 'Cash / Door' : 'UPI / Card',
+    purchase_source: order.paymentIntentId && /SALE|COMPLIMENTARY/i.test(String(order.paymentIntentId))
+        ? order.paymentIntentId
+        : 'Online',
+    price_paid: money(item.unitPrice * item.quantity),
+    quantity: item.quantity,
+    created_on: order.createdAt,
+    parent_id: index === 0 ? 0 : String(order._id),
+    all_tickets_count: order.items.reduce((sum, line) => sum + line.quantity, 0),
+    fee_breakdown: feeBreakdown(item.unitPrice * item.quantity, 0, item.unitPrice * item.quantity * 0.05),
+    group_fee_breakdown: feeBreakdown(order.total, 0, order.total * 0.05)
+}))).filter((row) => !search || [row.confirmation_id, row.ticket_type, row.username, row.email].some((value) => String(value).toLowerCase().includes(search.toLowerCase())));
 const paged = (rows, page, length) => ({ rows: rows.slice((page - 1) * length, page * length), pagination: { current_page: page, last_page: Math.max(1, Math.ceil(rows.length / length)), has_next_page: page * length < rows.length } });
 const eventTotals = (event, orders, tickets) => { const gross = orders.reduce((sum, order) => sum + order.total, 0); const sold = orders.reduce((sum, order) => sum + order.items.reduce((count, item) => count + item.quantity, 0), 0); const checkIns = tickets.filter((ticket) => ticket.status === 'used').length; return { gross_sales: money(gross), fees: money(gross * 0.05), earnings: money(gross * 0.95), apsession_earnings: money(gross * 0.05), outlet_earnings: 0, ambassador_earnings: 0, commission: 0, cash_sales: 0, payout_due: money(gross * 0.95), remitted: 0, remittance: { remitted: 0, pending: 0, last_remitted_at: null }, total_sold: sold, claimed_tickets: checkIns, unclaimed_tickets: Math.max(0, sold - checkIns), sales_by_type: event.ticketTypes.map((type) => ({ ticket_type: type.name, name: type.name, sold: orders.reduce((sum, order) => sum + order.items.filter((item) => String(item.ticketTypeId) === String(type._id)).reduce((count, item) => count + item.quantity, 0), 0), available: type.quantity, percent: type.quantity ? Math.round((type.sold / type.quantity) * 100) : 0 })) }; };
 export async function listOrders(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const orders = await BookingOrder.find({ event: event._id, status: 'paid' }).populate('user', 'name email').sort({ createdAt: -1 }).lean(); const type = ['summary', 'purchase_history', 'transactions'].includes(req.query.type) ? req.query.type : 'summary'; const rows = orderRows(orders, String(req.query.search || '').trim()); const page = Math.max(1, Number(req.query.page || 1)); const length = Math.min(100, Math.max(1, Number(req.query.length || 20))); const tickets = await Ticket.find({ event: event._id }).lean(); const result = { type, event_link: event.slug, ...eventTotals(event, orders, tickets), table_data: type === 'summary' ? null : paged(rows, page, length).rows }; return success(res, result, 'Dashboard data fetched successfully', 200, type === 'summary' ? {} : paged(rows, page, length).pagination); }
