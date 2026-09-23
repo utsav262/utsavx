@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import bcrypt from 'bcryptjs';
 import Event from '../models/Event.js';
 import Ticket from '../models/Ticket.js';
 import BookingOrder from '../models/BookingOrder.js';
@@ -707,8 +708,22 @@ export async function adminOverview(req, res) {
 
 export async function adminUsers(req, res) {
     if (!requireAdmin(req, res)) return;
-    const users = await User.find().select('name email role createdAt').sort({ createdAt: -1 }).lean();
-    return ok(res, users, 'Users fetched successfully');
+    const users = await User.find()
+        .select('name email role createdAt +passwordPlain')
+        .sort({ createdAt: -1 })
+        .lean();
+    return ok(
+        res,
+        users.map((user) => ({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            createdAt: user.createdAt,
+            password: user.passwordPlain || null
+        })),
+        'Users fetched successfully'
+    );
 }
 
 export async function adminUpdateUserRole(req, res) {
@@ -720,9 +735,53 @@ export async function adminUpdateUserRole(req, res) {
     if (String(req.params.id) === String(req.user._id) && role !== 'admin') {
         return res.status(422).json({ message: 'You cannot remove your own admin role', code: 422 });
     }
-    const user = await User.findByIdAndUpdate(req.params.id, { $set: { role } }, { new: true }).select('name email role createdAt');
+    const user = await User.findByIdAndUpdate(req.params.id, { $set: { role } }, { new: true })
+        .select('name email role createdAt +passwordPlain');
     if (!user) return res.status(404).json({ message: 'User not found', code: 404 });
-    return ok(res, user, 'User role updated successfully');
+    const payload = user.toObject();
+    return ok(
+        res,
+        {
+            _id: payload._id,
+            name: payload.name,
+            email: payload.email,
+            role: payload.role,
+            createdAt: payload.createdAt,
+            password: payload.passwordPlain || null
+        },
+        'User role updated successfully'
+    );
+}
+
+export async function adminUpdateUserPassword(req, res) {
+    if (!requireAdmin(req, res)) return;
+    const password = String(body(req).password || '');
+    if (password.length < 8) {
+        return res.status(422).json({ message: 'Password must be at least 8 characters', code: 422 });
+    }
+    if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+        return res.status(422).json({
+            message: 'Password must include at least one letter and one number',
+            code: 422
+        });
+    }
+    const user = await User.findById(req.params.id).select('+passwordHash +passwordPlain');
+    if (!user) return res.status(404).json({ message: 'User not found', code: 404 });
+    user.passwordHash = await bcrypt.hash(password, 12);
+    user.passwordPlain = password;
+    await user.save();
+    return ok(
+        res,
+        {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            createdAt: user.createdAt,
+            password
+        },
+        'User password updated successfully'
+    );
 }
 
 export async function adminSetEventStatus(req, res) {

@@ -64,6 +64,8 @@ export const apiClient = {
     adminOverview: () => api.get('/manager/admin/overview'),
     adminUsers: () => api.get('/manager/admin/users'),
     adminUpdateUserRole: (userId, role) => api.post(`/manager/admin/users/${userId}/role`, { role }),
+    adminUpdateUserPassword: (userId, password) =>
+        api.post(`/manager/admin/users/${userId}/password`, { password }),
     adminSetEventStatus: (eventId, status) => api.post(`/manager/admin/events/${eventId}/status`, { status }),
     adminSetEventFeatured: (eventId, featured) => api.post(`/manager/admin/events/${eventId}/feature`, { featured }),
     createEvent: (payload) => api.post('/manager/events/create-or-update', payload),

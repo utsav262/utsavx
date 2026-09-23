@@ -85,6 +85,7 @@ export async function register(req, res) {
         name: name || username,
         email,
         passwordHash: await bcrypt.hash(password, 12),
+        passwordPlain: String(password),
         role: safeRole
     });
     const profile = await enrichUser(user);

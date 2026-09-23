@@ -16,6 +16,7 @@ router.get('/events/pending-review', requireAdmin, manager.pendingEvents);
 router.get('/admin/overview', requireAdmin, manager.adminOverview);
 router.get('/admin/users', requireAdmin, manager.adminUsers);
 router.post('/admin/users/:id/role', requireAdmin, manager.adminUpdateUserRole);
+router.post('/admin/users/:id/password', requireAdmin, manager.adminUpdateUserPassword);
 router.post('/admin/events/:id/status', requireAdmin, manager.adminSetEventStatus);
 router.post('/admin/events/:id/feature', requireAdmin, manager.adminSetEventFeatured);
 router.get('/events/:id', manager.singleEvent);

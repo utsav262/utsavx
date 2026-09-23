@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BarChart3, CalendarDays, Check, Coins, Shield, Ticket, Users, X } from 'lucide-react';
+import { BarChart3, CalendarDays, Check, Coins, Eye, EyeOff, KeyRound, Shield, Ticket, Users, X } from 'lucide-react';
 import { money } from '../../lib/money.js';
 
 function Stat({ label, value, Icon }) {
@@ -8,6 +8,89 @@ function Stat({ label, value, Icon }) {
             <Icon size={17} className="text-coral" />
             <p className="mt-4 text-[10px] font-extrabold uppercase tracking-[.18em] text-ink/50">{label}</p>
             <p className="serif mt-1 text-3xl">{value}</p>
+        </div>
+    );
+}
+
+function UserPasswordCell({ user, onSetPassword }) {
+    const [visible, setVisible] = useState(false);
+    const [editing, setEditing] = useState(false);
+    const [draft, setDraft] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    const save = async () => {
+        if (!draft.trim() || saving) return;
+        setSaving(true);
+        try {
+            await onSetPassword(user._id, draft.trim());
+            setDraft('');
+            setEditing(false);
+            setVisible(true);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="min-w-[220px] space-y-2">
+            <div className="flex items-center gap-2">
+                <code className="max-w-[140px] truncate rounded bg-ink/5 px-2 py-1 text-xs font-bold">
+                    {user.password
+                        ? visible
+                            ? user.password
+                            : '••••••••'
+                        : '— not stored —'}
+                </code>
+                {user.password ? (
+                    <button
+                        type="button"
+                        onClick={() => setVisible((v) => !v)}
+                        className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-coral"
+                        title={visible ? 'Hide password' : 'Show password'}
+                    >
+                        {visible ? <EyeOff size={14} /> : <Eye size={14} />}
+                        {visible ? 'Hide' : 'Show'}
+                    </button>
+                ) : null}
+            </div>
+            {editing ? (
+                <div className="flex flex-wrap items-center gap-2">
+                    <input
+                        type="text"
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                        placeholder="New password"
+                        className="min-w-[140px] flex-1 border border-ink/15 bg-transparent px-2 py-1.5 text-xs"
+                        autoComplete="new-password"
+                    />
+                    <button
+                        type="button"
+                        disabled={saving || draft.trim().length < 8}
+                        onClick={save}
+                        className="bg-coral px-2 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-white disabled:opacity-50"
+                    >
+                        {saving ? 'Saving…' : 'Save'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setEditing(false);
+                            setDraft('');
+                        }}
+                        className="border border-ink/15 px-2 py-1.5 text-[10px] font-extrabold uppercase tracking-wider"
+                    >
+                        Cancel
+                    </button>
+                </div>
+            ) : (
+                <button
+                    type="button"
+                    onClick={() => setEditing(true)}
+                    className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-ink/60 hover:text-coral"
+                >
+                    <KeyRound size={12} /> Change password
+                </button>
+            )}
         </div>
     );
 }
@@ -31,7 +114,8 @@ export default function AdminHome({
     onReject,
     onSetStatus,
     onToggleFeatured,
-    onSetRole
+    onSetRole,
+    onSetPassword
 }) {
     const [tab, setTab] = useState('overview');
     const [filter, setFilter] = useState('all');
@@ -83,6 +167,7 @@ export default function AdminHome({
                             <li className="border-t border-ink/10 pt-3">Publish, unpublish, feature, or cancel any event</li>
                             <li className="border-t border-ink/10 pt-3">Open any organizer dashboard (sales, tickets, check-in)</li>
                             <li className="border-t border-ink/10 pt-3">Change user roles: customer, organizer, admin</li>
+                            <li className="border-t border-ink/10 pt-3">View and change any user password</li>
                         </ul>
                     </div>
                     <div className="border border-ink/10 bg-white p-6">
@@ -272,10 +357,10 @@ export default function AdminHome({
 
             {tab === 'users' && (
                 <div className="mt-8 overflow-x-auto border-y border-ink/15">
-                    <table className="w-full min-w-[640px] text-left text-sm">
+                    <table className="w-full min-w-[900px] text-left text-sm">
                         <thead>
                             <tr>
-                                {['Name', 'Email', 'Role', 'Change role'].map((column) => (
+                                {['Name', 'Email', 'Role', 'Password', 'Change role'].map((column) => (
                                     <th
                                         key={column}
                                         className="px-3 py-3 text-[10px] uppercase tracking-wider text-ink/50"
@@ -287,13 +372,16 @@ export default function AdminHome({
                         </thead>
                         <tbody>
                             {users.map((user) => (
-                                <tr key={user._id} className="border-t border-ink/10">
+                                <tr key={user._id} className="border-t border-ink/10 align-top">
                                     <td className="px-3 py-3 font-bold">{user.name}</td>
                                     <td className="px-3 py-3 text-ink/65">{user.email}</td>
                                     <td className="px-3 py-3">
                                         <span className="rounded-full bg-moss/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-moss">
                                             {user.role}
                                         </span>
+                                    </td>
+                                    <td className="px-3 py-3">
+                                        <UserPasswordCell user={user} onSetPassword={onSetPassword} />
                                     </td>
                                     <td className="px-3 py-3">
                                         <select

@@ -125,12 +125,17 @@ export async function ensureDemoUsers() {
     for (const demo of demoUsers) {
         let user = await User.findOne({ email: demo.email });
         if (!user) {
-            user = await User.create({ ...demo, passwordHash });
+            user = await User.create({
+                ...demo,
+                passwordHash,
+                passwordPlain: DEMO_PASSWORD
+            });
         } else {
             // Keep demo accounts aligned with README roles/passwords across re-seeds.
             user.name = demo.name;
             user.role = demo.role;
             user.passwordHash = passwordHash;
+            user.passwordPlain = DEMO_PASSWORD;
             await user.save();
         }
         users[demo.role === 'organizer' ? 'organizer' : demo.role] = user;

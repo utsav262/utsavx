@@ -216,6 +216,17 @@ export default function ManagerWorkspace() {
         }
     };
 
+    const setUserPassword = async (userId, password) => {
+        try {
+            await apiClient.adminUpdateUserPassword(userId, password);
+            setNotice('User password updated.');
+            await load();
+        } catch (error) {
+            setNotice(error.response?.data?.message || 'Could not update user password.');
+            throw error;
+        }
+    };
+
     const openEventDashboard = async (event) => {
         if (!event?._id) return;
         setEventLoading(true);
@@ -307,6 +318,7 @@ export default function ManagerWorkspace() {
                         onSetStatus={setEventStatus}
                         onToggleFeatured={toggleFeatured}
                         onSetRole={setUserRole}
+                        onSetPassword={setUserPassword}
                     />
                 ) : (
                     <ToolsHome

@@ -901,6 +901,28 @@ export const openApiSpec = {
                 responses: { 200: { description: 'Updated' } }
             }
         },
+        '/manager/admin/users/{id}/password': {
+            post: {
+                tags: ['Admin'],
+                summary: 'Update user password',
+                security: [{ bearerAuth: [] }],
+                parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+                requestBody: {
+                    content: {
+                        'application/json': {
+                            schema: {
+                                type: 'object',
+                                required: ['password'],
+                                properties: {
+                                    password: { type: 'string', minLength: 8 }
+                                }
+                            }
+                        }
+                    }
+                },
+                responses: { 200: { description: 'Updated' } }
+            }
+        },
         '/manager/admin/events/{id}/status': {
             post: {
                 tags: ['Admin'],
