@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { RedisStore } from 'rate-limit-redis';
-import { env } from './config/env.js';
+import { env, isAllowedClientOrigin } from './config/env.js';
 import { connectRedis, getRedis } from './config/redis.js';
 import authRoutes from './routes/auth.js';
 import eventRoutes, { getCategories, getCities, getCountryList } from './routes/events.js';
@@ -32,7 +32,8 @@ app.use(helmet({
 }));
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || origin === env.clientUrl) return callback(null, true);
+        if (isAllowedClientOrigin(origin)) return callback(null, true);
+        console.warn(`CORS blocked origin: ${origin}`);
         return callback(null, false);
     },
     credentials: true

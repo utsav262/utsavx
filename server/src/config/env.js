@@ -12,11 +12,24 @@ const hasStripe = Boolean(process.env.STRIPE_SECRET_KEY);
 const allowDemoPayments = process.env.ALLOW_DEMO_PAYMENTS === 'true'
     || (!isProduction && !hasRazorpay && !hasStripe);
 
+function normalizeOrigin(value) {
+    return String(value || '').trim().replace(/\/+$/, '');
+}
+
+/** CLIENT_URL plus optional comma-separated CLIENT_URLS (for Vercel previews, etc.). */
+const clientOrigins = [
+    process.env.CLIENT_URL,
+    ...(String(process.env.CLIENT_URLS || '').split(','))
+]
+    .map(normalizeOrigin)
+    .filter(Boolean);
+
 export const env = {
     nodeEnv: process.env.NODE_ENV || 'development',
     isProduction,
     port: Number(process.env.PORT || 5050),
-    clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
+    clientUrl: clientOrigins[0] || 'http://localhost:5173',
+    clientOrigins: clientOrigins.length ? clientOrigins : ['http://localhost:5173'],
     mongoUri: process.env.MONGO_URI,
     redisUrl: process.env.REDIS_URL,
     /** Minutes unpaid checkout holds inventory before auto-release. */
@@ -35,6 +48,28 @@ export const env = {
     hasStripe,
     allowDemoPayments
 };
+
+export function isAllowedClientOrigin(origin) {
+    if (!origin) return true;
+    const normalized = normalizeOrigin(origin);
+    if (env.clientOrigins.includes(normalized)) return true;
+    // Allow Vercel preview URLs when primary client is on *.vercel.app
+    try {
+        const incoming = new URL(normalized);
+        const allowedOnVercel = env.clientOrigins.some((allowed) => {
+            try {
+                const url = new URL(allowed);
+                return url.hostname.endsWith('.vercel.app');
+            } catch {
+                return false;
+            }
+        });
+        if (allowedOnVercel && incoming.hostname.endsWith('.vercel.app')) return true;
+    } catch {
+        return false;
+    }
+    return false;
+}
 
 if (!env.mongoUri || !env.jwtSecret) {
     console.error('MONGO_URI and JWT_SECRET must be set. Copy server/.env.example to server/.env');
