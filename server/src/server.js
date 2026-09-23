@@ -104,7 +104,8 @@ async function configureRateLimiter() {
 
 async function start() {
     await mongoose.connect(env.mongoUri);
-    if (env.nodeEnv !== 'production') await seedIfEmpty();
+    // Ensure README demo accounts exist in every environment (including Render).
+    await seedIfEmpty();
     await connectRedis();
     await configureRateLimiter();
     startHoldExpiryJob({ intervalMs: 30_000 });
