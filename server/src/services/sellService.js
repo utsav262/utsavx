@@ -3,6 +3,7 @@ import Event from '../models/Event.js';
 import EventHandler from '../models/EventHandler.js';
 import BookingOrder from '../models/BookingOrder.js';
 import { issueTickets } from './ticketService.js';
+import { reserveInventory, releaseInventory } from './inventoryService.js';
 
 function canSellHandler(handler) {
     if (!handler || handler.invitationStatus !== 'A') return false;
@@ -36,54 +37,6 @@ export async function assertSellAccess(user, eventId) {
         throw error;
     }
     return { event, handler, isOwner: false };
-}
-
-async function applyInventory(event, lines, { gate = false } = {}, attempt = 0) {
-    for (const line of lines) {
-        const ticket = event.ticketTypes.id(line.ticketTypeId);
-        if (!ticket) {
-            const error = new Error('Ticket type not found');
-            error.statusCode = 404;
-            throw error;
-        }
-        const unlimited = Number(ticket.quantity || 0) === 0;
-        if (!gate) {
-            if (ticket.salesStatus === 'paused') {
-                const error = new Error(`Insufficient inventory for ${ticket.name}`);
-                error.statusCode = 409;
-                throw error;
-            }
-            if (!unlimited) {
-                const remaining = Number(ticket.quantity || 0) - Number(ticket.sold || 0);
-                if (remaining < line.quantity) {
-                    const error = new Error(`Insufficient inventory for ${ticket.name}`);
-                    error.statusCode = 409;
-                    throw error;
-                }
-            }
-        }
-        ticket.sold = Number(ticket.sold || 0) + line.quantity;
-        if (!gate && !unlimited && ticket.sold >= ticket.quantity) ticket.salesStatus = 'sold-out';
-    }
-
-    if (
-        !gate &&
-        event.ticketTypes.length &&
-        event.ticketTypes.every((ticket) => Number(ticket.quantity) > 0 && ticket.sold >= ticket.quantity)
-    ) {
-        event.status = 'sold-out';
-    }
-
-    try {
-        await event.save();
-        return event;
-    } catch (error) {
-        if (error.name === 'VersionError' && attempt < 5) {
-            const fresh = await Event.findById(event._id);
-            return applyInventory(fresh, lines, { gate }, attempt + 1);
-        }
-        throw error;
-    }
 }
 
 /**
@@ -147,25 +100,31 @@ export async function sellTicketOrders({ user, eventId, tickets, purchaseSource,
     }
 
     const lines = [...grouped.values()];
-    await applyInventory(event, lines, { gate: isGate || complimentary });
+    await reserveInventory(eventId, lines, { gate: isGate || complimentary });
 
-    const total = lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0);
-    const order = await BookingOrder.create({
-        orderNumber: `CASH-${crypto.randomBytes(4).toString('hex').toUpperCase()}`,
-        user: user._id,
-        event: event._id,
-        items: lines.map((line) => ({
-            ticketTypeId: line.ticketTypeId,
-            name: line.name,
-            quantity: line.quantity,
-            unitPrice: line.unitPrice
-        })),
-        total,
-        currency: 'INR',
-        idempotencyKey: `sell-${user._id}-${event._id}-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
-        status: 'paid',
-        paymentIntentId: isGate ? 'GATE SALE' : complimentary ? 'COMPLIMENTARY' : 'CASH SALE'
-    });
+    let order;
+    try {
+        const total = lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0);
+        order = await BookingOrder.create({
+            orderNumber: `CASH-${crypto.randomBytes(4).toString('hex').toUpperCase()}`,
+            user: user._id,
+            event: event._id,
+            items: lines.map((line) => ({
+                ticketTypeId: line.ticketTypeId,
+                name: line.name,
+                quantity: line.quantity,
+                unitPrice: line.unitPrice
+            })),
+            total,
+            currency: 'INR',
+            idempotencyKey: `sell-${user._id}-${event._id}-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
+            status: 'paid',
+            paymentIntentId: isGate ? 'GATE SALE' : complimentary ? 'COMPLIMENTARY' : 'CASH SALE'
+        });
+    } catch (error) {
+        await releaseInventory(eventId, lines);
+        throw error;
+    }
 
     const issued = await issueTickets(order);
     return {

@@ -4,7 +4,34 @@ import Stripe from 'stripe';
 import BookingOrder from '../models/BookingOrder.js';
 import { env } from '../config/env.js';
 import { issueTickets } from '../services/ticketService.js';
+import { releaseInventory } from '../services/inventoryService.js';
 import { success } from '../utils/response.js';
+
+async function markOrderPaid(order, extra = {}) {
+    order.status = 'paid';
+    order.holdExpiresAt = null;
+    Object.assign(order, extra);
+    await order.save();
+    await issueTickets(order);
+    return order;
+}
+
+async function assertHoldActive(order) {
+    if (order.status === 'paid') return true;
+    if (order.status === 'cancelled' || order.status === 'refunded') return false;
+    if (order.status !== 'pending') return false;
+    if (!order.holdExpiresAt || order.holdExpiresAt > new Date()) return true;
+
+    const cancelled = await BookingOrder.findOneAndUpdate(
+        { _id: order._id, status: 'pending' },
+        { $set: { status: 'cancelled' }, $unset: { holdExpiresAt: 1 } },
+        { new: true }
+    );
+    if (cancelled) {
+        try { await releaseInventory(cancelled.event, cancelled.items); } catch { /* ignore */ }
+    }
+    return false;
+}
 
 const stripe = env.stripeSecretKey ? new Stripe(env.stripeSecretKey) : null;
 const razorpay = env.hasRazorpay
@@ -23,12 +50,14 @@ export async function createIntent(req, res) {
         return success(res, { status: 'paid', orderId: order._id }, 'Order already paid');
     }
 
+    if (!(await assertHoldActive(order))) {
+        return res.status(410).json({ message: 'Checkout hold expired — create a new order', code: 410 });
+    }
+
     if (razorpay) {
         const amount = amountInPaise(order);
         if (amount <= 0) {
-            order.status = 'paid';
-            await order.save();
-            await issueTickets(order);
+            await markOrderPaid(order);
             return success(res, { status: 'paid', orderId: order._id }, 'Free order completed');
         }
 
@@ -123,6 +152,10 @@ export async function verifyRazorpay(req, res) {
         return success(res, fresh, 'Order already paid');
     }
 
+    if (!(await assertHoldActive(order))) {
+        return res.status(410).json({ message: 'Checkout hold expired — create a new order', code: 410 });
+    }
+
     if (order.paymentIntentId && order.paymentIntentId !== razorpayOrderId) {
         return res.status(400).json({ message: 'Razorpay order mismatch', code: 400 });
     }
@@ -140,11 +173,10 @@ export async function verifyRazorpay(req, res) {
         return res.status(400).json({ message: 'Invalid payment signature', code: 400 });
     }
 
-    await issueTickets(order);
-    order.status = 'paid';
-    if (!order.paymentIntentId) order.paymentIntentId = razorpayOrderId;
-    order.razorpayPaymentId = razorpayPaymentId;
-    await order.save();
+    await markOrderPaid(order, {
+        paymentIntentId: order.paymentIntentId || razorpayOrderId,
+        razorpayPaymentId: razorpayPaymentId
+    });
     const fresh = await BookingOrder.findById(order._id).populate('event', 'title startsAt venue imageUrl');
     return success(res, fresh, 'Payment verified');
 }
@@ -161,11 +193,17 @@ export async function completeDemo(req, res) {
     }
     const order = await BookingOrder.findOne({ _id: req.params.orderId, user: req.user._id });
     if (!order) return res.status(404).json({ message: 'Order not found' });
-    if (order.status !== 'paid') {
-        order.status = 'paid';
-        await order.save();
+    if (order.status === 'cancelled') {
+        return res.status(410).json({ message: 'Checkout hold expired — create a new order', code: 410 });
     }
-    await issueTickets(order);
+    if (order.status !== 'paid') {
+        if (!(await assertHoldActive(order))) {
+            return res.status(410).json({ message: 'Checkout hold expired — create a new order', code: 410 });
+        }
+        await markOrderPaid(order);
+    } else {
+        await issueTickets(order);
+    }
     const fresh = await BookingOrder.findById(order._id);
     return success(res, fresh, 'Order completed');
 }
@@ -183,7 +221,7 @@ export async function webhook(req, res) {
         const payment = event.data.object;
         const order = await BookingOrder.findOneAndUpdate(
             { paymentIntentId: payment.id, status: { $ne: 'paid' } },
-            { status: 'paid' },
+            { $set: { status: 'paid' }, $unset: { holdExpiresAt: 1 } },
             { new: true }
         );
         if (order) await issueTickets(order);

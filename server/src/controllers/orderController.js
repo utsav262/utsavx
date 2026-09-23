@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import BookingOrder from '../models/BookingOrder.js';
 import Ticket from '../models/Ticket.js';
-import { reserveInventory } from '../services/inventoryService.js';
+import { reserveInventory, releaseInventory } from '../services/inventoryService.js';
 import { issueTickets } from '../services/ticketService.js';
 import { env } from '../config/env.js';
 import { success } from '../utils/response.js';
@@ -19,16 +19,28 @@ export async function createOrder(req, res) {
     const total = selected.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
     const onlinePayments = env.hasRazorpay || env.hasStripe;
     const demoCheckout = env.allowDemoPayments && !onlinePayments;
-    const order = await BookingOrder.create({
-        orderNumber: `UTX-${crypto.randomBytes(4).toString('hex').toUpperCase()}`,
-        user: req.user._id,
-        event: event._id,
-        items: selected,
-        total,
-        currency: 'INR',
-        idempotencyKey,
-        status: demoCheckout || total === 0 ? 'paid' : 'pending'
-    });
+    const paidImmediately = demoCheckout || total === 0;
+    const holdExpiresAt = paidImmediately
+        ? null
+        : new Date(Date.now() + env.holdTtlMinutes * 60 * 1000);
+
+    let order;
+    try {
+        order = await BookingOrder.create({
+            orderNumber: `UTX-${crypto.randomBytes(4).toString('hex').toUpperCase()}`,
+            user: req.user._id,
+            event: event._id,
+            items: selected,
+            total,
+            currency: 'INR',
+            idempotencyKey,
+            status: paidImmediately ? 'paid' : 'pending',
+            holdExpiresAt
+        });
+    } catch (error) {
+        await releaseInventory(eventId, selected);
+        throw error;
+    }
 
     if (order.status === 'paid') await issueTickets(order);
 
@@ -38,7 +50,8 @@ export async function createOrder(req, res) {
         paymentRequired: order.status !== 'paid',
         demoPayment: demoCheckout,
         provider: env.hasRazorpay ? 'razorpay' : env.hasStripe ? 'stripe' : demoCheckout ? 'demo' : null,
-        ticketsIssued: order.status === 'paid'
+        ticketsIssued: order.status === 'paid',
+        holdExpiresAt: order.holdExpiresAt
     });
 }
 

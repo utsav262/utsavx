@@ -9,6 +9,14 @@ import GlobalSetting from '../models/GlobalSetting.js';
 import BookingOrder from '../models/BookingOrder.js';
 import Ticket from '../models/Ticket.js';
 import { success } from '../utils/response.js';
+import { env } from '../config/env.js';
+import {
+    cacheGet,
+    cacheSet,
+    catalogGeneration,
+    invalidateEventCaches,
+    listCacheKey
+} from '../services/cacheService.js';
 
 function escapeRegex(value) {
     return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -202,11 +210,18 @@ function buildPublishedFilter(query = {}) {
 }
 
 export async function listEvents(req, res) {
+    const gen = await catalogGeneration();
+    const cacheKey = listCacheKey(`cache:events:list:${gen}`, req.query);
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json(cached);
+
     const filter = buildPublishedFilter(req.query);
     const events = await Event.find(filter).sort({ startsAt: 1, _id: 1 }).limit(100).lean();
     const covers = await coversByEventIds(events.map((event) => event._id));
     const result = events.map((event) => toListItem(event, covers.get(String(event._id))));
-    res.json({ events: result, result, message: 'Success', code: 200 });
+    const body = { events: result, result, message: 'Success', code: 200 };
+    await cacheSet(cacheKey, body, env.cacheListTtlSeconds);
+    res.json(body);
 }
 
 export async function getEvent(req, res) {
@@ -219,6 +234,7 @@ export async function createEvent(req, res) {
         payload.status = 'review_pending';
     }
     const event = await Event.create(payload);
+    await invalidateEventCaches(event);
     res.status(201).json({
         event,
         result: event,
@@ -237,6 +253,7 @@ export async function updateEvent(req, res) {
         payload.status = alreadyLive && payload.status === 'sold-out' ? 'sold-out' : alreadyLive ? existing.status : 'review_pending';
     }
     const event = await Event.findOneAndUpdate(filter, { $set: payload }, { new: true, runValidators: true });
+    await invalidateEventCaches(event || existing);
     res.json({ event, result: event, code: 200, message: 'Event updated successfully' });
 }
 
@@ -247,6 +264,12 @@ export async function legacyListEvents(req, res) {
         if (req.query.date_from && req.query.date_to && new Date(req.query.date_to) < new Date(req.query.date_from)) {
             return res.status(422).json({ message: 'Invalid request', errors: { date_to: ['date_to must be after or equal to date_from'] }, code: 422 });
         }
+
+        const gen = await catalogGeneration();
+        const cacheKey = listCacheKey(`cache:events:paged:${gen}`, { ...req.query, length, page });
+        const cached = await cacheGet(cacheKey);
+        if (cached) return res.json(cached);
+
         const filter = buildPublishedFilter(req.query);
         const [rows, total] = await Promise.all([
             Event.find(filter).sort({ startsAt: 1, _id: 1 }).skip((page - 1) * length).limit(length).lean(),
@@ -254,13 +277,18 @@ export async function legacyListEvents(req, res) {
         ]);
         const covers = await coversByEventIds(rows.map((event) => event._id));
         const result = rows.map((event) => toListItem(event, covers.get(String(event._id))));
-        return success(res, result, 'Success', 200, {
+        const body = {
+            message: 'Success',
+            result,
+            code: 200,
             pagination: {
                 current_page: page,
                 last_page: Math.max(1, Math.ceil(total / length)),
                 has_next_page: page * length < total
             }
-        });
+        };
+        await cacheSet(cacheKey, body, env.cacheListTtlSeconds);
+        return res.json(body);
     } catch (error) {
         if (error.name === 'ValidationError') {
             return res.status(422).json({ message: 'Invalid request', errors: error.errors || {}, code: 422 });
@@ -271,6 +299,18 @@ export async function legacyListEvents(req, res) {
 
 export async function legacyEventDetails(req, res) {
     const slug = req.params.slug || req.params.id;
+    const detailKey = isMongoId(slug)
+        ? `cache:event:detail:id:${slug}`
+        : `cache:event:detail:slug:${slug}`;
+    const cached = await cacheGet(detailKey);
+    if (cached) {
+        // Keep view counter live even on cache hits.
+        if (cached.result?.id || cached.result?._id) {
+            Event.updateOne({ _id: cached.result.id || cached.result._id }, { $inc: { pageViews: 1 } }).catch(() => {});
+        }
+        return res.json(cached);
+    }
+
     const event = await Event.findOne(idFilter(slug))
         .populate('organizer', 'name email avatarUrl role verifiedAt')
         .sort({ _id: -1 })
@@ -301,7 +341,7 @@ export async function legacyEventDetails(req, res) {
     const currency = feeSetting.currency || 'INR';
     const tickets = publicTicketTypes(event.ticketTypes).map((ticket) => ({ ...ticket, currency }));
 
-    await Event.updateOne({ _id: event._id }, { $inc: { pageViews: 1 } });
+    Event.updateOne({ _id: event._id }, { $inc: { pageViews: 1 } }).catch(() => {});
 
     const host = event.organizer ? {
         id: event.organizer._id,
@@ -344,7 +384,13 @@ export async function legacyEventDetails(req, res) {
         }
     };
 
-    return res.json({ message: 'Event fetched successfully', result, event: result, code: 200 });
+    const body = { message: 'Event fetched successfully', result, event: result, code: 200 };
+    await Promise.all([
+        cacheSet(detailKey, body, env.cacheDetailTtlSeconds),
+        cacheSet(`cache:event:detail:id:${event._id}`, body, env.cacheDetailTtlSeconds),
+        event.slug ? cacheSet(`cache:event:detail:slug:${event.slug}`, body, env.cacheDetailTtlSeconds) : Promise.resolve()
+    ]);
+    return res.json(body);
 }
 
 export async function getRelatedEvents(req, res) {
@@ -370,6 +416,10 @@ export async function getRelatedEvents(req, res) {
 export async function getCountryList(req, res) {
     const countryId = req.query.country_id || req.query.global_setting_id;
     const country = String(req.query.country || '').trim();
+    const cacheKey = listCacheKey('cache:catalog:countries', { countryId, country });
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json(cached);
+
     let settings;
     if (countryId) {
         settings = await GlobalSetting.find({ country_id: Number(countryId), type: 'country' }).lean();
@@ -386,12 +436,19 @@ export async function getCountryList(req, res) {
         timezone: decodeCountryTimezones(item.timezone)
     }));
 
-    return success(res, result, 'Success');
+    const body = { message: 'Success', result, code: 200 };
+    await cacheSet(cacheKey, body, env.cacheCatalogTtlSeconds);
+    return res.json(body);
 }
 
 export async function cityEventCounts(req, res) {
     const country = String(req.query.country || '').trim();
     const limit = Math.min(50, Math.max(1, Number(req.query.limit || 12)));
+    const gen = await catalogGeneration();
+    const cacheKey = listCacheKey(`cache:events:city-counts:${gen}`, { country, limit });
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json(cached);
+
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 1);
 
@@ -420,7 +477,9 @@ export async function cityEventCounts(req, res) {
         image_url: imageByEvent.get(String(row.sampleEvent)) || null
     }));
 
-    return success(res, result, 'Success');
+    const body = { message: 'Success', result, code: 200 };
+    await cacheSet(cacheKey, body, env.cacheListTtlSeconds);
+    return res.json(body);
 }
 
 export async function eventBooking(req, res) {
@@ -429,19 +488,34 @@ export async function eventBooking(req, res) {
 
 export async function getCities(req, res) {
     const country = req.params.country;
+    const cacheKey = listCacheKey('cache:catalog:cities', { country });
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json(cached);
+
     const cities = await EventCity.find({ country: new RegExp(`^${escapeRegex(country)}$`, 'i'), status: 1 }).sort({ name: 1 }).lean();
-    return success(res, cities, 'Cities fetched successfully');
+    const body = { message: 'Cities fetched successfully', result: cities, code: 200 };
+    await cacheSet(cacheKey, body, env.cacheCatalogTtlSeconds);
+    return res.json(body);
 }
 
 export async function getCategories(req, res) {
-    const categories = await EventCategory.find({ status: 1 }).select('name slug').sort({ name: 1 }).lean();
-    if (categories.length) return success(res, categories, 'Categories fetched successfully');
+    const cacheKey = 'cache:catalog:categories';
+    const cached = await cacheGet(cacheKey);
+    if (cached) return res.json(cached);
 
-    const distinct = await Event.distinct('category', { status: { $in: ['published', 'sold-out'] } });
-    return success(res, distinct.filter(Boolean).map((name) => ({
-        name,
-        slug: String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|$)/g, '')
-    })), 'Categories fetched successfully');
+    const categories = await EventCategory.find({ status: 1 }).select('name slug').sort({ name: 1 }).lean();
+    const result = categories.length
+        ? categories
+        : (await Event.distinct('category', { status: { $in: ['published', 'sold-out'] } }))
+            .filter(Boolean)
+            .map((name) => ({
+                name,
+                slug: String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|$)/g, '')
+            }));
+
+    const body = { message: 'Categories fetched successfully', result, code: 200 };
+    await cacheSet(cacheKey, body, env.cacheCatalogTtlSeconds);
+    return res.json(body);
 }
 
 export async function listByEventType(req, res) {

@@ -19,6 +19,12 @@ export const env = {
     clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
     mongoUri: process.env.MONGO_URI,
     redisUrl: process.env.REDIS_URL,
+    /** Minutes unpaid checkout holds inventory before auto-release. */
+    holdTtlMinutes: Math.max(1, Number(process.env.HOLD_TTL_MINUTES || 15)),
+    /** Short TTLs for public browse caches (seconds). */
+    cacheListTtlSeconds: Math.max(5, Number(process.env.CACHE_LIST_TTL_SECONDS || 30)),
+    cacheDetailTtlSeconds: Math.max(5, Number(process.env.CACHE_DETAIL_TTL_SECONDS || 15)),
+    cacheCatalogTtlSeconds: Math.max(30, Number(process.env.CACHE_CATALOG_TTL_SECONDS || 300)),
     jwtSecret: process.env.JWT_SECRET,
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
     stripeSecretKey: process.env.STRIPE_SECRET_KEY,

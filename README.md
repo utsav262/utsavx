@@ -5,10 +5,55 @@ A MERN event ticketing platform for India — customer, organizer, and admin wor
 ## Run locally
 
 1. Copy `.env.example` to `server/.env` and set at least `MONGO_URI` and a **32+ character** `JWT_SECRET`.
-2. Start infrastructure: `docker compose up -d` (optional).
+2. Start infrastructure: `docker compose up -d` (optional). Ensure **MongoDB** is running on `27017`. **Redis** on `6379` is recommended for rate limits + browse caches (API still runs without it).
 3. Install dependencies: `npm run install:all`.
 4. Start both apps: `npm run dev`.
 5. Open `http://localhost:5173`.
+
+Checkout holds inventory for `HOLD_TTL_MINUTES` (default 15). Unpaid pending orders are cancelled and stock is released automatically.
+
+## Deploy
+
+### Frontend (Vercel)
+
+- Root Directory: `client`
+- Framework: Vite
+- Build: `npm run build`
+- Output: `dist`
+- Env: `VITE_API_URL=https://YOUR-RENDER-API.onrender.com/api/v1`
+
+### Backend (Render)
+
+1. Create a [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) cluster and copy the connection string.
+2. (Recommended) Create a Redis instance ([Upstash](https://upstash.com) free tier works).
+3. On [Render](https://dashboard.render.com): **New → Web Service** → connect `utsav262/utsavx`.
+4. Settings:
+
+| Field | Value |
+|-------|--------|
+| Root Directory | `server` |
+| Runtime | Node |
+| Build Command | `npm install` (or leave default after pushing the no-op `build` script) |
+| Start Command | `npm start` |
+| Health Check Path | `/health` |
+
+5. Environment variables:
+
+| Key | Value |
+|-----|--------|
+| `NODE_ENV` | `production` |
+| `MONGO_URI` | Atlas URI |
+| `JWT_SECRET` | 32+ random characters |
+| `CLIENT_URL` | `https://your-app.vercel.app` |
+| `REDIS_URL` | Redis URL (optional but recommended) |
+| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | if using live checkout |
+
+Or use the repo Blueprint: **New → Blueprint** → select this repo (`render.yaml`).
+
+6. After deploy, open `https://YOUR-SERVICE.onrender.com/health` — expect `{"ok":true,...}`.
+7. Set that host in Vercel as `VITE_API_URL` and redeploy the frontend.
+
+> Free Render web services sleep after idle time; the first request may take ~30–60s to wake.
 
 API: `http://localhost:5050/api/v1`.
 

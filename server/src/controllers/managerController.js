@@ -10,6 +10,7 @@ import Notification from '../models/Notification.js';
 import User from '../models/User.js';
 import { success } from '../utils/response.js';
 import { sellTicketOrders } from '../services/sellService.js';
+import { invalidateEventCaches } from '../services/cacheService.js';
 
 const eventFor = (req, eventId) => Event.findOne({ _id: eventId, ...(req.user.role === 'admin' ? {} : { organizer: req.user._id }) });
 const body = (req) => req.body || {};
@@ -168,12 +169,14 @@ export async function createOrUpdateEvent(req, res) {
 
     if (!event) {
         const result = await Event.create({ ...payload, organizer: req.user._id });
+        await invalidateEventCaches(result);
         const message = result.status === 'review_pending'
             ? 'Event submitted for admin approval'
             : 'Event created successfully';
         return res.status(201).json({ message, code: 200, result });
     }
     const result = await Event.findOneAndUpdate({ _id: event._id }, { $set: payload }, { new: true, runValidators: true });
+    await invalidateEventCaches(result || event);
     return res.status(200).json({ message: 'Event updated successfully', code: 200, result });
 }
 
@@ -195,6 +198,7 @@ export async function approveEvent(req, res) {
     }
     event.status = 'published';
     await event.save();
+    await invalidateEventCaches(event);
     return ok(res, event, 'Event approved and published');
 }
 
@@ -207,6 +211,7 @@ export async function rejectEvent(req, res) {
     }
     event.status = 'draft';
     await event.save();
+    await invalidateEventCaches(event);
     return ok(res, event, 'Event rejected and returned to draft');
 }
 export async function deleteEvent(req, res) {
@@ -214,6 +219,7 @@ export async function deleteEvent(req, res) {
     if (!event) return res.status(404).json({ message: 'Event not found', code: 404 });
     event.status = 'cancelled';
     await event.save();
+    await invalidateEventCaches(event);
     return ok(res, null, 'Event cancelled successfully');
 }
 export async function upgradeEvent(req, res) {
@@ -263,6 +269,7 @@ export async function createTicket(req, res) {
     }
     event.ticketTypes.push(ticket);
     await event.save();
+    await invalidateEventCaches(event);
     return ok(res, serializeTicket(event.ticketTypes.at(-1)), 'Ticket type created successfully');
 }
 export async function updateTicket(req, res) {
@@ -282,6 +289,7 @@ export async function updateTicket(req, res) {
     }
     Object.assign(ticket, updates);
     await event.save();
+    await invalidateEventCaches(event);
     return ok(res, serializeTicket(ticket), 'Ticket type updated successfully');
 }
 export async function deleteTicket(req, res) {
@@ -293,6 +301,7 @@ export async function deleteTicket(req, res) {
     }
     event.ticketTypes.pull(req.params.id);
     await event.save();
+    await invalidateEventCaches(event);
     return ok(res, null, 'Ticket type deleted successfully');
 }
 
@@ -726,6 +735,7 @@ export async function adminSetEventStatus(req, res) {
     const event = await Event.findByIdAndUpdate(req.params.id, { $set: { status } }, { new: true, runValidators: true })
         .populate('organizer', 'name email role');
     if (!event) return res.status(404).json({ message: 'Event not found', code: 404 });
+    await invalidateEventCaches(event);
     return ok(res, event, `Event marked as ${status}`);
 }
 
@@ -735,5 +745,6 @@ export async function adminSetEventFeatured(req, res) {
     const event = await Event.findByIdAndUpdate(req.params.id, { $set: { featured } }, { new: true })
         .populate('organizer', 'name email role');
     if (!event) return res.status(404).json({ message: 'Event not found', code: 404 });
+    await invalidateEventCaches(event);
     return ok(res, event, featured ? 'Event featured' : 'Event unfeatured');
 }

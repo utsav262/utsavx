@@ -4,9 +4,9 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
-import Redis from 'ioredis';
 import { RedisStore } from 'rate-limit-redis';
 import { env } from './config/env.js';
+import { connectRedis, getRedis } from './config/redis.js';
 import authRoutes from './routes/auth.js';
 import eventRoutes, { getCategories, getCities, getCountryList } from './routes/events.js';
 import orderRoutes from './routes/orders.js';
@@ -18,6 +18,7 @@ import { webhook } from './controllers/paymentController.js';
 import { seedIfEmpty } from './scripts/seed.js';
 import { asyncHandler } from './middleware/asyncHandler.js';
 import { setupSwagger } from './docs/swagger.js';
+import { startHoldExpiryJob } from './jobs/expireHolds.js';
 
 const app = express();
 let limiter = (req, res, next) => next();
@@ -60,20 +61,12 @@ app.use(errorHandler);
 
 async function configureRateLimiter() {
     const base = { windowMs: 15 * 60 * 1000, standardHeaders: true, legacyHeaders: false };
-    let redis = null;
-    if (env.redisUrl) {
-        redis = new Redis(env.redisUrl, { lazyConnect: true, maxRetriesPerRequest: 1, enableOfflineQueue: false });
-        try {
-            await redis.connect();
-            console.log('Rate limiter using Redis');
-        } catch {
-            console.warn('Redis unavailable, using in-memory rate limiter');
-            try { redis.disconnect(); } catch { /* ignore */ }
-            redis = null;
-        }
-    }
-
+    const redis = getRedis();
     const sendCommand = redis ? (...args) => redis.call(...args) : null;
+
+    if (sendCommand) console.log('Rate limiter using Redis');
+    else console.warn('Using in-memory rate limiter');
+
     limiter = rateLimit({
         ...base,
         limit: env.isProduction ? 200 : 400,
@@ -96,7 +89,7 @@ async function configureRateLimiter() {
             legacyHeaders: false,
             message: { message: 'Too many auth attempts, try again later', code: 429 }
         });
-        if (sendCommand) {
+        if (redis) {
             try {
                 const keys = await redis.keys('rl:auth:*');
                 if (keys.length) await redis.del(...keys);
@@ -111,10 +104,13 @@ async function configureRateLimiter() {
 async function start() {
     await mongoose.connect(env.mongoUri);
     if (env.nodeEnv !== 'production') await seedIfEmpty();
+    await connectRedis();
     await configureRateLimiter();
+    startHoldExpiryJob({ intervalMs: 30_000 });
     app.listen(env.port, () => {
         console.log(`UTSAVX API listening on ${env.port}`);
         console.log(`Swagger docs: http://localhost:${env.port}/api-docs`);
+        console.log(`Checkout hold TTL: ${env.holdTtlMinutes} minute(s)`);
     });
 }
 
