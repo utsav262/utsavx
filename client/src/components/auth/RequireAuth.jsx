@@ -1,7 +1,15 @@
-import { Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { Navigate, useLocation } from 'react-router-dom';
 
 export default function RequireAuth({ children }) {
-    const user = useSelector((state) => state.auth.user);
-    return user ? children : <Navigate to="/login" replace />;
+  const { token, user } = useSelector((s) => s.auth);
+  const location = useLocation();
+
+  if (!token) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  if (!user) {
+    return <Navigate to="/login" replace />; // profile load nahi hua
+  }
+  return children;
 }

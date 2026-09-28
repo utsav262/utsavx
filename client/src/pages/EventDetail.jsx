@@ -1,139 +1,388 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { CalendarDays, MapPin } from 'lucide-react';
-import { useDispatch } from 'react-redux';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
+import {
+  CalendarDays, MapPin, Share2, Heart, Clock,
+  Users, ShieldCheck, ChevronLeft, Info
+} from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
 import { add } from '../store/index.js';
 import { apiClient } from '../api/index.js';
 import { unwrap } from '../lib/unwrap.js';
 import { money } from '../lib/money.js';
 import { formatDate } from '../lib/datetime.js';
-import { events as demoEvents } from '../data/demo.js';
 import EventCard from '../components/events/EventCard.jsx';
 
+const PLACEHOLDER = 'https://via.placeholder.com/1600x900?text=No+Image';
+
 export default function EventDetail() {
-    const { id } = useParams();
-    const dispatch = useDispatch();
-    const navigate = useNavigate();
-    const demo = demoEvents.find((item) => item.id === id);
-    const [event, setEvent] = useState(demo || null);
-    const [related, setRelated] = useState([]);
-    const [quantity, setQuantity] = useState(1);
-    const [loading, setLoading] = useState(!demo);
-    const [ticketTypeId, setTicketTypeId] = useState(demo?.ticketTypes?.[0]?._id || '');
+  const { id } = useParams();
+  const location = useLocation();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { token } = useSelector((s) => s.auth);
 
-    useEffect(() => {
-        let active = true;
-        setLoading(true);
-        apiClient.event(id).then((response) => {
-            const result = unwrap(response, null);
-            if (active && result && !Array.isArray(result)) {
-                setEvent(result);
-                const tickets = result.tickets || result.ticketTypes || [];
-                setTicketTypeId(tickets[0]?._id || tickets[0]?.id || '');
-                if (result._id || result.id) {
-                    apiClient.relatedEvents(result._id || result.id).then((relatedResponse) => {
-                        if (active) setRelated(unwrap(relatedResponse));
-                    }).catch(() => { if (active) setRelated([]); });
-                }
-            }
-        }).catch(() => {
-            if (active && !demo) setEvent(null);
-        }).finally(() => { if (active) setLoading(false); });
-        return () => { active = false; };
-    }, [id]);
+  const [event, setEvent] = useState(null);
+  const [related, setRelated] = useState([]);
+  const [quantity, setQuantity] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [ticketTypeId, setTicketTypeId] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [wishlisted, setWishlisted] = useState(false);
 
-    if (loading) return <main className="mx-auto max-w-7xl px-5 py-20 text-ink/55">Loading event…</main>;
-    if (!event) return <main className="mx-auto max-w-7xl px-5 py-20">Event not found. <Link to="/events" className="font-bold text-coral">Browse events</Link></main>;
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    setLoading(true); setError(null); setEvent(null); setRelated([]);
+    setTicketTypeId(''); setQuantity(1);
 
-    const title = event.title || event.name;
-    const tickets = event.tickets || event.ticketTypes || [];
-    const selected = tickets.find((ticket) => String(ticket._id || ticket.id) === String(ticketTypeId)) || tickets[0];
-    const price = selected?.price ?? event.price ?? 0;
-    const liveTicket = selected && String(selected._id || selected.id).length > 12;
-    const cover = event.cover_image || event.image || event.imageUrl || event.horizontal_flyer;
-    const fees = event._fee_settings;
+    (async () => {
+      try {
+        const res = await apiClient.event(id, { signal: controller.signal });
+        const result = unwrap(res, null);
+        if (!active) return;
+        if (!result || Array.isArray(result)) { setError('not_found'); return; }
+        setEvent(result);
+        const tickets = result.tickets || result.ticketTypes || [];
+        setTicketTypeId(tickets[0]?._id || tickets[0]?.id || '');
+        const eid = result._id || result.id;
+        if (eid) {
+          apiClient.relatedEvents(eid, { signal: controller.signal })
+            .then((r) => active && setRelated(unwrap(r, []) || []))
+            .catch(() => active && setRelated([]));
+        }
+      } catch (err) {
+        if (active && err.name !== 'AbortError') setError('fetch_failed');
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
 
+    return () => { active = false; controller.abort(); };
+  }, [id]);
+
+  const tickets = event?.tickets || event?.ticketTypes || [];
+  const selected = useMemo(
+    () => tickets.find((t) => String(t._id || t.id) === String(ticketTypeId)) || tickets[0],
+    [tickets, ticketTypeId]
+  );
+
+  const price = selected?.price ?? event?.price ?? 0;
+  const stock = selected?.quantity_left ?? selected?.quantity ?? null;
+  const isSoldOut = stock !== null && stock <= 0;
+  const isPast = event?.startsAt ? new Date(event.startsAt) < new Date() : false;
+  const maxQty = stock !== null ? Math.min(stock, 10) : 10;
+  const canBuy = !isSoldOut && !isPast && selected;
+
+  const fees = event?._fee_settings;
+  const subtotal = price * quantity;
+  const feeAmount = fees
+    ? (subtotal * (Number(fees.Online_Payment_Fee_percentage) || 0)) / 100
+      + Number(fees.Online_Payment_Fee_dollar_amount || 0) * quantity
+      + (subtotal * (Number(fees.Online_Service_Fee_percentage) || 0)) / 100
+    : 0;
+  const total = subtotal + feeAmount;
+
+  const handleAddToCart = () => {
+    if (!canBuy || adding) return;
+    if (!token) return navigate('/login', { state: { from: location.pathname } });
+    setAdding(true);
+    dispatch(add({
+      id: `${event._id || event.id || event.slug}-${selected._id || selected.id || 'ga'}`,
+      title: event.title || event.name,
+      price, quantity,
+      eventId: event._id || event.id,
+      ticketTypeId: selected._id || selected.id,
+      ticketName: selected?.name || 'General Admission',
+    }));
+    navigate('/cart');
+  };
+
+  // ---------- LOADING / ERROR ----------
+  if (loading) {
     return (
-        <main className="mx-auto max-w-7xl px-5 py-10 lg:px-8 lg:py-16">
-            <div className="grid gap-10 lg:grid-cols-[1.1fr_.9fr]">
-                <div>
-                    <img src={cover} className="aspect-[1.15] w-full bg-moss object-cover" alt="" />
-                    {(event.flyer1 || event.flyer2) && (
-                        <div className="mt-4 grid grid-cols-2 gap-4">
-                            {event.flyer1 && <img src={event.flyer1} className="aspect-[1.2] w-full object-cover" alt="" />}
-                            {event.flyer2 && <img src={event.flyer2} className="aspect-[1.2] w-full object-cover" alt="" />}
-                        </div>
-                    )}
-                </div>
-                <div className="lg:pt-8">
-                    <p className="text-sm font-extrabold uppercase tracking-[.2em] text-coral">{event.city || event.venue?.city || 'Featured event'}</p>
-                    <h1 className="serif mt-3 text-6xl leading-[.9] sm:text-8xl">{title}</h1>
-                    <p className="mt-7 text-lg leading-8 text-ink/70">{event.description}</p>
-                    {event.host && <p className="mt-4 text-sm text-ink/55">Hosted by <b>{event.host.name || event.host.username}</b></p>}
-                    <div className="my-8 grid grid-cols-2 border-y border-ink/15 py-5">
-                        <div>
-                            <CalendarDays className="text-coral" />
-                            <p className="mt-2 text-sm font-bold">
-                                {formatDate(event.startsAt || event.date) || 'Date TBA'}
-                            </p>
-                        </div>
-                        <div>
-                            <MapPin className="text-coral" />
-                            <p className="mt-2 text-sm font-bold">{event.city || event.venue?.city || 'Venue details soon'}</p>
-                        </div>
-                    </div>
-                    {tickets.length > 1 && (
-                        <select value={ticketTypeId} onChange={(change) => setTicketTypeId(change.target.value)} className="mb-5 w-full rounded-full border border-ink/20 bg-transparent px-4 py-3 text-sm">
-                            {tickets.map((ticket) => <option key={ticket._id || ticket.id} value={ticket._id || ticket.id}>{ticket.name} · {money(ticket.price)}{ticket.quantity_left != null ? ` · ${ticket.quantity_left} left` : ''}</option>)}
-                        </select>
-                    )}
-                    <div className="flex items-center justify-between">
-                        <p className="text-2xl font-extrabold">{money(price)} <span className="text-sm font-medium text-ink/50">/ person</span></p>
-                        <div className="flex items-center rounded-full border border-ink/20">
-                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-4 py-3">−</button>
-                            <span>{quantity}</span>
-                            <button onClick={() => setQuantity(quantity + 1)} className="px-4 py-3">+</button>
-                        </div>
-                    </div>
-                    {fees && (
-                        <p className="mt-3 text-xs text-ink/45">
-                            Fees: {fees.Online_Payment_Fee_percentage}% + {money(fees.Online_Payment_Fee_dollar_amount)} payment · {fees.Online_Service_Fee_percentage}% service ({fees.currency})
-                        </p>
-                    )}
-                    <button
-                        onClick={() => {
-                            dispatch(add({
-                                id: `${event._id || event.id || event.slug}-${selected?._id || selected?.id || 'ga'}`,
-                                title,
-                                price,
-                                quantity,
-                                eventId: event._id || event.id,
-                                ticketTypeId: liveTicket ? (selected._id || selected.id) : undefined,
-                                ticketName: selected?.name || 'General Admission'
-                            }));
-                            navigate('/cart');
-                        }}
-                        className="mt-5 w-full rounded-full bg-coral px-6 py-4 font-extrabold text-white"
-                    >
-                        Get tickets
-                    </button>
-                    {event.guests?.length > 0 && (
-                        <div className="mt-8">
-                            <p className="text-xs font-extrabold uppercase tracking-wider text-ink/45">Special guests</p>
-                            <ul className="mt-3 space-y-2 text-sm">{event.guests.map((guest) => <li key={guest._id || guest.email}>{guest.name}</li>)}</ul>
-                        </div>
-                    )}
-                </div>
+      <main className="mx-auto max-w-7xl px-5 py-20">
+        <div className="animate-pulse space-y-6">
+          <div className="aspect-[21/9] w-full rounded-2xl bg-ink/10" />
+          <div className="grid gap-10 lg:grid-cols-[2fr_1fr]">
+            <div className="space-y-4">
+              <div className="h-10 w-2/3 rounded bg-ink/10" />
+              <div className="h-4 w-full rounded bg-ink/10" />
+              <div className="h-4 w-5/6 rounded bg-ink/10" />
             </div>
-            {related.length > 0 && (
-                <section className="mt-16 border-t border-ink/10 pt-12">
-                    <p className="text-xs font-extrabold uppercase tracking-[.2em] text-coral">More like this</p>
-                    <h2 className="serif mt-2 text-4xl">Related events</h2>
-                    <div className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-                        {related.map((item) => <EventCard key={item.slug || item._id} event={item} />)}
-                    </div>
-                </section>
-            )}
-        </main>
+            <div className="h-80 rounded-2xl bg-ink/10" />
+          </div>
+        </div>
+      </main>
     );
+  }
+
+  if (error === 'not_found' || (!event && !loading)) {
+    return (
+      <main className="mx-auto max-w-7xl px-5 py-24 text-center">
+        <h1 className="serif text-5xl">Event not found</h1>
+        <p className="mt-3 text-ink/55">Yeh event exist nahi karta ya remove ho gaya.</p>
+        <Link to="/events" className="mt-6 inline-block rounded-full bg-coral px-6 py-3 font-bold text-white">
+          Browse events
+        </Link>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="mx-auto max-w-7xl px-5 py-24 text-center">
+        <h1 className="serif text-5xl">Something went wrong</h1>
+        <button onClick={() => window.location.reload()} className="mt-6 rounded-full bg-coral px-6 py-3 font-bold text-white">
+          Retry
+        </button>
+      </main>
+    );
+  }
+
+  const title = event.title || event.name;
+  const cover = event.cover_image || event.image || event.imageUrl || event.horizontal_flyer || PLACEHOLDER;
+  const city = event.city || event.venue?.city || 'Location TBA';
+  const startDate = formatDate(event.startsAt || event.date);
+
+  return (
+    <main className="bg-cream">
+      {/* ================= HERO ================= */}
+      <section className="relative">
+        <div className="relative h-[55vh] min-h-[400px] w-full overflow-hidden">
+          <img
+            src={cover}
+            onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
+            alt={title}
+            className="h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
+
+          {/* Back button */}
+          <button
+            onClick={() => navigate(-1)}
+            className="absolute left-5 top-5 flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-bold text-white backdrop-blur-md hover:bg-white/25"
+          >
+            <ChevronLeft className="h-4 w-4" /> Back
+          </button>
+
+          {/* Top-right actions */}
+          <div className="absolute right-5 top-5 flex gap-2">
+            <button
+              onClick={() => setWishlisted((w) => !w)}
+              aria-label="Wishlist"
+              className="rounded-full bg-white/15 p-3 text-white backdrop-blur-md hover:bg-white/25"
+            >
+              <Heart className={`h-4 w-4 ${wishlisted ? 'fill-coral text-coral' : ''}`} />
+            </button>
+            <button
+              onClick={() => navigator.share?.({ title, url: window.location.href })}
+              aria-label="Share"
+              className="rounded-full bg-white/15 p-3 text-white backdrop-blur-md hover:bg-white/25"
+            >
+              <Share2 className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Hero content */}
+          <div className="absolute bottom-0 left-0 right-0 px-5 pb-8 lg:px-10 lg:pb-12">
+            <div className="mx-auto max-w-7xl">
+              <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-wider">
+                <span className="rounded-full bg-coral px-3 py-1 text-white">
+                  {isPast ? 'Ended' : isSoldOut ? 'Sold out' : 'Live'}
+                </span>
+                <span className="rounded-full bg-white/15 px-3 py-1 text-white backdrop-blur-md">
+                  {city}
+                </span>
+              </div>
+              <h1 className="serif mt-4 max-w-4xl text-5xl leading-[1] text-white sm:text-7xl lg:text-8xl">
+                {title}
+              </h1>
+              {event.host && (
+                <p className="mt-3 text-sm text-white/80">
+                  Hosted by <b className="text-white">{event.host.name || event.host.username}</b>
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ================= BODY ================= */}
+      <section className="mx-auto max-w-7xl px-5 py-10 lg:px-10 lg:py-14">
+        <div className="grid gap-10 lg:grid-cols-[2fr_1fr] lg:gap-14">
+
+          {/* ---------- LEFT COLUMN ---------- */}
+          <div className="space-y-10">
+
+            {/* Quick facts bar */}
+            <div className="grid grid-cols-2 gap-4 rounded-2xl border border-ink/10 bg-white p-5 sm:grid-cols-3">
+              <Fact icon={<CalendarDays className="h-5 w-5 text-coral" />} label="Date" value={startDate || 'TBA'} />
+              <Fact icon={<Clock className="h-5 w-5 text-coral" />} label="Time" value={event.startsAt ? new Date(event.startsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'TBA'} />
+              <Fact icon={<MapPin className="h-5 w-5 text-coral" />} label="Venue" value={event.venue?.name || city} />
+            </div>
+
+            {/* About */}
+            <div>
+              <h2 className="serif text-3xl">About this event</h2>
+              <p className="mt-4 whitespace-pre-line text-base leading-8 text-ink/70">
+                {event.description || 'No description provided.'}
+              </p>
+            </div>
+
+            {/* Gallery */}
+            {(event.flyer1 || event.flyer2) && (
+              <div>
+                <h2 className="serif text-3xl">Gallery</h2>
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  {event.flyer1 && (
+                    <img src={event.flyer1} alt="Flyer 1" className="aspect-[4/3] w-full rounded-xl object-cover" />
+                  )}
+                  {event.flyer2 && (
+                    <img src={event.flyer2} alt="Flyer 2" className="aspect-[4/3] w-full rounded-xl object-cover" />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Lineup / Guests */}
+            {event.guests?.length > 0 && (
+              <div>
+                <h2 className="serif text-3xl">Lineup</h2>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  {event.guests.map((g) => (
+                    <div key={g._id || g.email} className="flex items-center gap-3 rounded-full border border-ink/10 bg-white py-2 pl-2 pr-4">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-coral/15 text-sm font-bold text-coral">
+                        {(g.name || '?').charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-sm font-bold">{g.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Info / Terms */}
+            <div className="rounded-2xl border border-ink/10 bg-white p-6">
+              <div className="flex items-center gap-2">
+                <Info className="h-5 w-5 text-coral" />
+                <h3 className="font-bold">Good to know</h3>
+              </div>
+              <ul className="mt-4 space-y-2 text-sm text-ink/70">
+                <li className="flex items-start gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 text-coral" /> Entry allowed with valid ID + ticket</li>
+                <li className="flex items-start gap-2"><Users className="mt-0.5 h-4 w-4 text-coral" /> {stock !== null ? `${stock} tickets left` : 'Limited tickets'}</li>
+                <li className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 text-coral" /> Gates open 1 hour before start</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* ---------- RIGHT COLUMN (STICKY BUY BOX) ---------- */}
+          <div>
+            <div className="sticky top-24 space-y-4 rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
+              <div>
+                <p className="text-xs font-extrabold uppercase tracking-wider text-ink/45">Tickets</p>
+                <p className="mt-1 text-3xl font-extrabold">
+                  {money(price)} <span className="text-sm font-medium text-ink/50">/ person</span>
+                </p>
+              </div>
+
+              {/* Ticket type */}
+              {tickets.length > 1 ? (
+                <select
+                  value={ticketTypeId}
+                  onChange={(e) => { setTicketTypeId(e.target.value); setQuantity(1); }}
+                  className="w-full rounded-xl border border-ink/20 bg-transparent px-4 py-3 text-sm"
+                  aria-label="Select ticket type"
+                >
+                  {tickets.map((t) => {
+                    const left = t.quantity_left ?? t.quantity;
+                    const soldOut = left !== undefined && left <= 0;
+                    return (
+                      <option key={t._id || t.id} value={t._id || t.id} disabled={soldOut}>
+                        {t.name} · {money(t.price)}
+                        {left !== undefined ? (soldOut ? ' · Sold out' : ` · ${left} left`) : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+              ) : (
+                <p className="rounded-xl bg-ink/5 px-4 py-3 text-sm font-bold">
+                  {selected?.name || 'General Admission'}
+                </p>
+              )}
+
+              {/* Qty */}
+              <div className="flex items-center justify-between rounded-xl border border-ink/20 px-2">
+                <button
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  disabled={quantity <= 1 || !canBuy}
+                  className="px-4 py-3 text-lg disabled:opacity-40"
+                  aria-label="Decrease"
+                >−</button>
+                <span className="font-bold">{quantity}</span>
+                <button
+                  onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
+                  disabled={quantity >= maxQty || !canBuy}
+                  className="px-4 py-3 text-lg disabled:opacity-40"
+                  aria-label="Increase"
+                >+</button>
+              </div>
+
+              {/* Fee breakdown */}
+              {fees && canBuy && (
+                <div className="space-y-1 rounded-xl bg-ink/5 p-3 text-xs text-ink/60">
+                  <div className="flex justify-between"><span>Subtotal</span><span>{money(subtotal)}</span></div>
+                  <div className="flex justify-between"><span>Fees</span><span>{money(feeAmount)}</span></div>
+                  <div className="mt-1 flex justify-between border-t border-ink/10 pt-2 font-bold text-ink">
+                    <span>Total</span><span>{money(total)}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* CTA */}
+              <button
+                onClick={handleAddToCart}
+                disabled={!canBuy || adding}
+                className="w-full rounded-xl bg-coral px-6 py-4 font-extrabold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isPast ? 'Event ended' : isSoldOut ? 'Sold out' : adding ? 'Adding…' : token ? 'Get tickets' : 'Sign in to buy'}
+              </button>
+
+              <p className="text-center text-xs text-ink/45">
+                Secure checkout · Instant confirmation
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ================= RELATED ================= */}
+      {related.length > 0 && (
+        <section className="border-t border-ink/10 bg-white">
+          <div className="mx-auto max-w-7xl px-5 py-14 lg:px-10">
+            <p className="text-xs font-extrabold uppercase tracking-[.2em] text-coral">More like this</p>
+            <h2 className="serif mt-2 text-4xl">Related events</h2>
+            <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {related.slice(0, 4).map((item) => (
+                <EventCard key={item.slug || item._id} event={item} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+    </main>
+  );
+}
+
+/* ---------- Small helper component ---------- */
+function Fact({ icon, label, value }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="mt-0.5">{icon}</div>
+      <div>
+        <p className="text-xs font-bold uppercase tracking-wider text-ink/45">{label}</p>
+        <p className="mt-0.5 text-sm font-bold text-ink">{value}</p>
+      </div>
+    </div>
+  );
 }

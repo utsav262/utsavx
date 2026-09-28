@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, Navigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { setUser, signOut } from '../store/index.js';
 import { apiClient } from '../api/index.js';
@@ -7,8 +7,9 @@ import { unwrap } from '../lib/unwrap.js';
 import Header from '../components/layout/Header.jsx';
 import Footer from '../components/layout/Footer.jsx';
 import RequireAuth from '../components/auth/RequireAuth.jsx';
-import RequireManager from '../components/auth/RequireManager.jsx';
-import RequireAdmin from '../components/auth/RequireAdmin.jsx';
+import RequireRole from '../components/auth/RequireRole.jsx';
+import RequireGuest from '../components/auth/RequireGuest.jsx';
+
 import Home from '../pages/Home.jsx';
 import Events from '../pages/Events.jsx';
 import EventDetail from '../pages/EventDetail.jsx';
@@ -27,53 +28,97 @@ import EventDashboard from '../pages/EventDashboard.jsx';
 import AddTeamMember from '../features/team/AddTeamMember.jsx';
 import Sell from '../pages/Sell.jsx';
 
+import About from '../pages/About.jsx';
+import Careers from '../pages/Careers.jsx';
+import Blog from '../pages/Blog.jsx';
+import Press from '../pages/Press.jsx';
+import Pricing from '../pages/Pricing.jsx';
+import Help from '../pages/Help.jsx';
+import Contact from '../pages/Contact.jsx';
+import Refunds from '../pages/Refunds.jsx';
+import Faq from '../pages/Faq.jsx';
+import Terms from '../pages/Terms.jsx';
+import Privacy from '../pages/Privacy.jsx';
+import Cookies from '../pages/Cookies.jsx';
+import Sitemap from '../pages/Sitemap.jsx';
+import NotFound from '../pages/NotFound.jsx';
+import Unauthorized from '../pages/Unauthorized.jsx';
+
 export default function AppRoutes() {
-    const dispatch = useDispatch();
+  const dispatch = useDispatch();
 
-    useEffect(() => {
-        if (!localStorage.getItem('utsavx_token')) return;
-        apiClient.me()
-            .then((response) => {
-                const profile = unwrap(response, null);
-                if (!profile || typeof profile !== 'object' || Array.isArray(profile)) {
-                    dispatch(signOut());
-                    return;
-                }
-                dispatch(setUser({
-                    user: profile,
-                    token: localStorage.getItem('utsavx_token')
-                }));
-            })
-            .catch(() => dispatch(signOut()));
-    }, [dispatch]);
+  useEffect(() => {
+    if (!localStorage.getItem('utsavx_token')) return;
+    apiClient.me()
+      .then((response) => {
+        const profile = unwrap(response, null);
+        if (!profile || typeof profile !== 'object' || Array.isArray(profile)) {
+          dispatch(signOut());
+          return;
+        }
+        dispatch(setUser({
+          user: profile,
+          token: localStorage.getItem('utsavx_token'),
+        }));
+      })
+      .catch(() => dispatch(signOut()));
+  }, [dispatch]);
 
-    return (
-        <>
-            <Header />
-            <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/events" element={<Events />} />
-                <Route path="/events/:id" element={<EventDetail />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/organizer" element={<Organizer />} />
-                <Route path="/manager/login" element={<ManagerSignIn />} />
-                <Route path="/manager/signin" element={<ManagerSignIn />} />
-                <Route path="/manager/signup" element={<ManagerSignUp />} />
-                <Route path="/admin/login" element={<AdminSignIn />} />
-                <Route path="/admin/signin" element={<AdminSignIn />} />
-                <Route path="/tickets" element={<RequireAuth><Tickets /></RequireAuth>} />
-                <Route path="/invitations" element={<RequireAuth><Invitations /></RequireAuth>} />
-                <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
-                <Route path="/dashboard/events/:eventId" element={<RequireAuth><EventDashboard /></RequireAuth>} />
-                <Route path="/dashboard/events/:eventId/team/add" element={<RequireAuth><AddTeamMember /></RequireAuth>} />
-                <Route path="/dashboard/sell/:eventId" element={<RequireAuth><Sell /></RequireAuth>} />
-                <Route path="/manager" element={<RequireManager><ManagerWorkspace /></RequireManager>} />
-                <Route path="/admin" element={<RequireAdmin><ManagerWorkspace /></RequireAdmin>} />
-                <Route path="*" element={<Home />} />
-            </Routes>
-            <Footer />
-        </>
-    );
+  return (
+    <>
+      <Header />
+      <Routes>
+        {/* ---------- PUBLIC ---------- */}
+        <Route path="/" element={<Home />} />
+        <Route path="/events" element={<Events />} />
+        <Route path="/events/:id" element={<EventDetail />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/checkout" element={<Checkout />} />
+        
+        {/* ---------- INFORMATIONAL & FOOTER PAGES ---------- */}
+        <Route path="/about" element={<About />} />
+        <Route path="/careers" element={<Careers />} />
+        <Route path="/blog" element={<Blog />} />
+        <Route path="/blog/:slug" element={<Blog />} />
+        <Route path="/press" element={<Press />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/help" element={<Help />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/refunds" element={<Refunds />} />
+        <Route path="/faq" element={<Faq />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/cookies" element={<Cookies />} />
+        <Route path="/sitemap" element={<Sitemap />} />
+        <Route path="/unauthorized" element={<Unauthorized />} />
+
+        {/* ---------- GUEST ONLY (login/signup) ---------- */}
+        <Route path="/login" element={<RequireGuest><Login /></RequireGuest>} />
+        <Route path="/organizer" element={<RequireGuest><Organizer /></RequireGuest>} />
+        <Route path="/manager/login" element={<RequireGuest><ManagerSignIn /></RequireGuest>} />
+        <Route path="/manager/signin" element={<RequireGuest><ManagerSignIn /></RequireGuest>} />
+        <Route path="/manager/signup" element={<RequireGuest><ManagerSignUp /></RequireGuest>} />
+        <Route path="/admin/login" element={<RequireGuest><AdminSignIn /></RequireGuest>} />
+        <Route path="/admin/signin" element={<RequireGuest><AdminSignIn /></RequireGuest>} />
+
+        {/* ---------- USER (any logged in) ---------- */}
+        <Route path="/tickets" element={<RequireAuth><Tickets /></RequireAuth>} />
+        <Route path="/invitations" element={<RequireAuth><Invitations /></RequireAuth>} />
+        <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
+        <Route path="/dashboard/events/:eventId" element={<RequireAuth><EventDashboard /></RequireAuth>} />
+        <Route path="/dashboard/events/:eventId/team/add" element={<RequireAuth><AddTeamMember /></RequireAuth>} />
+        <Route path="/dashboard/sell/:eventId" element={<RequireAuth><Sell /></RequireAuth>} />
+
+        {/* ---------- MANAGER ONLY ---------- */}
+        <Route path="/manager" element={<RequireRole roles={['manager', 'organizer']}><ManagerWorkspace /></RequireRole>} />
+
+        {/* ---------- ADMIN ONLY ---------- */}
+        <Route path="/admin" element={<RequireRole roles={['admin']}><ManagerWorkspace /></RequireRole>} />
+
+        {/* ---------- FALLBACK ---------- */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <Footer />
+    </>
+  );
 }
