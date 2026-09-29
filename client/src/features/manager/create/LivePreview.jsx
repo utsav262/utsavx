@@ -1,9 +1,10 @@
 import { CalendarDays, MapPin, Ticket, Star, Sparkles } from 'lucide-react';
 import { formatDateTime } from '../../../lib/datetime.js';
 import { money } from '../../../lib/money.js';
+import { EVENT_PLACEHOLDER } from '../../../lib/placeholder.js';
 
 const FALLBACK =
-  'https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=1200&q=80';
+  EVENT_PLACEHOLDER;
 
 export default function LivePreview({ basics, imageUrl, tickets, capacity, minPrice, guests, handlers, coupons }) {
   const cover = imageUrl || FALLBACK;
@@ -14,18 +15,18 @@ export default function LivePreview({ basics, imageUrl, tickets, capacity, minPr
   return (
     <aside className="sticky top-24 space-y-4">
       {/* Preview card */}
-      <div className="overflow-hidden rounded-2xl border border-ink/10 bg-ink text-white shadow-xl">
+      <div className="overflow-hidden border border-ink/10 bg-ink text-white shadow-xl">
         <div className="relative aspect-[4/3] overflow-hidden">
           <img src={cover} alt="" className="h-full w-full object-cover opacity-95" />
           <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/40 to-transparent" />
 
           {/* Top badges */}
           <div className="absolute left-4 top-4 flex flex-wrap gap-2">
-            <span className="rounded-full bg-coral px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider">
+            <span className="bg-coral px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider">
               Preview
             </span>
             {basics.featured && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider">
+              <span className="inline-flex items-center gap-1 bg-amber-500 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider">
                 <Star size={10} className="fill-white" /> Featured
               </span>
             )}
@@ -70,7 +71,7 @@ export default function LivePreview({ basics, imageUrl, tickets, capacity, minPr
       </div>
 
       {/* Tip card */}
-      <div className="flex items-start gap-3 rounded-2xl border border-ink/10 bg-white p-4 text-xs text-ink/60">
+      <div className="flex items-start gap-3 border border-ink/10 bg-white p-4 text-xs text-ink/60">
         <Sparkles size={14} className="mt-0.5 shrink-0 text-coral" />
         <p>
           Live preview — what you enter on the left is what attendees will see.
@@ -91,6 +92,6 @@ function PreviewRow({ icon, text }) {
 
 function Chip({ children }) {
   return (
-    <span className="rounded-full bg-white/10 px-2.5 py-1">{children}</span>
+    <span className="bg-white/10 px-2.5 py-1">{children}</span>
   );
 }

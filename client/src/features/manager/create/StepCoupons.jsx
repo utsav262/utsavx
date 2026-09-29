@@ -26,7 +26,7 @@ export default function StepCoupons({ coupons, setCoupons, notice }) {
   };
 
   return (
-    <div className="rounded-2xl border border-ink/10 bg-white p-6">
+    <div className="border border-ink/10 bg-white p-6">
       <div className="mb-5 flex items-center justify-between">
         <h3 className="flex items-center gap-2 serif text-2xl leading-none">
           <span className="text-coral"><Tag size={16} /></span>
@@ -52,7 +52,7 @@ export default function StepCoupons({ coupons, setCoupons, notice }) {
             onClick={() =>
               setDraft({ ...draft, discount_type: 'percentage' })
             }
-            className={`flex items-center gap-1.5 rounded-xl border px-3 py-3 text-xs font-bold transition ${
+            className={`flex items-center gap-1.5 border px-3 py-3 text-xs font-bold transition ${
               draft.discount_type === 'percentage'
                 ? 'border-coral bg-coral/5 text-coral'
                 : 'border-ink/15 text-ink/60'
@@ -63,7 +63,7 @@ export default function StepCoupons({ coupons, setCoupons, notice }) {
           <button
             type="button"
             onClick={() => setDraft({ ...draft, discount_type: 'fixed' })}
-            className={`flex items-center gap-1.5 rounded-xl border px-3 py-3 text-xs font-bold transition ${
+            className={`flex items-center gap-1.5 border px-3 py-3 text-xs font-bold transition ${
               draft.discount_type === 'fixed'
                 ? 'border-coral bg-coral/5 text-coral'
                 : 'border-ink/15 text-ink/60'
@@ -83,17 +83,17 @@ export default function StepCoupons({ coupons, setCoupons, notice }) {
         <button
           type="button"
           onClick={add}
-          className="shrink-0 rounded-xl bg-ink px-5 py-3 text-sm font-bold text-white hover:opacity-90"
+          className="shrink-0 bg-ink px-5 py-3 text-sm font-bold text-white hover:opacity-90"
         >
           <Plus size={16} />
         </button>
       </div>
 
       {coupons.length > 0 ? (
-        <ul className="mt-5 divide-y divide-ink/10 rounded-xl border border-ink/10 bg-cream/40">
+        <ul className="mt-5 divide-y divide-ink/10 border border-ink/10 bg-cream/40">
           {coupons.map((c, i) => (
             <li key={`${c.code}-${i}`} className="flex items-center gap-3 px-4 py-3">
-              <span className="rounded-full bg-coral/10 px-2.5 py-1 font-mono text-xs font-extrabold text-coral">
+              <span className="bg-coral/10 px-2.5 py-1 font-mono text-xs font-extrabold text-coral">
                 {c.code}
               </span>
               <span className="text-sm text-ink/60">
@@ -104,7 +104,7 @@ export default function StepCoupons({ coupons, setCoupons, notice }) {
               <button
                 type="button"
                 onClick={() => setCoupons((rows) => rows.filter((_, idx) => idx !== i))}
-                className="ml-auto rounded-lg p-1.5 text-ink/40 hover:bg-red-50 hover:text-red-600"
+                className="ml-auto p-1.5 text-ink/40 hover:bg-red-50 hover:text-red-600"
               >
                 <Trash2 size={14} />
               </button>
@@ -112,7 +112,7 @@ export default function StepCoupons({ coupons, setCoupons, notice }) {
           ))}
         </ul>
       ) : (
-        <p className="mt-5 rounded-xl border border-dashed border-ink/15 px-4 py-6 text-center text-sm text-ink/45">
+        <p className="mt-5 border border-dashed border-ink/15 px-4 py-6 text-center text-sm text-ink/45">
           No coupons — skip if you want.
         </p>
       )}

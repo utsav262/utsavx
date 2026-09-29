@@ -17,7 +17,7 @@ export default function ManagerSignIn() {
     const [busy, setBusy] = useState(false);
 
     if (user?.role === 'organizer') return <Navigate to="/dashboard" replace />;
-    if (user?.role === 'admin') return <Navigate to="/admin" replace />;
+    if (user?.role === 'admin') return <Navigate to="/admin-legacy" replace />;
 
     const submit = async (event) => {
         event.preventDefault();

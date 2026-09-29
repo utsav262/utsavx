@@ -46,7 +46,7 @@ export default function EventsTab({ events = [], selected, onOpen, onSetStatus, 
     <div className="mt-6 space-y-4">
       {/* Toolbar */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div className="flex flex-1 items-center gap-2 rounded-xl border border-ink/15 bg-white px-3.5 py-2.5">
+        <div className="flex flex-1 items-center gap-2 border border-ink/15 bg-white px-3.5 py-2.5">
           <Search size={15} className="text-ink/40" />
           <input
             value={query}
@@ -63,7 +63,7 @@ export default function EventsTab({ events = [], selected, onOpen, onSetStatus, 
           <button
             key={f.value}
             onClick={() => setFilter(f.value)}
-            className={`rounded-full px-3.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wider transition ${
+            className={`px-3.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wider transition ${
               filter === f.value
                 ? 'bg-ink text-white'
                 : 'border border-ink/15 text-ink/60 hover:border-ink/30'
@@ -75,7 +75,7 @@ export default function EventsTab({ events = [], selected, onOpen, onSetStatus, 
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white">
+      <div className="overflow-hidden border border-ink/10 bg-white">
         {filtered.length === 0 ? (
           <div className="px-6 py-14 text-center">
             <Filter className="mx-auto h-8 w-8 text-ink/30" />
@@ -135,14 +135,14 @@ export default function EventsTab({ events = [], selected, onOpen, onSetStatus, 
                         {formatDateTime(event.startsAt) || '—'}
                       </td>
                       <td className="px-4 py-3 align-top">
-                        <span className={`inline-block rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider ${tone}`}>
+                        <span className={`inline-block px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider ${tone}`}>
                           {status.replace('_', ' ')}
                         </span>
                       </td>
                       <td className="px-4 py-3 align-top">
                         <button
                           onClick={() => onToggleFeatured(event._id, !event.featured)}
-                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider ${
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider ${
                             event.featured
                               ? 'bg-amber-100 text-amber-700'
                               : 'border border-ink/15 text-ink/50'

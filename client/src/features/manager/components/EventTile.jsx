@@ -2,13 +2,14 @@ import { CalendarDays, MapPin, MoreVertical, Edit3, Eye, Trash2 } from 'lucide-r
 import { useState } from 'react';
 import { formatDateTime } from '../../../lib/datetime.js';
 import { money } from '../../../lib/money.js';
+import { EVENT_PLACEHOLDER } from '../../../lib/placeholder.js';
 
 function cover(event) {
   return (
     event.imageUrl ||
     event.image ||
     event.cover_image ||
-    'https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=900&q=80'
+    EVENT_PLACEHOLDER
   );
 }
 
@@ -32,7 +33,7 @@ export default function EventTile({ event, active, onOpen, onEdit, onDelete }) {
 
   return (
     <article
-      className={`group relative overflow-hidden rounded-2xl border bg-white transition ${
+      className={`group relative overflow-hidden border bg-white transition ${
         active ? 'border-coral shadow-[0_12px_40px_rgba(232,93,76,0.12)]' : 'border-ink/10 hover:border-ink/25'
       }`}
     >
@@ -41,7 +42,7 @@ export default function EventTile({ event, active, onOpen, onEdit, onDelete }) {
         <div className="relative aspect-[16/10] overflow-hidden bg-moss">
           <img src={cover(event)} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" />
           <div className="absolute inset-0 bg-gradient-to-t from-ink/75 via-ink/20 to-transparent" />
-          <span className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider ${STATUS_TONES[status] || STATUS_TONES.draft}`}>
+          <span className={`absolute left-3 top-3 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider ${STATUS_TONES[status] || STATUS_TONES.draft}`}>
             {status}
           </span>
           <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
@@ -57,13 +58,13 @@ export default function EventTile({ event, active, onOpen, onEdit, onDelete }) {
       <div className="absolute right-3 top-3">
         <button
           onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
-          className="rounded-full bg-white/90 p-1.5 text-ink backdrop-blur hover:bg-white"
+          className="bg-white/90 p-1.5 text-ink backdrop-blur hover:bg-white"
           aria-label="Actions"
         >
           <MoreVertical size={14} />
         </button>
         {menuOpen && (
-          <div className="absolute right-0 mt-1 w-40 overflow-hidden rounded-xl border border-ink/10 bg-white shadow-xl">
+          <div className="absolute right-0 mt-1 w-40 overflow-hidden border border-ink/10 bg-white shadow-xl">
             <button onClick={() => { setMenuOpen(false); onOpen(event); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-cream">
               <Eye size={13} /> Open
             </button>
@@ -98,7 +99,7 @@ export default function EventTile({ event, active, onOpen, onEdit, onDelete }) {
             <span>{sold}/{capacity || '—'} sold</span>
             <span className="text-coral">{pct}%</span>
           </div>
-          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-ink/10">
+          <div className="mt-1.5 h-1.5 w-full overflow-hidden bg-ink/10">
             <div
               className="h-full bg-coral transition-all"
               style={{ width: `${Math.min(pct, 100)}%` }}

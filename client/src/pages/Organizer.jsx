@@ -60,7 +60,7 @@ export default function Organizer() {
             ) : user?.role === 'admin' ? (
                 <div className="mt-8">
                     <Link
-                        to="/admin"
+                        to="/admin-legacy"
                         className="inline-flex bg-ink px-6 py-3.5 text-sm font-extrabold uppercase tracking-wider text-white"
                     >
                         Open admin console

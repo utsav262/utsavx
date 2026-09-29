@@ -27,7 +27,7 @@ export default function PendingTab({ pending = [], onOpen, onApprove, onReject }
 
   if (!pending.length) {
     return (
-      <div className="mt-8 rounded-2xl border border-dashed border-ink/15 bg-white px-6 py-16 text-center">
+      <div className="mt-8 border border-dashed border-ink/15 bg-white px-6 py-16 text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
           <Check className="h-6 w-6 text-emerald-600" />
         </div>
@@ -42,13 +42,13 @@ export default function PendingTab({ pending = [], onOpen, onApprove, onReject }
   return (
     <>
       {/* Bulk bar */}
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ink/10 bg-white p-4">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border border-ink/10 bg-white p-4">
         <label className="flex cursor-pointer items-center gap-2 text-sm font-bold">
           <input
             type="checkbox"
             checked={selected.size === pending.length && pending.length > 0}
             onChange={toggleAll}
-            className="h-4 w-4 rounded border-ink/30 text-coral focus:ring-coral"
+            className="h-4 w-4 border-ink/30 text-coral focus:ring-coral"
           />
           Select all ({pending.length})
         </label>
@@ -58,13 +58,13 @@ export default function PendingTab({ pending = [], onOpen, onApprove, onReject }
             <span className="text-xs text-ink/55">{selected.size} selected</span>
             <button
               onClick={() => setConfirm('approve')}
-              className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-2 text-xs font-extrabold uppercase tracking-wider text-white hover:bg-emerald-700"
+              className="inline-flex items-center gap-1.5 bg-emerald-600 px-3.5 py-2 text-xs font-extrabold uppercase tracking-wider text-white hover:bg-emerald-700"
             >
               <Check size={13} /> Approve all
             </button>
             <button
               onClick={() => setSelected(new Set())}
-              className="rounded-full border border-ink/15 px-3.5 py-2 text-xs font-extrabold uppercase tracking-wider"
+              className="border border-ink/15 px-3.5 py-2 text-xs font-extrabold uppercase tracking-wider"
             >
               Clear
             </button>
@@ -77,7 +77,7 @@ export default function PendingTab({ pending = [], onOpen, onApprove, onReject }
         {pending.map((event) => (
           <article
             key={event._id}
-            className={`overflow-hidden rounded-2xl border bg-white transition ${
+            className={`overflow-hidden border bg-white transition ${
               selected.has(event._id) ? 'border-coral shadow-sm' : 'border-ink/10'
             }`}
           >
@@ -87,17 +87,17 @@ export default function PendingTab({ pending = [], onOpen, onApprove, onReject }
                 type="checkbox"
                 checked={selected.has(event._id)}
                 onChange={() => toggle(event._id)}
-                className="mt-1 h-4 w-4 shrink-0 rounded border-ink/30 text-coral focus:ring-coral"
+                className="mt-1 h-4 w-4 shrink-0 border-ink/30 text-coral focus:ring-coral"
               />
 
               {/* Info */}
               <div className="min-w-0 flex-1">
                 <div className="flex items-start gap-2">
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-700">
+                  <span className="bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-700">
                     <Clock className="inline h-3 w-3" /> Pending
                   </span>
                   {event.category && (
-                    <span className="rounded-full bg-ink/5 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-ink/60">
+                    <span className="bg-ink/5 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-ink/60">
                       {event.category}
                     </span>
                   )}
@@ -127,19 +127,19 @@ export default function PendingTab({ pending = [], onOpen, onApprove, onReject }
               <div className="flex shrink-0 flex-wrap gap-2 sm:flex-nowrap">
                 <button
                   onClick={() => onOpen(event)}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-ink/15 px-3 py-2 text-[11px] font-extrabold uppercase tracking-wider hover:border-ink/30"
+                  className="inline-flex items-center gap-1.5 border border-ink/15 px-3 py-2 text-[11px] font-extrabold uppercase tracking-wider hover:border-ink/30"
                 >
                   <Eye size={12} /> Preview
                 </button>
                 <button
                   onClick={() => setConfirm({ type: 'reject', event })}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-extrabold uppercase tracking-wider text-red-600 hover:bg-red-100"
+                  className="inline-flex items-center gap-1.5 border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-extrabold uppercase tracking-wider text-red-600 hover:bg-red-100"
                 >
                   <X size={12} /> Reject
                 </button>
                 <button
                   onClick={() => setConfirm({ type: 'approve', event })}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-2 text-[11px] font-extrabold uppercase tracking-wider text-white hover:bg-emerald-700"
+                  className="inline-flex items-center gap-1.5 bg-emerald-600 px-3 py-2 text-[11px] font-extrabold uppercase tracking-wider text-white hover:bg-emerald-700"
                 >
                   <Check size={12} /> Approve
                 </button>

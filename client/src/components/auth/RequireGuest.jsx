@@ -5,9 +5,9 @@ export default function RequireGuest({ children }) {
   const { token, user } = useSelector((s) => s.auth);
 
   if (token && user) {
-    // Role ke hisaab se redirect
+    // Redirect by role
     const redirectMap = {
-      admin: '/admin',
+      admin: '/admin-legacy',
       manager: '/manager',
       organizer: '/manager',
       user: '/dashboard',

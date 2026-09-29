@@ -15,7 +15,7 @@ export default function Careers() {
   return (
     <StaticPage eyebrow="Join us" title="Careers" subtitle="Help us shape how India experiences live events.">
       <div className="space-y-6">
-        <div className="rounded-2xl border border-ink/10 bg-white p-6">
+        <div className="border border-ink/10 bg-white p-6">
           <h2 className="serif text-2xl">Why UTSAVX?</h2>
           <ul className="mt-4 grid gap-3 text-sm text-ink/70 sm:grid-cols-2">
             <li>• Remote-first culture</li>
@@ -29,7 +29,7 @@ export default function Careers() {
 
         <div>
           <h2 className="serif text-3xl">Open roles</h2>
-          <div className="mt-4 divide-y divide-ink/10 rounded-2xl border border-ink/10 bg-white">
+          <div className="mt-4 divide-y divide-ink/10 border border-ink/10 bg-white">
             {JOBS.map((j) => (
               <Link
                 key={j.title}

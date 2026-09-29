@@ -62,7 +62,6 @@ async function resolveBuyerUser(attendee, fallbackSeller) {
         name,
         email,
         passwordHash: await bcrypt.hash(tempPassword, 12),
-        passwordPlain: tempPassword,
         role: 'customer'
     });
 }
@@ -74,6 +73,31 @@ async function resolveBuyerUser(attendee, fallbackSeller) {
  * Tickets are owned by the attendee (buyer email), not the selling manager,
  * so they appear under that user's My tickets on web/app.
  */
+const ALLOTTED_ROLES = ['Ambassador', 'Outlet'];
+
+/**
+ * Ambassadors / outlets may only sell the ticket types assigned to them, up to
+ * the assigned quantity minus what they have already sold. Returns null for
+ * roles without allotments (owner, manager, gate staff).
+ */
+async function allotmentsLeft(handler, eventId, userId) {
+    if (!handler || !ALLOTTED_ROLES.includes(handler.userType)) return null;
+    const left = new Map();
+    for (const row of handler.allotments || []) {
+        if (!row.ticketTypeId) continue;
+        const key = String(row.ticketTypeId);
+        left.set(key, (left.get(key) || 0) + Number(row.quantity || 0));
+    }
+    const orders = await BookingOrder.find({ event: eventId, soldBy: userId, status: 'paid' }).select('items').lean();
+    for (const order of orders) {
+        for (const item of order.items || []) {
+            const key = String(item.ticketTypeId);
+            if (left.has(key)) left.set(key, Math.max(0, left.get(key) - Number(item.quantity || 0)));
+        }
+    }
+    return left;
+}
+
 export async function sellTicketOrders({ user, eventId, tickets, purchaseSource, complimentary = false }) {
     if (!eventId || !Array.isArray(tickets) || !tickets.length) {
         const error = new Error('event_id and tickets are required');
@@ -81,7 +105,8 @@ export async function sellTicketOrders({ user, eventId, tickets, purchaseSource,
         throw error;
     }
 
-    const { event } = await assertSellAccess(user, eventId);
+    const { event, handler } = await assertSellAccess(user, eventId);
+    const allotted = await allotmentsLeft(handler, event._id, user._id);
     if (event.status !== 'published' && event.status !== 'sold-out') {
         const error = new Error('Event is not available for sales');
         error.statusCode = 409;
@@ -144,6 +169,18 @@ export async function sellTicketOrders({ user, eventId, tickets, purchaseSource,
         byType.set(key, existing);
     }
     inventoryLines.push(...byType.values());
+    if (allotted) {
+        for (const line of inventoryLines) {
+            const left = allotted.get(String(line.ticketTypeId)) || 0;
+            if (line.quantity > left) {
+                const error = new Error(left
+                    ? `Only ${left} ${line.name} ticket${left === 1 ? '' : 's'} left in your allotment.`
+                    : `${line.name} is not assigned to you for this event.`);
+                error.statusCode = 403;
+                throw error;
+            }
+        }
+    }
     await reserveInventory(eventId, inventoryLines, { gate: isGate || complimentary });
 
     // One booking per buyer so each account owns its tickets.
@@ -211,6 +248,8 @@ export async function sellTicketOrders({ user, eventId, tickets, purchaseSource,
 
 export async function listSellableTickets(user, eventId) {
     const { event, handler, isOwner } = await assertSellAccess(user, eventId);
+    const allotted = await allotmentsLeft(handler, event._id, user._id);
+    const types = (event.ticketTypes || []).filter((type) => !allotted || allotted.has(String(type._id)));
     return {
         event: {
             _id: event._id,
@@ -222,7 +261,7 @@ export async function listSellableTickets(user, eventId) {
             status: event.status,
             imageUrl: event.imageUrl
         },
-        tickets: (event.ticketTypes || []).map((type) => ({
+        tickets: types.map((type) => ({
             _id: type._id,
             id: type._id,
             name: type.name,
@@ -231,9 +270,13 @@ export async function listSellableTickets(user, eventId) {
             door_price: type.doorPrice ?? 0,
             quantity: type.quantity,
             sold: type.sold || 0,
-            remaining: Number(type.quantity || 0) === 0
-                ? 999999
-                : Math.max(0, Number(type.quantity || 0) - Number(type.sold || 0)),
+            remaining: (() => {
+                const stock = Number(type.quantity || 0) === 0
+                    ? 999999
+                    : Math.max(0, Number(type.quantity || 0) - Number(type.sold || 0));
+                return allotted ? Math.min(stock, allotted.get(String(type._id)) || 0) : stock;
+            })(),
+            allotted: allotted ? allotted.get(String(type._id)) || 0 : null,
             salesStatus: type.salesStatus,
             currency: type.currency || 'INR',
             type: type.type || null,

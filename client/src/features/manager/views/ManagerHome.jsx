@@ -22,9 +22,9 @@ export default function ManagerHome({ dashboard, events = [], onCreate, onOpenDa
         <button
           type="button"
           onClick={onCreate}
-          className="group flex items-center gap-4 rounded-2xl border border-ink/10 bg-gradient-to-br from-coral/5 to-white p-6 text-left transition hover:border-coral"
+          className="group flex items-center gap-4 border border-ink/10 bg-gradient-to-br from-coral/5 to-white p-6 text-left transition hover:border-coral"
         >
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-coral text-white">
+          <div className="flex h-12 w-12 items-center justify-center bg-coral text-white">
             <Plus size={22} />
           </div>
           <div className="flex-1">
@@ -38,9 +38,9 @@ export default function ManagerHome({ dashboard, events = [], onCreate, onOpenDa
         <button
           type="button"
           onClick={onOpenDashboard}
-          className="group flex items-center gap-4 rounded-2xl border border-ink/10 bg-white p-6 text-left transition hover:border-coral"
+          className="group flex items-center gap-4 border border-ink/10 bg-white p-6 text-left transition hover:border-coral"
         >
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-ink text-white">
+          <div className="flex h-12 w-12 items-center justify-center bg-ink text-white">
             <CalendarDays size={22} />
           </div>
           <div className="flex-1">
@@ -59,7 +59,7 @@ export default function ManagerHome({ dashboard, events = [], onCreate, onOpenDa
           title="Recent events"
           subtitle={`${events.length} event${events.length === 1 ? '' : 's'}`}
           actions={
-            <button onClick={onCreate} className="inline-flex items-center gap-2 rounded-full bg-coral px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider text-white hover:opacity-90">
+            <button onClick={onCreate} className="inline-flex items-center gap-2 bg-coral px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider text-white hover:opacity-90">
               <Sparkles size={13} /> New
             </button>
           }
@@ -72,12 +72,12 @@ export default function ManagerHome({ dashboard, events = [], onCreate, onOpenDa
             ))}
           </div>
         ) : (
-          <div className="mt-6 rounded-2xl border border-dashed border-ink/20 px-6 py-16 text-center">
+          <div className="mt-6 border border-dashed border-ink/20 px-6 py-16 text-center">
             <p className="serif text-3xl">No events yet</p>
             <p className="mx-auto mt-3 max-w-md text-sm text-ink/55">
               Create your first event to sell tickets, invite team, and open the door.
             </p>
-            <button onClick={onCreate} className="mt-6 inline-flex items-center gap-2 rounded-full bg-ink px-5 py-3 text-xs font-extrabold uppercase tracking-wider text-white">
+            <button onClick={onCreate} className="mt-6 inline-flex items-center gap-2 bg-ink px-5 py-3 text-xs font-extrabold uppercase tracking-wider text-white">
               <Plus size={14} /> Create event
             </button>
           </div>

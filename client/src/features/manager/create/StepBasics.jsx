@@ -52,7 +52,7 @@ export default function StepBasics({ basics, setBasics, errors }) {
                   key={c.value}
                   type="button"
                   onClick={() => set('category', c.value)}
-                  className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 text-xs font-bold transition ${
+                  className={`flex flex-col items-center gap-1.5 border p-3 text-xs font-bold transition ${
                     active
                       ? 'border-coral bg-coral/5 text-coral'
                       : 'border-ink/15 text-ink/60 hover:border-ink/30'
@@ -129,7 +129,7 @@ export default function StepBasics({ basics, setBasics, errors }) {
 
       {/* Section: Promotion */}
       <Section title="Promotion" hint="Optional">
-        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-ink/15 bg-white p-4 transition hover:border-coral">
+        <label className="flex cursor-pointer items-start gap-3 border border-ink/15 bg-white p-4 transition hover:border-coral">
           <input
             type="checkbox"
             className="mt-0.5 h-4 w-4 accent-coral"
@@ -153,7 +153,7 @@ export default function StepBasics({ basics, setBasics, errors }) {
 
 function Section({ title, hint, children }) {
   return (
-    <div className="rounded-2xl border border-ink/10 bg-white p-6">
+    <div className="border border-ink/10 bg-white p-6">
       <div className="mb-5 flex items-baseline justify-between">
         <h3 className="serif text-2xl leading-none">{title}</h3>
         {hint && <span className="text-xs text-ink/45">{hint}</span>}

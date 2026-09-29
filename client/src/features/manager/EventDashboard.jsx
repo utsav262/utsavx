@@ -2,13 +2,14 @@ import { BarChart3, CalendarDays, Check, Coins, ExternalLink, MapPin, ScanLine, 
 import { Link } from 'react-router-dom';
 import { money } from '../../lib/money.js';
 import { formatDateTimeLong } from '../../lib/datetime.js';
+import { EVENT_PLACEHOLDER } from '../../lib/placeholder.js';
 
 function cover(event) {
     return (
         event?.imageUrl ||
         event?.image ||
         event?.cover_image ||
-        'https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=1200&q=80'
+        EVENT_PLACEHOLDER
     );
 }
 

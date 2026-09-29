@@ -9,10 +9,10 @@ export default function Unauthorized() {
           <ShieldAlert className="h-7 w-7 text-coral" />
         </div>
         <h1 className="serif mt-6 text-4xl">403 — Access denied</h1>
-        <p className="mt-3 text-ink/60">Aapko is page ka access nahi hai.</p>
+        <p className="mt-3 text-ink/60">You don't have access to this page.</p>
         <div className="mt-6 flex justify-center gap-3">
-          <Link to="/" className="rounded-full bg-coral px-6 py-3 font-bold text-white">Go home</Link>
-          <Link to="/contact" className="rounded-full border border-ink/20 px-6 py-3 font-bold">Contact support</Link>
+          <Link to="/" className="bg-coral px-6 py-3 font-bold text-white">Go home</Link>
+          <Link to="/contact" className="border border-ink/20 px-6 py-3 font-bold">Contact support</Link>
         </div>
       </div>
     </main>

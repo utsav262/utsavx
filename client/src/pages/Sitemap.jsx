@@ -51,7 +51,7 @@ const GROUPS = [
 
 export default function Sitemap() {
   return (
-    <StaticPage eyebrow="Navigation" title="Sitemap" subtitle="Har page ek jagah." maxWidth="max-w-5xl">
+    <StaticPage eyebrow="Navigation" title="Sitemap" subtitle="Every page in one place." maxWidth="max-w-5xl">
       <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
         {GROUPS.map((g) => (
           <div key={g.title}>

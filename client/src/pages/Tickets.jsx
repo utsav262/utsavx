@@ -157,7 +157,7 @@ export default function Tickets() {
             </p>
           </div>
           {totalCount > 0 && (
-            <div className="rounded-2xl border border-ink/10 bg-white px-5 py-3">
+            <div className="border border-ink/10 bg-white px-5 py-3">
               <p className="text-xs font-bold uppercase tracking-wider text-ink/45">
                 Total
               </p>
@@ -168,7 +168,7 @@ export default function Tickets() {
 
         {/* ============== ERROR ============== */}
         {error && (
-          <div className="mt-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm">
+          <div className="mt-6 flex items-start gap-3 border border-red-200 bg-red-50 p-4 text-sm">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
             <p className="text-red-700">{error}</p>
           </div>
@@ -177,14 +177,14 @@ export default function Tickets() {
         {/* ============== LOADING ============== */}
         {loading ? (
           <div className="mt-10 grid gap-6 md:grid-cols-[1.1fr_0.9fr]">
-            <div className="h-96 animate-pulse rounded-2xl bg-ink/10" />
-            <div className="h-96 animate-pulse rounded-2xl bg-ink/10" />
+            <div className="h-96 animate-pulse bg-ink/10" />
+            <div className="h-96 animate-pulse bg-ink/10" />
           </div>
         ) : null}
 
         {/* ============== EMPTY ============== */}
         {!loading && !tickets.length && !error ? (
-          <div className="mt-12 rounded-3xl border border-ink/10 bg-white px-6 py-16 text-center">
+          <div className="mt-12 border border-ink/10 bg-white px-6 py-16 text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-coral/10">
               <Ticket className="h-6 w-6 text-coral" />
             </div>
@@ -195,13 +195,13 @@ export default function Tickets() {
             <div className="mt-6 flex flex-wrap justify-center gap-2">
               <Link
                 to="/events"
-                className="inline-flex items-center gap-2 rounded-full bg-coral px-5 py-2.5 text-sm font-bold text-white hover:opacity-90"
+                className="inline-flex items-center gap-2 bg-coral px-5 py-2.5 text-sm font-bold text-white hover:opacity-90"
               >
                 Browse events <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 to="/"
-                className="rounded-full border border-ink/20 px-5 py-2.5 text-sm font-bold hover:border-coral hover:text-coral"
+                className="border border-ink/20 px-5 py-2.5 text-sm font-bold hover:border-coral hover:text-coral"
               >
                 Go home
               </Link>
@@ -214,7 +214,7 @@ export default function Tickets() {
           <>
             {/* Tabs + search */}
             <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
-              <div className="inline-flex rounded-full border border-ink/15 bg-white p-1">
+              <div className="inline-flex border border-ink/15 bg-white p-1">
                 <TabBtn
                   active={tab === 'upcoming'}
                   onClick={() => {
@@ -237,7 +237,7 @@ export default function Tickets() {
 
               {/* Search */}
               {filtered.length > 3 && (
-                <div className="relative flex flex-1 items-center rounded-full border border-ink/15 bg-white px-3.5 py-2 sm:max-w-xs">
+                <div className="relative flex flex-1 items-center border border-ink/15 bg-white px-3.5 py-2 sm:max-w-xs">
                   <Search size={15} className="text-ink/45" />
                   <input
                     value={search}
@@ -248,7 +248,7 @@ export default function Tickets() {
                   {search && (
                     <button
                       onClick={() => setSearch('')}
-                      className="rounded-full p-0.5 text-ink/40 hover:text-ink"
+                      className="p-0.5 text-ink/40 hover:text-ink"
                       aria-label="Clear"
                     >
                       <X size={13} />
@@ -260,7 +260,7 @@ export default function Tickets() {
 
             {/* Content */}
             {filtered.length === 0 ? (
-              <div className="mt-8 rounded-2xl border border-ink/10 bg-white px-6 py-12 text-center">
+              <div className="mt-8 border border-ink/10 bg-white px-6 py-12 text-center">
                 <p className="text-sm text-ink/60">
                   {search
                     ? `No tickets match "${search}".`
@@ -300,7 +300,7 @@ export default function Tickets() {
                         <button
                           onClick={() => setDownloadOpen((v) => !v)}
                           disabled={downloading}
-                          className="inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-sm font-bold text-white transition hover:bg-ink/90 disabled:opacity-60"
+                          className="inline-flex items-center gap-2 bg-ink px-4 py-2.5 text-sm font-bold text-white transition hover:bg-ink/90 disabled:opacity-60"
                         >
                           <Download className="h-4 w-4" />
                           {downloading ? 'Preparing…' : 'Download pass'}
@@ -312,7 +312,7 @@ export default function Tickets() {
                         </button>
 
                         {downloadOpen && (
-                          <div className="absolute right-0 top-full z-20 mt-2 w-56 overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-xl">
+                          <div className="absolute right-0 top-full z-20 mt-2 w-56 overflow-hidden border border-ink/10 bg-white shadow-xl">
                             <button
                               onClick={handleDownloadPng}
                               className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-bold text-ink/75 transition hover:bg-cream"
@@ -387,7 +387,7 @@ function TicketRow({ ticket, active, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`group w-full overflow-hidden rounded-2xl border bg-white text-left transition ${
+      className={`group w-full overflow-hidden border bg-white text-left transition ${
         active
           ? 'border-coral shadow-[0_12px_40px_rgba(232,93,76,0.12)]'
           : 'border-ink/10 hover:border-ink/25'
@@ -396,7 +396,7 @@ function TicketRow({ ticket, active, onClick }) {
       <div className="flex gap-4 p-4">
         {/* Date block */}
         <div
-          className={`flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl ${
+          className={`flex h-16 w-16 shrink-0 flex-col items-center justify-center ${
             upcoming ? 'bg-coral/10 text-coral' : 'bg-ink/5 text-ink/50'
           }`}
         >
@@ -421,7 +421,7 @@ function TicketRow({ ticket, active, onClick }) {
               {ticket.event?.title || ticket.ticketType || 'Ticket'}
             </p>
             <span
-              className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider ${cfg.cls}`}
+              className={`inline-flex shrink-0 items-center gap-1 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider ${cfg.cls}`}
             >
               {cfg.icon}
               {cfg.label}
@@ -485,7 +485,7 @@ function ScreenPassView({ ticket, qrValue }) {
   };
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-ink/10 bg-white shadow-[0_12px_40px_rgba(26,26,26,0.06)]">
+    <div className="overflow-hidden border border-ink/10 bg-white shadow-[0_12px_40px_rgba(26,26,26,0.06)]">
       {/* Header strip */}
       <div className="flex items-center justify-between border-b border-ink/10 bg-gradient-to-r from-coral/10 via-coral/5 to-transparent px-6 py-4">
         <div>
@@ -497,7 +497,7 @@ function ScreenPassView({ ticket, qrValue }) {
           </p>
         </div>
         <span
-          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider ${cfg.cls}`}
+          className={`inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider ${cfg.cls}`}
         >
           {cfg.icon}
           {cfg.label}
@@ -511,7 +511,7 @@ function ScreenPassView({ ticket, qrValue }) {
         </h2>
 
         <div className="mt-6 flex justify-center">
-          <div className="relative rounded-3xl border border-ink/10 bg-white p-4 shadow-[0_18px_50px_rgba(26,26,26,0.08)]">
+          <div className="relative border border-ink/10 bg-white p-4 shadow-[0_18px_50px_rgba(26,26,26,0.08)]">
             <QRCodeSVG
               value={qrValue}
               size={220}
@@ -521,10 +521,10 @@ function ScreenPassView({ ticket, qrValue }) {
               fgColor="#1a1a1a"
             />
             {/* Corner brackets */}
-            <span className="pointer-events-none absolute -left-1 -top-1 h-4 w-4 rounded-tl-lg border-l-2 border-t-2 border-coral" />
-            <span className="pointer-events-none absolute -right-1 -top-1 h-4 w-4 rounded-tr-lg border-r-2 border-t-2 border-coral" />
-            <span className="pointer-events-none absolute -bottom-1 -left-1 h-4 w-4 rounded-bl-lg border-b-2 border-l-2 border-coral" />
-            <span className="pointer-events-none absolute -bottom-1 -right-1 h-4 w-4 rounded-br-lg border-b-2 border-r-2 border-coral" />
+            <span className="pointer-events-none absolute -left-1 -top-1 h-4 w-4 border-l-2 border-t-2 border-coral" />
+            <span className="pointer-events-none absolute -right-1 -top-1 h-4 w-4 border-r-2 border-t-2 border-coral" />
+            <span className="pointer-events-none absolute -bottom-1 -left-1 h-4 w-4 border-b-2 border-l-2 border-coral" />
+            <span className="pointer-events-none absolute -bottom-1 -right-1 h-4 w-4 border-b-2 border-r-2 border-coral" />
           </div>
         </div>
 
@@ -535,7 +535,7 @@ function ScreenPassView({ ticket, qrValue }) {
         {/* Confirmation code with copy */}
         <button
           onClick={copyCode}
-          className="mt-5 flex w-full items-center justify-between rounded-xl border border-dashed border-ink/20 bg-cream/50 px-4 py-3 transition hover:border-coral"
+          className="mt-5 flex w-full items-center justify-between border border-dashed border-ink/20 bg-cream/50 px-4 py-3 transition hover:border-coral"
         >
           <div className="text-left">
             <p className="text-[10px] font-extrabold uppercase tracking-wider text-ink/45">
@@ -565,14 +565,14 @@ function ScreenPassView({ ticket, qrValue }) {
         <div className="mt-5 flex gap-2">
           <button
             onClick={handleShare}
-            className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-ink/15 bg-white py-2.5 text-xs font-bold text-ink/70 transition hover:border-coral hover:text-coral"
+            className="flex-1 inline-flex items-center justify-center gap-2 border border-ink/15 bg-white py-2.5 text-xs font-bold text-ink/70 transition hover:border-coral hover:text-coral"
           >
             <Share2 className="h-3.5 w-3.5" /> Share pass
           </button>
         </div>
 
         {/* Trust note */}
-        <div className="mt-5 flex items-start gap-2 rounded-xl bg-cream/60 p-3 text-xs text-ink/60">
+        <div className="mt-5 flex items-start gap-2 bg-cream/60 p-3 text-xs text-ink/60">
           <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-coral" />
           <p>
             Each QR is unique. Screenshot sharing is safe, but avoid posting
@@ -608,7 +608,7 @@ function TabBtn({ active, onClick, children }) {
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-4 py-2 text-xs font-extrabold transition ${
+      className={`px-4 py-2 text-xs font-extrabold transition ${
         active ? 'bg-ink text-white' : 'text-ink/60 hover:text-ink'
       }`}
     >

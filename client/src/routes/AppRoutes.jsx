@@ -9,6 +9,7 @@ import Footer from '../components/layout/Footer.jsx';
 import RequireAuth from '../components/auth/RequireAuth.jsx';
 import RequireRole from '../components/auth/RequireRole.jsx';
 import RequireGuest from '../components/auth/RequireGuest.jsx';
+import RequireBuyer from '../components/auth/RequireBuyer.jsx';
 
 import Home from '../pages/Home.jsx';
 import Events from '../pages/Events.jsx';
@@ -20,12 +21,14 @@ import Tickets from '../pages/Tickets.jsx';
 import Organizer from '../pages/Organizer.jsx';
 import ManagerSignIn from '../pages/ManagerSignIn.jsx';
 import ManagerSignUp from '../pages/ManagerSignUp.jsx';
-import AdminSignIn from '../pages/AdminSignIn.jsx';
 import ManagerWorkspace from '../features/manager/ManagerWorkspace.jsx';
 import Invitations from '../pages/Invitations.jsx';
 import Dashboard from '../pages/Dashboard.jsx';
 import EventDashboard from '../pages/EventDashboard.jsx';
 import AddTeamMember from '../features/team/AddTeamMember.jsx';
+import TeamMemberPage from '../features/team/TeamMemberPage.jsx';
+import Notifications from '../pages/Notifications.jsx';
+import Settlements from '../pages/Settlements.jsx';
 import Sell from '../pages/Sell.jsx';
 
 import About from '../pages/About.jsx';
@@ -61,7 +64,10 @@ export default function AppRoutes() {
           token: localStorage.getItem('utsavx_token'),
         }));
       })
-      .catch(() => dispatch(signOut()));
+      // Only a rejected token logs you out; network errors / rate limits keep the session.
+      .catch((error) => {
+        if (error.response?.status === 401) dispatch(signOut());
+      });
   }, [dispatch]);
 
   return (
@@ -72,8 +78,8 @@ export default function AppRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/events" element={<Events />} />
         <Route path="/events/:id" element={<EventDetail />} />
-        <Route path="/cart" element={<Cart />} />
-        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/cart" element={<RequireBuyer><Cart /></RequireBuyer>} />
+        <Route path="/checkout" element={<RequireBuyer><Checkout /></RequireBuyer>} />
         
         {/* ---------- INFORMATIONAL & FOOTER PAGES ---------- */}
         <Route path="/about" element={<About />} />
@@ -98,8 +104,6 @@ export default function AppRoutes() {
         <Route path="/manager/login" element={<RequireGuest><ManagerSignIn /></RequireGuest>} />
         <Route path="/manager/signin" element={<RequireGuest><ManagerSignIn /></RequireGuest>} />
         <Route path="/manager/signup" element={<RequireGuest><ManagerSignUp /></RequireGuest>} />
-        <Route path="/admin/login" element={<RequireGuest><AdminSignIn /></RequireGuest>} />
-        <Route path="/admin/signin" element={<RequireGuest><AdminSignIn /></RequireGuest>} />
 
         {/* ---------- USER (any logged in) ---------- */}
         <Route path="/tickets" element={<RequireAuth><Tickets /></RequireAuth>} />
@@ -107,13 +111,16 @@ export default function AppRoutes() {
         <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
         <Route path="/dashboard/events/:eventId" element={<RequireAuth><EventDashboard /></RequireAuth>} />
         <Route path="/dashboard/events/:eventId/team/add" element={<RequireAuth><AddTeamMember /></RequireAuth>} />
+        <Route path="/dashboard/events/:eventId/team/:handlerId" element={<RequireAuth><TeamMemberPage /></RequireAuth>} />
+        <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
+        <Route path="/dashboard/settlements" element={<RequireRole roles={['organizer']}><Settlements /></RequireRole>} />
         <Route path="/dashboard/sell/:eventId" element={<RequireAuth><Sell /></RequireAuth>} />
 
         {/* ---------- MANAGER ONLY ---------- */}
         <Route path="/manager" element={<RequireRole roles={['manager', 'organizer']}><ManagerWorkspace /></RequireRole>} />
 
         {/* ---------- ADMIN ONLY ---------- */}
-        <Route path="/admin" element={<RequireRole roles={['admin']}><ManagerWorkspace /></RequireRole>} />
+        <Route path="/admin-legacy" element={<RequireRole roles={['admin']}><ManagerWorkspace /></RequireRole>} />
 
         {/* ---------- FALLBACK ---------- */}
         <Route path="*" element={<NotFound />} />

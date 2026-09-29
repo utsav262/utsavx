@@ -32,21 +32,21 @@ export default function PasswordCell({ user, onSetPassword }) {
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Min 8 chars"
-          className="min-w-[120px] flex-1 rounded-lg border border-ink/15 bg-transparent px-2.5 py-1.5 font-mono text-xs outline-none focus:border-coral"
+          className="min-w-[120px] flex-1 border border-ink/15 bg-transparent px-2.5 py-1.5 font-mono text-xs outline-none focus:border-coral"
           autoComplete="new-password"
           autoFocus
         />
         <button
           onClick={save}
           disabled={saving || draft.trim().length < 8}
-          className="rounded-lg bg-coral p-1.5 text-white disabled:opacity-40"
+          className="bg-coral p-1.5 text-white disabled:opacity-40"
           aria-label="Save"
         >
           <Check size={13} />
         </button>
         <button
           onClick={cancel}
-          className="rounded-lg border border-ink/15 p-1.5 text-ink/60 hover:text-ink"
+          className="border border-ink/15 p-1.5 text-ink/60 hover:text-ink"
           aria-label="Cancel"
         >
           <X size={13} />
@@ -59,7 +59,7 @@ export default function PasswordCell({ user, onSetPassword }) {
     <div className="flex items-center gap-2">
       {user.password ? (
         <>
-          <code className="rounded-lg bg-ink/5 px-2 py-1 font-mono text-xs">
+          <code className="bg-ink/5 px-2 py-1 font-mono text-xs">
             {visible ? user.password : '••••••••'}
           </code>
           <button
@@ -71,7 +71,7 @@ export default function PasswordCell({ user, onSetPassword }) {
           </button>
         </>
       ) : (
-        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700">
+        <span className="inline-flex items-center gap-1 bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-700">
           <ShieldCheck size={10} /> Hashed
         </span>
       )}

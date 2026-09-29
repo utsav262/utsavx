@@ -3,7 +3,7 @@ import StaticPage from '../components/layout/StaticPage.jsx';
 
 export default function Press() {
   return (
-    <StaticPage eyebrow="Media" title="Press kit" subtitle="Brand assets, logos, aur media inquiries.">
+    <StaticPage eyebrow="Media" title="Press kit" subtitle="Brand assets, logos and media inquiries.">
       <div className="space-y-8">
         <div>
           <h2 className="serif text-2xl">Brand assets</h2>
@@ -17,7 +17,7 @@ export default function Press() {
               <a
                 key={a.name}
                 href="#"
-                className="flex items-center justify-between rounded-xl border border-ink/10 bg-white p-4 transition hover:border-coral"
+                className="flex items-center justify-between border border-ink/10 bg-white p-4 transition hover:border-coral"
               >
                 <div>
                   <p className="font-bold text-sm">{a.name}</p>
@@ -40,7 +40,7 @@ export default function Press() {
               ['Cities', '48'],
               ['Events hosted', '12,000+'],
             ].map(([k, v]) => (
-              <div key={k} className="rounded-xl border border-ink/10 bg-white p-4">
+              <div key={k} className="border border-ink/10 bg-white p-4">
                 <dt className="text-xs font-bold uppercase tracking-wider text-ink/45">{k}</dt>
                 <dd className="mt-1 font-bold">{v}</dd>
               </div>
@@ -48,7 +48,7 @@ export default function Press() {
           </dl>
         </div>
 
-        <div className="rounded-2xl border border-ink/10 bg-white p-6">
+        <div className="border border-ink/10 bg-white p-6">
           <div className="flex items-start gap-3">
             <Mail className="mt-0.5 h-5 w-5 text-coral" />
             <div>

@@ -28,7 +28,7 @@ export default function StepReview({
   return (
     <div className="space-y-6">
       {/* Hero card */}
-      <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white">
+      <div className="overflow-hidden border border-ink/10 bg-white">
         <div className="bg-gradient-to-br from-coral/10 via-coral/5 to-transparent p-6">
           <p className="text-[11px] font-extrabold uppercase tracking-wider text-coral">
             Ready to launch
@@ -82,7 +82,7 @@ export default function StepReview({
       </div>
 
       {/* Checklist */}
-      <div className="rounded-2xl border border-ink/10 bg-white p-6">
+      <div className="border border-ink/10 bg-white p-6">
         <p className="text-[11px] font-extrabold uppercase tracking-wider text-ink/55">
           Pre-flight check
         </p>
@@ -103,9 +103,9 @@ export default function StepReview({
       </div>
 
       {/* Actions */}
-      <div className="rounded-2xl border border-ink/10 bg-white p-6">
+      <div className="border border-ink/10 bg-white p-6">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-coral/10 text-coral">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-coral/10 text-coral">
             <Sparkles size={17} />
           </div>
           <div className="flex-1">
@@ -125,7 +125,7 @@ export default function StepReview({
             type="button"
             disabled={busy}
             onClick={onSaveDraft}
-            className="rounded-xl border border-ink/20 px-5 py-4 text-sm font-extrabold uppercase tracking-wider transition hover:border-ink/40 disabled:opacity-60"
+            className="border border-ink/20 px-5 py-4 text-sm font-extrabold uppercase tracking-wider transition hover:border-ink/40 disabled:opacity-60"
           >
             {busy ? 'Saving…' : 'Save as draft'}
           </button>
@@ -133,7 +133,7 @@ export default function StepReview({
             type="button"
             disabled={busy || !allOk}
             onClick={onPublish}
-            className="rounded-xl bg-coral px-5 py-4 text-sm font-extrabold uppercase tracking-wider text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="bg-coral px-5 py-4 text-sm font-extrabold uppercase tracking-wider text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy
               ? isAdmin

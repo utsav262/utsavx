@@ -25,7 +25,8 @@ export default function SellFlow() {
     const seed = location.state || {};
     const mode = seed.mode || 'digital';
     const eventItem = seed.eventItem || null;
-    const ownerLike = isOwnerLike(eventItem) || user?.role === 'organizer' || user?.role === 'admin';
+    // Owner tools only when this event is theirs (or they manage it) — an organizer account can still be an ambassador elsewhere.
+    const ownerLike = isOwnerLike(eventItem) && (user?.role === 'organizer' || user?.role === 'admin');
 
     const [step, setStep] = useState('tickets');
     const [loading, setLoading] = useState(true);
@@ -195,6 +196,10 @@ export default function SellFlow() {
         }
     };
 
+    // Sales only run for live events; say so up front instead of failing at payment.
+    const eventStatus = catalog?.event?.status || eventItem?.status || eventItem?.post_visibility;
+    const salesClosed = Boolean(eventStatus) && !['published', 'sold-out'].includes(eventStatus);
+
     const modeLabel =
         mode === 'gate' ? 'Gate ticket' : mode === 'complimentary' ? 'Complimentary' : 'Digital ticket';
 
@@ -230,7 +235,15 @@ export default function SellFlow() {
 
             {loading ? <p className="mt-10 text-sm text-ink/50">Loading tickets…</p> : null}
 
-            {!loading && step === 'tickets' ? (
+            {!loading && salesClosed ? (
+                <p className="mt-8 border border-dashed border-ink/20 px-4 py-10 text-center text-sm text-ink/60">
+                    {eventStatus === 'cancelled'
+                        ? 'This event is cancelled, so ticket sales are closed.'
+                        : 'Tickets can be sold once this event is approved and live.'}
+                </p>
+            ) : null}
+
+            {!loading && !salesClosed && step === 'tickets' ? (
                 <section className="mt-8 space-y-4">
                     {!tiers.length ? (
                         <p className="border border-dashed border-ink/20 px-4 py-10 text-center text-sm text-ink/55">

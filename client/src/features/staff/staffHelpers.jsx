@@ -1,5 +1,6 @@
 import { CalendarDays, MapPin } from 'lucide-react';
 import { formatDateTime } from '../../lib/datetime.js';
+import { EVENT_PLACEHOLDER } from '../../lib/placeholder.js';
 
 export function roleLabel(type) {
     if (type === 'Event_Scanner') return 'Event Scanner';
@@ -23,7 +24,7 @@ export function place(event) {
 export function eventCover(event) {
     return (
         event?.imageUrl ||
-        'https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=900&q=80'
+        EVENT_PLACEHOLDER
     );
 }
 

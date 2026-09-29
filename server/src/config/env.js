@@ -40,6 +40,9 @@ export const env = {
     cacheCatalogTtlSeconds: Math.max(30, Number(process.env.CACHE_CATALOG_TTL_SECONDS || 300)),
     jwtSecret: process.env.JWT_SECRET,
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    /** Admin tokens use their own secret + audience so user tokens never work on /api/admin. */
+    adminJwtSecret: process.env.ADMIN_JWT_SECRET || '',
+    adminJwtExpiresIn: process.env.ADMIN_JWT_EXPIRES_IN || '8h',
     stripeSecretKey: process.env.STRIPE_SECRET_KEY,
     stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
     razorpayKeyId: process.env.RAZORPAY_KEY_ID || '',
@@ -69,6 +72,16 @@ export function isAllowedClientOrigin(origin) {
         return false;
     }
     return false;
+}
+
+if (!env.adminJwtSecret || env.adminJwtSecret.length < 32 || env.adminJwtSecret === env.jwtSecret) {
+    if (env.isProduction) {
+        console.error('ADMIN_JWT_SECRET must be set, at least 32 characters, and different from JWT_SECRET');
+        process.exit(1);
+    }
+    // Development fallback: derived from JWT_SECRET so it still differs from user tokens.
+    env.adminJwtSecret = `${env.jwtSecret || ''}::admin-dev`;
+    console.warn('ADMIN_JWT_SECRET not set — using a development-only fallback');
 }
 
 if (!env.mongoUri || !env.jwtSecret) {

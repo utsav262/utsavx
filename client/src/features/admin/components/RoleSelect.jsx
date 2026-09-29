@@ -24,7 +24,7 @@ export default function RoleSelect({ user, onChange }) {
       <div className="relative">
         <button
           onClick={() => setOpen((v) => !v)}
-          className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-extrabold uppercase tracking-wider ${current.tone}`}
+          className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-extrabold uppercase tracking-wider ${current.tone}`}
         >
           <current.Icon size={12} />
           {current.label}
@@ -34,7 +34,7 @@ export default function RoleSelect({ user, onChange }) {
         {open && (
           <>
             <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-            <div className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-xl border border-ink/10 bg-white shadow-xl">
+            <div className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden border border-ink/10 bg-white shadow-xl">
               {ROLES.map((r) => (
                 <button
                   key={r.value}

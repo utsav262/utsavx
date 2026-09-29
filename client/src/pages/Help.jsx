@@ -19,7 +19,7 @@ export default function Help() {
           <Link
             key={t.title}
             to={t.to}
-            className="rounded-2xl border border-ink/10 bg-white p-5 transition hover:border-coral"
+            className="border border-ink/10 bg-white p-5 transition hover:border-coral"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-coral/10">{t.icon}</div>
             <p className="mt-4 font-bold">{t.title}</p>
@@ -28,10 +28,10 @@ export default function Help() {
         ))}
       </div>
 
-      <div className="mt-10 rounded-2xl border border-ink/10 bg-white p-6 text-center">
+      <div className="mt-10 border border-ink/10 bg-white p-6 text-center">
         <h3 className="serif text-2xl">Can't find what you need?</h3>
         <p className="mt-2 text-sm text-ink/60">Our team replies within 24 hours.</p>
-        <Link to="/contact" className="mt-4 inline-block rounded-full bg-coral px-6 py-3 font-bold text-white">
+        <Link to="/contact" className="mt-4 inline-block bg-coral px-6 py-3 font-bold text-white">
           Contact support
         </Link>
       </div>

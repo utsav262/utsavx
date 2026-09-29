@@ -28,14 +28,14 @@ export default function EventStatusMenu({ event, onSetStatus, onToggleFeatured, 
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="rounded-lg border border-ink/15 p-1.5 text-ink/50 hover:border-ink/30 hover:text-ink"
+        className="border border-ink/15 p-1.5 text-ink/50 hover:border-ink/30 hover:text-ink"
         aria-label="Event actions"
       >
         <MoreVertical size={14} />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-20 mt-1 w-52 overflow-hidden rounded-xl border border-ink/10 bg-white shadow-xl">
+        <div className="absolute right-0 top-full z-20 mt-1 w-52 overflow-hidden border border-ink/10 bg-white shadow-xl">
           <button
             onClick={() => { setOpen(false); onOpen?.(event); }}
             className="flex w-full items-center gap-2 border-b border-ink/10 px-3 py-2.5 text-left text-xs font-bold hover:bg-cream"

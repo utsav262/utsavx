@@ -8,14 +8,14 @@ export default function StatCard({ label, value, Icon, trend, hint, accent = 'co
     amber: 'text-amber-700 bg-amber-100',
   };
   return (
-    <div className="rounded-2xl border border-ink/10 bg-white p-5 transition hover:border-ink/25">
+    <div className="border border-ink/10 bg-white p-5 transition hover:border-ink/25">
       <div className="flex items-start justify-between">
-        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${accentMap[accent] || accentMap.coral}`}>
+        <div className={`flex h-10 w-10 items-center justify-center ${accentMap[accent] || accentMap.coral}`}>
           <Icon size={18} />
         </div>
         {trend != null && (
           <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+            className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-extrabold ${
               trend >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'
             }`}
           >

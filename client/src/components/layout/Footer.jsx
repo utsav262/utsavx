@@ -17,29 +17,29 @@ export default function Footer() {
             <Link to="/" className="serif text-3xl italic text-ink">UTSAVX.</Link>
             <p className="mt-3 max-w-md text-sm leading-6 text-ink/60">
               India's home for live experiences — concerts, comedy, workshops, festivals
-              aur bahut kuch. Discover, book, aur apne moments create karo.
+              and more. Discover, book and make the moments that matter.
             </p>
 
             {/* Contact chips */}
             <div className="mt-5 flex flex-wrap gap-2 text-xs">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-white px-3 py-1.5 text-ink/70">
+              <span className="inline-flex items-center gap-1.5 border border-ink/10 bg-white px-3 py-1.5 text-ink/70">
                 <MapPin className="h-3.5 w-3.5 text-coral" /> Mumbai · Delhi · Bengaluru
               </span>
-              <a href="mailto:hello@utsavx.com" className="inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-white px-3 py-1.5 text-ink/70 hover:border-coral">
+              <a href="mailto:hello@utsavx.com" className="inline-flex items-center gap-1.5 border border-ink/10 bg-white px-3 py-1.5 text-ink/70 hover:border-coral">
                 <Mail className="h-3.5 w-3.5 text-coral" /> hello@utsavx.com
               </a>
-              <a href="tel:+919999999999" className="inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-white px-3 py-1.5 text-ink/70 hover:border-coral">
+              <a href="tel:+919999999999" className="inline-flex items-center gap-1.5 border border-ink/10 bg-white px-3 py-1.5 text-ink/70 hover:border-coral">
                 <Phone className="h-3.5 w-3.5 text-coral" /> +91 99999 99999
               </a>
             </div>
           </div>
 
           {/* Newsletter */}
-          <div className="rounded-2xl border border-ink/10 bg-white p-6">
+          <div className="border border-ink/10 bg-white p-6">
             <p className="text-xs font-extrabold uppercase tracking-wider text-coral">Newsletter</p>
             <h3 className="serif mt-2 text-2xl">Never miss a drop.</h3>
             <p className="mt-1 text-sm text-ink/60">
-              New events, early-bird tickets, aur exclusive offers — seedha inbox me.
+              New events, early-bird tickets and exclusive offers, straight to your inbox.
             </p>
             <form
               onSubmit={(e) => { e.preventDefault(); /* TODO: wire up */ }}
@@ -49,11 +49,11 @@ export default function Footer() {
                 type="email"
                 required
                 placeholder="you@email.com"
-                className="w-full rounded-full border border-ink/20 bg-transparent px-4 py-2.5 text-sm outline-none focus:border-coral"
+                className="w-full border border-ink/20 bg-transparent px-4 py-2.5 text-sm outline-none focus:border-coral"
               />
               <button
                 type="submit"
-                className="shrink-0 rounded-full bg-coral px-5 py-2.5 text-sm font-bold text-white hover:opacity-90"
+                className="shrink-0 bg-coral px-5 py-2.5 text-sm font-bold text-white hover:opacity-90"
               >
                 Subscribe
               </button>
@@ -113,7 +113,7 @@ export default function Footer() {
             <ShieldCheck className="h-4 w-4 text-coral" />
             <span className="font-bold">Secure payments:</span>
             {['UPI', 'Visa', 'Mastercard', 'RuPay', 'Net Banking'].map((p) => (
-              <span key={p} className="rounded-full border border-ink/10 bg-white px-2.5 py-1 font-bold text-ink/70">
+              <span key={p} className="border border-ink/10 bg-white px-2.5 py-1 font-bold text-ink/70">
                 {p}
               </span>
             ))}

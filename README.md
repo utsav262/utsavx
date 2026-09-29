@@ -67,7 +67,7 @@ New accounts need passwords of **8+ characters with a letter and a number**. In 
 |------|-------|----------|-------|
 | Customer | `emma@utsavx.com` | `password123` | `/login` |
 | Manager | `leo@utsavx.com` | `password123` | `/manager/login` |
-| Admin | `admin@utsavx.com` | `password123` | `/admin/login` |
+| Legacy admin (user role) | `admin@utsavx.com` | `password123` | `/login` → `/admin-legacy` |
 
 ## User flows
 
@@ -89,12 +89,52 @@ New accounts need passwords of **8+ characters with a letter and a number**. In 
 3. After admin approval, event is Live and sellable
 4. Event dashboard: sales, tickets, people, check-in
 
-### Admin
-1. `/admin/login` → `/admin`
-2. **Pending** → Approve / Reject
-3. **Events** → publish, unpublish, feature, cancel any event
-4. **Users** → change roles
-5. Can also Discover → buy tickets like any user
+### Admin console (`/admin`)
+Staff sign in separately from customers and organizers. Admin accounts live in the `AdminUser`
+collection, use their own JWT secret and audience, and every write is recorded in `AuditLog`.
+
+**Setup**
+1. In `server/.env` set `ADMIN_JWT_SECRET` (32+ chars, **different** from `JWT_SECRET`) and
+   optionally `ADMIN_JWT_EXPIRES_IN` (default `8h`). Required in production.
+2. Create the first super admin (password: 12+ chars with a letter and a number):
+   ```bash
+   cd server
+   ADMIN_EMAIL=you@company.com ADMIN_NAME="Your Name" ADMIN_PASSWORD='choose-a-strong-one-1' npm run admin:create
+   ```
+   Re-running with the same email resets that admin's password.
+3. Upgrading an older database? Remove the plaintext password copies earlier builds stored:
+   `npm run purge:plain-passwords` (password hashes are untouched).
+4. Sign in at `/admin/login`.
+
+**Modules:** Dashboard · Users (search, suspend/reactivate, verify hosts, order history) · Events
+(approve / send back / unpublish / cancel / feature, plus Categories and Cities) · Orders & tickets
+(refund via Razorpay or Stripe, manual for cash/gate/demo; resend tickets) · Settlements · Coupons
+(platform-wide codes; organizer coupons can only be switched on/off) · Notifications (in-app broadcasts to a
+segment) · Admin users · Audit log. Every list supports search, filters, pagination and CSV export
+(`?format=csv`, up to 10,000 rows).
+
+**Roles:** `support` can read everything and resend tickets; `admin` can also moderate, refund,
+manage coupons, review settlements, broadcast and read the audit log; `super_admin` can also change
+user roles and manage admin accounts. The sidebar only shows what the signed-in role can use, and the
+API enforces the same rules. At least one active `super_admin` always remains.
+
+**API:** `/api/admin/v1/*` — `POST /auth/login` (5 attempts / 15 min per IP + email),
+`GET /auth/me`, `POST /auth/logout`, `GET /dashboard?from=YYYY-MM-DD&to=YYYY-MM-DD[&refresh=1]`
+(UTC days, cached in Redis for 2 minutes).
+
+**Tests:** `cd server && npm test` (Vitest + Supertest against `MONGO_URI_TEST`,
+default `mongodb://127.0.0.1:27017/utsavx_test`; the dev database is never touched).
+
+**Settlements (cash & gate sales).** Hosts collect cash for `CASH SALE` / `GATE SALE` orders, so the
+platform service fee on them is remitted back. Hosts see what's due at `/dashboard/settlements`
+(one open settlement per event, due 7 days after the last sale), transfer to the bank account set in
+`PLATFORM_BANK_*`, and upload up to 5 receipts (JPG/PNG/WebP/PDF, 5MB each). Receipts are stored
+privately in `server/storage/receipts` (or `RECEIPT_STORAGE_DIR`) and only served to the host and admins.
+Admins review them in the console under **Settlements**: `super_admin`/`admin` approve or send back with a
+note (audited, host notified); `support` can view only.
+
+The previous user-role admin panel (event approvals, featuring, role changes) stays available at
+`/admin-legacy` for `role: admin` users until those modules are ported into the console.
 
 ## Payments
 

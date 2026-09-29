@@ -48,7 +48,7 @@ export default function Faq() {
         {SECTIONS.map((section) => (
           <div key={section.id} id={section.id}>
             <h2 className="serif text-3xl">{section.title}</h2>
-            <div className="mt-4 divide-y divide-ink/10 rounded-2xl border border-ink/10 bg-white">
+            <div className="mt-4 divide-y divide-ink/10 border border-ink/10 bg-white">
               {section.items.map((item) => (
                 <Accordion key={item.q} q={item.q} a={item.a} />
               ))}

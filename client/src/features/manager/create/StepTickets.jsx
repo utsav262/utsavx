@@ -7,7 +7,7 @@ export default function StepTickets({ tickets, capacity, minPrice, onOpenFlow, b
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-ink/10 bg-white p-6">
+      <div className="border border-ink/10 bg-white p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[11px] font-extrabold uppercase tracking-wider text-coral">
@@ -22,7 +22,7 @@ export default function StepTickets({ tickets, capacity, minPrice, onOpenFlow, b
             type="button"
             disabled={busy}
             onClick={onOpenFlow}
-            className="inline-flex shrink-0 items-center gap-2 rounded-full bg-coral px-4 py-3 text-xs font-extrabold uppercase tracking-wider text-white hover:opacity-90 disabled:opacity-60"
+            className="inline-flex shrink-0 items-center gap-2 bg-coral px-4 py-3 text-xs font-extrabold uppercase tracking-wider text-white hover:opacity-90 disabled:opacity-60"
           >
             <Plus size={14} /> {tickets.length ? 'Manage' : 'Add tickets'}
           </button>
@@ -39,7 +39,7 @@ export default function StepTickets({ tickets, capacity, minPrice, onOpenFlow, b
 
         {/* Validation hint */}
         {!sellable.length && tickets.length > 0 && (
-          <div className="mt-5 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs">
+          <div className="mt-5 flex items-start gap-2 border border-amber-200 bg-amber-50 p-3 text-xs">
             <AlertCircle size={14} className="mt-0.5 shrink-0 text-amber-600" />
             <p className="text-amber-800">
               Add at least one paid ticket before continuing.
@@ -48,7 +48,7 @@ export default function StepTickets({ tickets, capacity, minPrice, onOpenFlow, b
         )}
 
         {sellable.length > 0 && (
-          <div className="mt-5 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs">
+          <div className="mt-5 flex items-start gap-2 border border-emerald-200 bg-emerald-50 p-3 text-xs">
             <Check size={14} className="mt-0.5 shrink-0 text-emerald-600" />
             <p className="text-emerald-800">
               Ready — {sellable.length} sellable tier
@@ -60,7 +60,7 @@ export default function StepTickets({ tickets, capacity, minPrice, onOpenFlow, b
 
       {/* Ticket list */}
       {tickets.length > 0 ? (
-        <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white">
+        <div className="overflow-hidden border border-ink/10 bg-white">
           <div className="border-b border-ink/10 px-5 py-3 text-[10px] font-extrabold uppercase tracking-wider text-ink/50">
             Tier list
           </div>
@@ -70,7 +70,7 @@ export default function StepTickets({ tickets, capacity, minPrice, onOpenFlow, b
                 key={ticket._id || ticket.name}
                 className="flex items-center gap-3 px-5 py-4"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-coral/10 text-coral">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-coral/10 text-coral">
                   <TicketIcon size={16} />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -80,7 +80,7 @@ export default function StepTickets({ tickets, capacity, minPrice, onOpenFlow, b
                   </p>
                 </div>
                 {!isNonComplimentary(ticket) && (
-                  <span className="shrink-0 rounded-full bg-ink/5 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-ink/50">
+                  <span className="shrink-0 bg-ink/5 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-ink/50">
                     Comp
                   </span>
                 )}
@@ -89,7 +89,7 @@ export default function StepTickets({ tickets, capacity, minPrice, onOpenFlow, b
           </ul>
         </div>
       ) : (
-        <div className="rounded-2xl border-2 border-dashed border-ink/15 bg-cream/40 px-6 py-14 text-center">
+        <div className="border-2 border-dashed border-ink/15 bg-cream/40 px-6 py-14 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-coral/10">
             <TicketIcon size={22} className="text-coral" />
           </div>
@@ -101,7 +101,7 @@ export default function StepTickets({ tickets, capacity, minPrice, onOpenFlow, b
             type="button"
             disabled={busy}
             onClick={onOpenFlow}
-            className="mt-5 inline-flex items-center gap-2 rounded-full bg-coral px-5 py-2.5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60"
+            className="mt-5 inline-flex items-center gap-2 bg-coral px-5 py-2.5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60"
           >
             <Plus size={14} /> Add first ticket
           </button>
@@ -113,7 +113,7 @@ export default function StepTickets({ tickets, capacity, minPrice, onOpenFlow, b
 
 function Stat({ label, value }) {
   return (
-    <div className="rounded-xl bg-cream/60 px-4 py-3">
+    <div className="bg-cream/60 px-4 py-3">
       <p className="text-[10px] font-extrabold uppercase tracking-wider text-ink/45">
         {label}
       </p>

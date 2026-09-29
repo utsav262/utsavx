@@ -40,7 +40,11 @@ const eventSchema = new mongoose.Schema({
     imageUrl: String,
     status: { type: String, enum: ['draft', 'published', 'sold-out', 'cancelled', 'review_pending'], default: 'draft', index: true },
     featured: { type: Boolean, default: false },
+    /** Last moderation note from a platform admin (shown to the organizer on reject/unpublish). */
+    reviewNote: String,
     pageViews: { type: Number, default: 0, min: 0 },
+    likes: { type: Number, default: 0, min: 0 },
+    shares: { type: Number, default: 0, min: 0 },
     ticketTypes: [ticketTypeSchema]
 }, { timestamps: true });
 

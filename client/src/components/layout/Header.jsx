@@ -3,7 +3,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import {
   LogOut, Menu, ShoppingBag, UserRound, X, ChevronDown,
   Ticket, LayoutDashboard, Sparkles, ShieldCheck, Mail,
-  Calendar, Plus, Bell, Search
+  Calendar, Plus, Bell, Search, Landmark
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { signOut } from '../../store/index.js';
@@ -78,7 +78,7 @@ export default function Header() {
   if (!isManager) links.push({ to: '/events', label: 'Discover' });
 
   if (isAdmin) {
-    links.push({ to: '/admin', label: 'Admin' });
+    links.push({ to: '/admin-legacy', label: 'Admin' });
     links.push({ to: '/dashboard', label: 'Dashboard' });
   } else if (isManager) {
     links.push({ to: '/dashboard', label: 'Dashboard' });
@@ -130,7 +130,7 @@ export default function Header() {
               key={l.to + l.label}
               to={l.to}
               className={({ isActive }) =>
-                `rounded-full px-3.5 py-2 text-sm font-bold transition ${
+                `px-3.5 py-2 text-sm font-bold transition ${
                   isActive
                     ? 'bg-ink text-white'
                     : 'text-ink/70 hover:bg-ink/5 hover:text-ink'
@@ -144,7 +144,7 @@ export default function Header() {
             <NavLink
               to="/invitations"
               className={({ isActive }) =>
-                `relative rounded-full px-3.5 py-2 text-sm font-bold transition ${
+                `relative px-3.5 py-2 text-sm font-bold transition ${
                   isActive
                     ? 'bg-ink text-white'
                     : 'text-ink/70 hover:bg-ink/5 hover:text-ink'
@@ -154,7 +154,7 @@ export default function Header() {
               Requests
               {hasPendingInvites && (
                 <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-coral">
-                  <span className="absolute inset-0 animate-ping rounded-full bg-coral/60" />
+                  <span className="absolute inset-0 animate-ping bg-coral/60" />
                 </span>
               )}
             </NavLink>
@@ -166,25 +166,27 @@ export default function Header() {
           {/* Search (desktop only) */}
           <Link
             to="/events"
-            className="hidden rounded-full border border-ink/15 p-2.5 text-ink/70 transition hover:border-coral hover:text-coral md:inline-flex"
+            className="hidden border border-ink/15 p-2.5 text-ink/70 transition hover:border-coral hover:text-coral md:inline-flex"
             aria-label="Search events"
           >
             <Search size={17} />
           </Link>
 
           {/* Cart */}
+          {!isAdmin && !isManager && (
           <Link
             to="/cart"
-            className="relative rounded-full border border-ink/15 p-2.5 text-ink/70 transition hover:border-coral hover:text-coral"
+            className="relative border border-ink/15 p-2.5 text-ink/70 transition hover:border-coral hover:text-coral"
             aria-label={`Cart${count ? ` (${count} items)` : ''}`}
           >
             <ShoppingBag size={17} />
             {count > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-coral px-1 text-[10px] font-extrabold text-white ring-2 ring-cream">
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center bg-coral px-1 text-[10px] font-extrabold text-white ring-2 ring-cream">
                 {count > 99 ? '99+' : count}
               </span>
             )}
           </Link>
+          )}
 
           {/* User menu (desktop) */}
           {user ? (
@@ -192,7 +194,7 @@ export default function Header() {
               <button
                 type="button"
                 onClick={() => setUserMenuOpen((v) => !v)}
-                className="flex items-center gap-2 rounded-full border border-ink/15 bg-white py-1.5 pl-1.5 pr-2.5 transition hover:border-coral"
+                className="flex items-center gap-2 border border-ink/15 bg-white py-1.5 pl-1.5 pr-2.5 transition hover:border-coral"
                 aria-haspopup="menu"
                 aria-expanded={userMenuOpen}
               >
@@ -209,7 +211,7 @@ export default function Header() {
               </button>
 
               {userMenuOpen && (
-                <div className="absolute right-0 mt-2 w-64 overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-xl">
+                <div className="absolute right-0 mt-2 w-64 overflow-hidden border border-ink/10 bg-white shadow-xl">
                   {/* User info */}
                   <div className="border-b border-ink/10 px-4 py-3.5">
                     <p className="truncate text-sm font-bold">
@@ -217,7 +219,7 @@ export default function Header() {
                     </p>
                     <p className="truncate text-xs text-ink/55">{user.email}</p>
                     <span
-                      className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider ${roleBadgeClass(
+                      className={`mt-2 inline-block px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider ${roleBadgeClass(
                         user
                       )}`}
                     >
@@ -230,6 +232,14 @@ export default function Header() {
                     <MenuItem to="/tickets" icon={<Ticket size={15} />} onClick={() => setUserMenuOpen(false)}>
                       My tickets
                     </MenuItem>
+                    <MenuItem to="/notifications" icon={<Bell size={15} />} onClick={() => setUserMenuOpen(false)}>
+                      Notifications
+                    </MenuItem>
+                    {isManager && (
+                      <MenuItem to="/dashboard/settlements" icon={<Landmark size={15} />} onClick={() => setUserMenuOpen(false)}>
+                        Settlements
+                      </MenuItem>
+                    )}
                     {(isAdmin || isManager || isStaff) && (
                       <MenuItem
                         to="/dashboard"
@@ -260,7 +270,7 @@ export default function Header() {
                     )}
                     {isAdmin && (
                       <MenuItem
-                        to="/admin"
+                        to="/admin-legacy"
                         icon={<ShieldCheck size={15} />}
                         onClick={() => setUserMenuOpen(false)}
                       >
@@ -283,7 +293,7 @@ export default function Header() {
                     <button
                       type="button"
                       onClick={logout}
-                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50"
                     >
                       <LogOut size={15} /> Sign out
                     </button>
@@ -295,13 +305,13 @@ export default function Header() {
             <div className="hidden items-center gap-2 sm:flex">
               <Link
                 to="/login"
-                className="rounded-full px-3.5 py-2 text-sm font-bold text-ink/70 hover:text-ink"
+                className="px-3.5 py-2 text-sm font-bold text-ink/70 hover:text-ink"
               >
                 Log in
               </Link>
               <Link
                 to="/manager/signup"
-                className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2.5 text-sm font-bold text-white transition hover:bg-ink/90"
+                className="inline-flex items-center gap-1.5 bg-ink px-4 py-2.5 text-sm font-bold text-white transition hover:bg-ink/90"
               >
                 <Sparkles size={14} /> Host events
               </Link>
@@ -312,7 +322,7 @@ export default function Header() {
           <button
             type="button"
             onClick={() => setMobileOpen((v) => !v)}
-            className="rounded-full border border-ink/15 p-2.5 text-ink/70 md:hidden"
+            className="border border-ink/15 p-2.5 text-ink/70 md:hidden"
             aria-label="Toggle menu"
             aria-expanded={mobileOpen}
           >
@@ -327,7 +337,7 @@ export default function Header() {
           <div className="mx-auto max-w-7xl px-5 py-4">
             {/* User card */}
             {user ? (
-              <div className="mb-4 flex items-center gap-3 rounded-2xl border border-ink/10 bg-white p-3">
+              <div className="mb-4 flex items-center gap-3 border border-ink/10 bg-white p-3">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-coral/15 text-sm font-extrabold text-coral">
                   {(user.name || user.email || '?').charAt(0).toUpperCase()}
                 </span>
@@ -338,7 +348,7 @@ export default function Header() {
                   <p className="truncate text-xs text-ink/55">{user.email}</p>
                 </div>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase ${roleBadgeClass(
+                  className={`px-2 py-0.5 text-[10px] font-extrabold uppercase ${roleBadgeClass(
                     user
                   )}`}
                 >
@@ -350,14 +360,14 @@ export default function Header() {
                 <Link
                   to="/login"
                   onClick={close}
-                  className="flex-1 rounded-full border border-ink/20 py-2.5 text-center text-sm font-bold"
+                  className="flex-1 border border-ink/20 py-2.5 text-center text-sm font-bold"
                 >
                   Log in
                 </Link>
                 <Link
                   to="/manager/signup"
                   onClick={close}
-                  className="flex-1 rounded-full bg-ink py-2.5 text-center text-sm font-bold text-white"
+                  className="flex-1 bg-ink py-2.5 text-center text-sm font-bold text-white"
                 >
                   Host events
                 </Link>
@@ -372,7 +382,7 @@ export default function Header() {
                   to={l.to}
                   onClick={close}
                   className={({ isActive }) =>
-                    `rounded-xl px-3 py-2.5 transition ${
+                    `px-3 py-2.5 transition ${
                       isActive
                         ? 'bg-ink text-white'
                         : 'text-ink/70 hover:bg-ink/5'
@@ -395,9 +405,11 @@ export default function Header() {
                   Requests
                 </MobileLink>
               )}
-              <MobileLink to="/cart" icon={<ShoppingBag size={16} />} onClick={close} badge={count || null}>
-                Cart
-              </MobileLink>
+              {!isAdmin && !isManager && (
+                <MobileLink to="/cart" icon={<ShoppingBag size={16} />} onClick={close} badge={count || null}>
+                  Cart
+                </MobileLink>
+              )}
             </nav>
 
             {/* Logout */}
@@ -405,7 +417,7 @@ export default function Header() {
               <button
                 type="button"
                 onClick={logout}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-red-50 py-3 text-sm font-bold text-red-600"
+                className="mt-3 flex w-full items-center justify-center gap-2 bg-red-50 py-3 text-sm font-bold text-red-600"
               >
                 <LogOut size={15} /> Sign out
               </button>
@@ -423,12 +435,12 @@ function MenuItem({ to, icon, children, badge, onClick }) {
     <Link
       to={to}
       onClick={onClick}
-      className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-bold text-ink/75 transition hover:bg-ink/5 hover:text-ink"
+      className="flex items-center gap-2.5 px-3 py-2 text-sm font-bold text-ink/75 transition hover:bg-ink/5 hover:text-ink"
     >
       <span className="text-ink/50">{icon}</span>
       <span className="flex-1">{children}</span>
       {badge ? (
-        <span className="rounded-full bg-coral px-1.5 text-[10px] font-extrabold text-white">
+        <span className="bg-coral px-1.5 text-[10px] font-extrabold text-white">
           {badge}
         </span>
       ) : null}
@@ -442,7 +454,7 @@ function MobileLink({ to, icon, children, badge, onClick }) {
       to={to}
       onClick={onClick}
       className={({ isActive }) =>
-        `flex items-center gap-3 rounded-xl px-3 py-2.5 transition ${
+        `flex items-center gap-3 px-3 py-2.5 transition ${
           isActive
             ? 'bg-ink text-white'
             : 'text-ink/70 hover:bg-ink/5'
@@ -452,7 +464,7 @@ function MobileLink({ to, icon, children, badge, onClick }) {
       <span className="opacity-70">{icon}</span>
       <span className="flex-1">{children}</span>
       {badge ? (
-        <span className="rounded-full bg-coral px-1.5 text-[10px] font-extrabold text-white">
+        <span className="bg-coral px-1.5 text-[10px] font-extrabold text-white">
           {badge}
         </span>
       ) : null}

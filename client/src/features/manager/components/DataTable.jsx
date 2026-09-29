@@ -48,7 +48,7 @@ export default function DataTable({
   };
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white">
+    <div className="overflow-hidden border border-ink/10 bg-white">
       {searchable && (
         <div className="flex items-center gap-2 border-b border-ink/10 px-4 py-3">
           <Search size={15} className="text-ink/45" />

@@ -4,6 +4,35 @@ import Ticket from '../models/Ticket.js';
 import BookingOrder from '../models/BookingOrder.js';
 import { success } from '../utils/response.js';
 import { listSellableTickets, sellTicketOrders } from '../services/sellService.js';
+import Notification from '../models/Notification.js';
+import { notifyUser } from '../services/notificationService.js';
+
+async function notifyOwner(handler, req, accepted) {
+    const event = await Event.findById(handler.event).select('title organizer').lean();
+    if (!event?.organizer) return;
+    const who = req.user.name || req.user.email;
+    await notifyUser({
+        userId: event.organizer,
+        type: accepted ? 'EVENT_HANDLER_ACCEPTED' : 'EVENT_HANDLER_DECLINED',
+        title: accepted ? 'Invite accepted' : 'Invite declined',
+        message: `${who} ${accepted ? 'accepted' : 'declined'} your ${handler.userType.replace('_', ' ')} invite for ${event.title}.`,
+        payload: { handlerId: handler._id, eventId: event._id }
+    });
+}
+
+export async function listNotifications(req, res) {
+    const rows = await Notification.find({ user: req.user._id }).sort({ createdAt: -1 }).limit(100).lean();
+    return success(res, rows, 'Notifications fetched successfully', 200, {
+        unread: rows.filter((row) => !row.readAt).length
+    });
+}
+
+export async function markNotificationsRead(req, res) {
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids : null;
+    const filter = { user: req.user._id, readAt: null, ...(ids ? { _id: { $in: ids } } : {}) };
+    await Notification.updateMany(filter, { $set: { readAt: new Date() } });
+    return success(res, null, 'Notifications marked as read');
+}
 
 const emailOf = (req) => String(req.user?.email || '').trim().toLowerCase();
 const EVENT_POPULATE = 'title slug description category startsAt endsAt venue imageUrl status ticketTypes featured';
@@ -245,6 +274,7 @@ export async function acceptInvitation(req, res) {
         if (rest.length) found.handler.lastName = rest.join(' ');
     }
     await found.handler.save();
+    await notifyOwner(found.handler, req, true);
 
     const event = await loadEvent(found.handler.event);
     return success(res, serialize({ ...found.handler.toObject(), event }), 'Invitation accepted successfully');
@@ -261,6 +291,7 @@ export async function rejectInvitation(req, res) {
     found.handler.invitationStatus = 'D';
     found.handler.user = req.user._id;
     await found.handler.save();
+    await notifyOwner(found.handler, req, false);
 
     const event = await loadEvent(found.handler.event);
     return success(res, serialize({ ...found.handler.toObject(), event }), 'Invitation declined');

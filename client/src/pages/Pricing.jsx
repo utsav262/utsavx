@@ -60,12 +60,12 @@ export default function Pricing() {
         {PLANS.map((p) => (
           <div
             key={p.name}
-            className={`flex flex-col rounded-2xl border bg-white p-6 ${
+            className={`flex flex-col border bg-white p-6 ${
               p.highlight ? 'border-coral shadow-lg ring-2 ring-coral/20' : 'border-ink/10'
             }`}
           >
             {p.highlight && (
-              <span className="mb-3 self-start rounded-full bg-coral px-3 py-1 text-xs font-bold text-white">
+              <span className="mb-3 self-start bg-coral px-3 py-1 text-xs font-bold text-white">
                 Most popular
               </span>
             )}
@@ -88,7 +88,7 @@ export default function Pricing() {
 
             <Link
               to={p.to}
-              className={`mt-6 rounded-full px-5 py-3 text-center text-sm font-bold ${
+              className={`mt-6 px-5 py-3 text-center text-sm font-bold ${
                 p.highlight
                   ? 'bg-coral text-white hover:opacity-90'
                   : 'border border-ink/20 text-ink hover:border-coral hover:text-coral'
@@ -100,10 +100,10 @@ export default function Pricing() {
         ))}
       </div>
 
-      <div className="mt-10 rounded-2xl border border-ink/10 bg-white p-6 text-sm text-ink/60">
+      <div className="mt-10 border border-ink/10 bg-white p-6 text-sm text-ink/60">
         <p className="font-bold text-ink">Platform fee</p>
         <p className="mt-1">
-          Har ticket pe 2% + ₹5 platform fee lagta hai. Payment gateway fees alag
+          Each ticket carries a 2% + ₹5 platform fee. Payment gateway fees are extra
           (UPI free, cards 2%). Fees configurable on Pro and above.
         </p>
       </div>

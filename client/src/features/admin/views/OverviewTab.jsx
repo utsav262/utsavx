@@ -10,7 +10,7 @@ export default function OverviewTab({ overview, onGoToPending, onGoToEvents, onG
     return (
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-32 animate-pulse rounded-2xl bg-ink/5" />
+          <div key={i} className="h-32 animate-pulse bg-ink/5" />
         ))}
       </div>
     );
@@ -58,9 +58,9 @@ export default function OverviewTab({ overview, onGoToPending, onGoToEvents, onG
       {pendingCount > 0 && (
         <button
           onClick={onGoToPending}
-          className="group flex w-full items-center gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-left transition hover:border-amber-300"
+          className="group flex w-full items-center gap-4 border border-amber-200 bg-amber-50 p-5 text-left transition hover:border-amber-300"
         >
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500 text-white">
+          <div className="flex h-12 w-12 items-center justify-center bg-amber-500 text-white">
             <AlertCircle size={22} />
           </div>
           <div className="flex-1">
@@ -78,9 +78,9 @@ export default function OverviewTab({ overview, onGoToPending, onGoToEvents, onG
       {/* Two-column grid */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Access */}
-        <div className="rounded-2xl border border-ink/10 bg-white p-6">
+        <div className="border border-ink/10 bg-white p-6">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-purple-700">
+            <div className="flex h-8 w-8 items-center justify-center bg-purple-100 text-purple-700">
               <Shield size={15} />
             </div>
             <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-purple-700">
@@ -107,9 +107,9 @@ export default function OverviewTab({ overview, onGoToPending, onGoToEvents, onG
         </div>
 
         {/* Snapshot */}
-        <div className="rounded-2xl border border-ink/10 bg-white p-6">
+        <div className="border border-ink/10 bg-white p-6">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-coral/10 text-coral">
+            <div className="flex h-8 w-8 items-center justify-center bg-coral/10 text-coral">
               <Star size={15} />
             </div>
             <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-coral">
@@ -134,7 +134,7 @@ export default function OverviewTab({ overview, onGoToPending, onGoToEvents, onG
 
           <button
             onClick={onGoToPending}
-            className="mt-6 inline-flex items-center gap-2 rounded-full bg-coral px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider text-white hover:opacity-90"
+            className="mt-6 inline-flex items-center gap-2 bg-coral px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider text-white hover:opacity-90"
           >
             <Shield size={13} /> Review queue
           </button>

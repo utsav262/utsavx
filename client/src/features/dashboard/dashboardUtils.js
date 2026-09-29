@@ -1,52 +1,136 @@
+import { EVENT_PLACEHOLDER } from '../../lib/placeholder.js';
+
 /** Per-event role helpers for Dashboard home + EventDashboard hub. */
 
+/** Normalized handler type: event_handler_type ?? eventHandlerType ?? handler_type, trimmed + lowercase. */
+export function handlerType(event) {
+    return String(event?.event_handler_type ?? event?.eventHandlerType ?? event?.handler_type ?? '')
+        .trim()
+        .toLowerCase();
+}
+
+const TRUTHY = [true, 1, '1'];
+
+export function isEventOwner(event) {
+    return TRUTHY.includes(event?.is_owner) || TRUTHY.includes(event?.isOwner) || handlerType(event) === 'owner';
+}
+
+export function isEventManager(event) {
+    return handlerType(event).includes('manager');
+}
+
+export function isEventScanner(event) {
+    const raw = handlerType(event);
+    return ['scanner', 'event_scanner', 'gate staff', 'gate_staff'].some((key) => raw.includes(key));
+}
+
+export function isEventAmbassador(event) {
+    const raw = handlerType(event);
+    return raw.includes('ambassador') && !raw.includes('outlet');
+}
+
+export function isEventOutlet(event) {
+    return handlerType(event).includes('outlet');
+}
+
+/** Per-event role. Owner takes priority over every handler type. */
 export function eventRole(event) {
-    if (event?.is_owner || event?.event_handler_type === 'Owner') return 'owner';
-    const type = event?.event_handler_type;
-    if (type === 'Manager') return 'manager';
-    if (type === 'Ambassador') return 'ambassador';
-    if (type === 'Outlet') return 'outlet';
-    if (type === 'Event_Scanner') return 'scanner';
+    if (isEventOwner(event)) return 'owner';
+    if (isEventManager(event)) return 'manager';
+    if (isEventScanner(event)) return 'scanner';
+    if (isEventOutlet(event)) return 'outlet';
+    if (isEventAmbassador(event)) return 'ambassador';
     return 'viewer';
 }
 
+/** Badge for event cards. Owners get no badge. */
 export function roleBadge(event) {
     const role = eventRole(event);
-    if (role === 'owner') return 'Owner';
     if (role === 'manager') return 'Manager';
+    if (role === 'scanner') return 'Gate Staff';
     if (role === 'ambassador') return 'Ambassador';
     if (role === 'outlet') return 'Outlet';
-    if (role === 'scanner') return 'Event Scanner';
-    return 'Staff';
+    return '';
 }
 
+/** scan_only | sell_only | both — the backend defaults scanners to scan_only. */
 export function scannerPermission(event) {
-    return event?.scanner_permission || 'both';
+    const raw = String(event?.scanner_permission ?? event?.scannerPermission ?? '').trim().toLowerCase();
+    return ['scan_only', 'sell_only', 'both'].includes(raw) ? raw : 'scan_only';
+}
+
+export function canScannerScan(permission) {
+    return permission === 'scan_only' || permission === 'both';
+}
+
+export function canScannerSell(permission) {
+    return permission === 'sell_only' || permission === 'both';
+}
+
+/** Owner / Manager: drafts, create, full dashboard, payout. */
+export function canManageEvent(event) {
+    const role = eventRole(event);
+    return role === 'owner' || role === 'manager';
 }
 
 export function canScan(event) {
     const role = eventRole(event);
     if (role === 'owner' || role === 'manager') return true;
-    if (role !== 'scanner') return false;
-    const perm = scannerPermission(event);
-    return perm === 'scan_only' || perm === 'both';
+    return role === 'scanner' && canScannerScan(scannerPermission(event));
 }
 
 export function canSell(event) {
     const role = eventRole(event);
-    if (role === 'owner' || role === 'manager' || role === 'ambassador' || role === 'outlet') return true;
-    if (role !== 'scanner') return false;
-    const perm = scannerPermission(event);
-    return perm === 'sell_only' || perm === 'both';
+    if (role === 'scanner') return canScannerSell(scannerPermission(event));
+    return role !== 'viewer';
+}
+
+/** Price on the card: everyone except gate staff who can't sell. */
+export function canSeePrice(event) {
+    return eventRole(event) !== 'scanner' || canScannerSell(scannerPermission(event));
+}
+
+/** Owner, Manager, or the event host may upgrade / unlock. */
+export function canUpgradeEvent(event, authUserId) {
+    if (canManageEvent(event)) return true;
+    const hostId = event?.host_id ?? event?.organizer?._id ?? event?.organizer;
+    return Boolean(hostId && authUserId && String(hostId) === String(authUserId));
+}
+
+/** Only the owner edits / unpublishes / deletes, and never once the event is past. */
+export function canEditEvent(event, isPast) {
+    return eventRole(event) === 'owner' && !isPast;
+}
+
+/** Background ticket sync: everyone except ambassadors / outlets. */
+export function shouldSyncEventTickets(event) {
+    const role = eventRole(event);
+    return role === 'owner' || role === 'manager' || role === 'scanner';
+}
+
+export function isEventInPast(event, tab) {
+    if (tab === 'past') return true;
+    if (tab === 'live' || tab === 'draft') return false;
+    const raw = event?.endsAt || event?.end_date || event?.startsAt || event?.date;
+    const date = raw ? new Date(raw) : null;
+    return Boolean(date && !Number.isNaN(date.getTime()) && date < new Date());
+}
+
+/** Email/password signups (signup_type 1) must verify; social signups skip the check. */
+export function isUserEmailVerified(user) {
+    if (!user) return true;
+    if (Number(user.signup_type ?? 0) !== 1) return true;
+    const verifiedAt = user.email_verified_at ?? user.emailVerifiedAt;
+    if (verifiedAt && String(verifiedAt) !== 'null') return true;
+    return [true, 1, '1', 'true'].includes(user.email_verified ?? user.emailVerified ?? user.isEmailVerified);
 }
 
 export function canOpenDashboard(event) {
-    return Boolean(event?.is_owner || event?.event_handler_type);
+    return eventRole(event) !== 'viewer';
 }
 
 export function isOwnerLike(event) {
-    const role = eventRole(event);
-    return role === 'owner' || role === 'manager';
+    return canManageEvent(event);
 }
 
 export function isScannerLike(event) {
@@ -64,7 +148,7 @@ export function eventCover(event) {
         event?.imageUrl ||
         event?.image ||
         event?.horizontal_flyer ||
-        'https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=900&q=80'
+        EVENT_PLACEHOLDER
     );
 }
 

@@ -64,25 +64,25 @@ export default function Cart() {
   if (!items.length) {
     return (
       <main className="mx-auto max-w-4xl px-5 py-20 lg:px-8">
-        <div className="rounded-3xl border border-ink/10 bg-white px-8 py-16 text-center">
+        <div className="border border-ink/10 bg-white px-8 py-16 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-coral/10">
             <ShoppingBag className="h-7 w-7 text-coral" />
           </div>
           <h1 className="serif mt-6 text-4xl">Your cart is empty</h1>
           <p className="mx-auto mt-3 max-w-md text-sm text-ink/60">
-            Koi ticket nahi mila. Chalo kuch dhamakedaar events dhoondte hain
-            jo tumhare weekend ko yaadgaar bana dein.
+            Your cart is empty. Let's find some great events to make
+            your weekend memorable.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link
               to="/events"
-              className="inline-flex items-center gap-2 rounded-full bg-coral px-6 py-3 font-bold text-white hover:opacity-90"
+              className="inline-flex items-center gap-2 bg-coral px-6 py-3 font-bold text-white hover:opacity-90"
             >
               Browse events <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
               to="/"
-              className="inline-flex items-center gap-2 rounded-full border border-ink/20 px-6 py-3 font-bold hover:border-coral hover:text-coral"
+              className="inline-flex items-center gap-2 border border-ink/20 px-6 py-3 font-bold hover:border-coral hover:text-coral"
             >
               Go home
             </Link>
@@ -132,7 +132,7 @@ export default function Cart() {
             ))}
 
             {/* Info note */}
-            <div className="flex items-start gap-3 rounded-2xl border border-ink/10 bg-white p-4 text-xs text-ink/60">
+            <div className="flex items-start gap-3 border border-ink/10 bg-white p-4 text-xs text-ink/60">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-coral" />
               <p>
                 Tickets are held for 15 minutes. Complete checkout soon to
@@ -145,7 +145,7 @@ export default function Cart() {
           <div>
             <div className="sticky top-24 space-y-4">
               {/* Order summary */}
-              <div className="rounded-2xl border border-ink/10 bg-white p-6">
+              <div className="border border-ink/10 bg-white p-6">
                 <h2 className="serif text-2xl">Order summary</h2>
 
                 <div className="mt-5 space-y-2 text-sm">
@@ -170,7 +170,7 @@ export default function Cart() {
                     Have a coupon?
                   </label>
                   {couponApplied ? (
-                    <div className="mt-2 flex items-center justify-between rounded-xl bg-green-50 px-4 py-2.5 text-sm">
+                    <div className="mt-2 flex items-center justify-between bg-green-50 px-4 py-2.5 text-sm">
                       <span className="font-bold text-green-700">
                         UTSAV10 applied
                       </span>
@@ -192,12 +192,12 @@ export default function Cart() {
                           value={coupon}
                           onChange={(e) => setCoupon(e.target.value)}
                           placeholder="Enter code"
-                          className="w-full rounded-xl border border-ink/20 bg-transparent pl-9 pr-3 py-2.5 text-sm outline-none focus:border-coral"
+                          className="w-full border border-ink/20 bg-transparent pl-9 pr-3 py-2.5 text-sm outline-none focus:border-coral"
                         />
                       </div>
                       <button
                         onClick={handleCoupon}
-                        className="rounded-xl bg-ink px-4 py-2.5 text-sm font-bold text-white hover:opacity-90"
+                        className="bg-ink px-4 py-2.5 text-sm font-bold text-white hover:opacity-90"
                       >
                         Apply
                       </button>
@@ -211,7 +211,7 @@ export default function Cart() {
                 {/* CTA */}
                 <button
                   onClick={handleCheckout}
-                  className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-coral px-6 py-4 font-extrabold text-white transition hover:opacity-90"
+                  className="mt-6 flex w-full items-center justify-center gap-2 bg-coral px-6 py-4 font-extrabold text-white transition hover:opacity-90"
                 >
                   Continue to checkout
                   <ArrowRight className="h-4 w-4" />
@@ -225,10 +225,10 @@ export default function Cart() {
               </div>
 
               {/* Help card */}
-              <div className="rounded-2xl border border-ink/10 bg-white p-5 text-sm">
+              <div className="border border-ink/10 bg-white p-5 text-sm">
                 <p className="font-bold">Need help?</p>
                 <p className="mt-1 text-ink/60">
-                  Booking me dikkat?{' '}
+                  Trouble booking?{' '}
                   <Link to="/contact" className="font-bold text-coral hover:underline">
                     Contact support
                   </Link>
@@ -249,10 +249,10 @@ function CartItem({ item, onQty, onRemove }) {
   const lineTotal = item.price * item.quantity;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white">
+    <div className="overflow-hidden border border-ink/10 bg-white">
       <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start">
         {/* Icon / Flyer placeholder */}
-        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-coral/10">
+        <div className="flex h-20 w-20 shrink-0 items-center justify-center bg-coral/10">
           <Ticket className="h-7 w-7 text-coral" />
         </div>
 
@@ -268,7 +268,7 @@ function CartItem({ item, onQty, onRemove }) {
             <button
               onClick={() => onRemove(item.id, item.title)}
               aria-label="Remove"
-              className="rounded-full p-2 text-ink/40 transition hover:bg-red-50 hover:text-red-600"
+              className="p-2 text-ink/40 transition hover:bg-red-50 hover:text-red-600"
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -290,7 +290,7 @@ function CartItem({ item, onQty, onRemove }) {
 
           {/* Qty + Price row */}
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex items-center rounded-full border border-ink/15">
+            <div className="inline-flex items-center border border-ink/15">
               <button
                 onClick={() => onQty(item, -1)}
                 disabled={isMin}

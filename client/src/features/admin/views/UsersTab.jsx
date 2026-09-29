@@ -36,7 +36,7 @@ export default function UsersTab({ users = [], onSetRole, onSetPassword }) {
     <div className="mt-6 space-y-4">
       {/* Toolbar */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div className="flex flex-1 items-center gap-2 rounded-xl border border-ink/15 bg-white px-3.5 py-2.5">
+        <div className="flex flex-1 items-center gap-2 border border-ink/15 bg-white px-3.5 py-2.5">
           <Search size={15} className="text-ink/40" />
           <input
             value={query}
@@ -53,7 +53,7 @@ export default function UsersTab({ users = [], onSetRole, onSetPassword }) {
           <button
             key={f.value}
             onClick={() => setFilter(f.value)}
-            className={`rounded-full px-3.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wider transition ${
+            className={`px-3.5 py-1.5 text-[11px] font-extrabold uppercase tracking-wider transition ${
               filter === f.value
                 ? 'bg-ink text-white'
                 : 'border border-ink/15 text-ink/60 hover:border-ink/30'
@@ -65,7 +65,7 @@ export default function UsersTab({ users = [], onSetRole, onSetPassword }) {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white">
+      <div className="overflow-hidden border border-ink/10 bg-white">
         {filtered.length === 0 ? (
           <div className="px-6 py-14 text-center">
             <p className="text-sm text-ink/55">No users match.</p>
@@ -111,7 +111,7 @@ export default function UsersTab({ users = [], onSetRole, onSetPassword }) {
                     </td>
                     <td className="px-4 py-3 align-top">
                       {user.role === 'admin' && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-extrabold text-purple-700">
+                        <span className="inline-flex items-center gap-1 bg-purple-100 px-2 py-0.5 text-[10px] font-extrabold text-purple-700">
                           <ShieldCheck size={10} /> Admin
                         </span>
                       )}

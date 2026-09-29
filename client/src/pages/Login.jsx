@@ -6,7 +6,7 @@ import { apiClient } from '../api/index.js';
 
 function destinationAfterAuth(user, from) {
     if (from && from !== '/login') return from;
-    if (user?.role === 'admin') return '/admin';
+    if (user?.role === 'admin') return '/admin-legacy';
     if (user?.role === 'organizer') return '/dashboard';
     // Pure customers land on Discover home — not Invitations / staff dashboard.
     if (user?.role === 'customer' && user?.staffEvents?.length) return '/dashboard';
@@ -59,7 +59,7 @@ export default function Login() {
                         required
                         value={form.name}
                         onChange={(event) => setForm({ ...form, name: event.target.value })}
-                        className="mt-8 w-full rounded-full border border-ink/20 bg-transparent px-5 py-3.5"
+                        className="mt-8 w-full border border-ink/20 bg-transparent px-5 py-3.5"
                         placeholder="Your name"
                     />
                 )}
@@ -68,7 +68,7 @@ export default function Login() {
                     type="email"
                     value={form.email}
                     onChange={(event) => setForm({ ...form, email: event.target.value })}
-                    className="mt-4 w-full rounded-full border border-ink/20 bg-transparent px-5 py-3.5"
+                    className="mt-4 w-full border border-ink/20 bg-transparent px-5 py-3.5"
                     placeholder="Email address"
                 />
                 <input
@@ -77,7 +77,7 @@ export default function Login() {
                     type="password"
                     value={form.password}
                     onChange={(event) => setForm({ ...form, password: event.target.value })}
-                    className="mt-4 w-full rounded-full border border-ink/20 bg-transparent px-5 py-3.5"
+                    className="mt-4 w-full border border-ink/20 bg-transparent px-5 py-3.5"
                     placeholder={signup ? 'Password (8+ chars, letter + number)' : 'Password'}
                 />
                 {signup && (
@@ -93,7 +93,7 @@ export default function Login() {
                     </label>
                 )}
                 {error && <p className="mt-4 text-sm text-coral">{error}</p>}
-                <button className="mt-5 w-full rounded-full bg-coral px-5 py-3.5 font-extrabold text-white">
+                <button className="mt-5 w-full bg-coral px-5 py-3.5 font-extrabold text-white">
                     {signup ? 'Create account' : 'Log in'}
                 </button>
                 <button

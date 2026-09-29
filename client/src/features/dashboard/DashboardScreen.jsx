@@ -10,9 +10,17 @@ import { apiClient } from '../../api/index.js';
 import { unwrapList } from '../../lib/unwrap.js';
 import { useToast } from '../../components/ui/Toast.jsx';
 import DashboardEventCard from './DashboardEventCard.jsx';
-import { dashboardNavPayload, matchesSearch } from './dashboardUtils.js';
+import {
+  canManageEvent,
+  canScan,
+  canSell,
+  dashboardNavPayload,
+  eventRole,
+  isUserEmailVerified,
+  matchesSearch,
+} from './dashboardUtils.js';
 import SellTicketsModal from '../sell/SellTicketsModal.jsx';
-import { sellEntryMode } from '../sell/sellUtils.js';
+import { isGateWindowOpen, sellEntryMode } from '../sell/sellUtils.js';
 
 const TABS = [
   { id: 'live', label: 'Live', icon: Sparkles, accent: 'coral' },
@@ -54,6 +62,7 @@ export default function DashboardScreen() {
 
   const isOrganizer = user?.role === 'organizer' || user?.role === 'admin';
   const isScannerOnly = Boolean(user?.staffRole === 'Event_Scanner' && user?.role === 'customer');
+  const emailVerified = isUserEmailVerified(user);
 
   /* ---------------- loaders ---------------- */
   const loadTab = useCallback(async (type, { page = 1, append = false } = {}) => {
@@ -119,6 +128,18 @@ export default function DashboardScreen() {
   };
 
   /* ---------------- derived ---------------- */
+  // Drafts + create are Owner/Manager only; pure staff accounts never see them.
+  const canCreate = isOrganizer;
+  const showDrafts = useMemo(
+    () => canCreate || [...tabs.live.items, ...tabs.past.items].some(canManageEvent),
+    [canCreate, tabs.live.items, tabs.past.items]
+  );
+  const visibleTabs = showDrafts ? TABS : TABS.filter((t) => t.id !== 'draft');
+
+  useEffect(() => {
+    if (tab === 'draft' && !showDrafts) setTab('live');
+  }, [tab, showDrafts]);
+
   const active = tabs[tab];
 
   const visible = useMemo(() => {
@@ -148,10 +169,24 @@ export default function DashboardScreen() {
   /* ---------------- actions ---------------- */
   const openDashboard = (event) => {
     const payload = dashboardNavPayload(event, tab);
-    navigate(`/dashboard/events/${payload.eventId}`, { state: payload });
+    navigate(`/dashboard/events/${payload.eventId}`, {
+      // Gate staff only ever get the check-in view.
+      state: { ...payload, scannerCheckInView: eventRole(event) === 'scanner' },
+    });
+  };
+
+  const requireVerified = () => {
+    if (emailVerified) return true;
+    toast.error('Verify your email to continue.');
+    return false;
   };
 
   const openScan = (event) => {
+    if (!requireVerified()) return;
+    if (!canScan(event)) {
+      toast.error('You do not have permission to scan tickets for this event.');
+      return;
+    }
     const payload = dashboardNavPayload(event, tab);
     navigate(`/dashboard/events/${payload.eventId}`, {
       state: { ...payload, focus: 'checkin' },
@@ -159,15 +194,28 @@ export default function DashboardScreen() {
   };
 
   const startSellFlow = (event, mode) => {
+    if (mode === 'gate' && !isGateWindowOpen(event)) {
+      toast.error('Gate tickets can be sold starting 1 day before the event.');
+      return;
+    }
+    if (mode === 'complimentary' && !canManageEvent(event)) {
+      toast.error('You do not have permission to sell tickets for this event.');
+      return;
+    }
     navigate(`/dashboard/sell/${event._id || event.id}`, {
       state: { mode, eventItem: event, name: event.title || event.name },
     });
   };
 
   const openSell = (event) => {
-    const entry = sellEntryMode(event);
+    if (!requireVerified()) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      toast.error('Connect to sell tickets.');
+      return;
+    }
+    const entry = canSell(event) ? sellEntryMode(event) : null;
     if (!entry) {
-      toast.error('Sell is not available for this role.');
+      toast.error('You do not have permission to sell tickets for this event.');
       return;
     }
     if (entry === 'modal') {
@@ -177,7 +225,17 @@ export default function DashboardScreen() {
     startSellFlow(event, entry === 'gate' ? 'gate' : 'digital');
   };
 
+  const createEvent = () => {
+    if (!canCreate) return;
+    if (!requireVerified()) return;
+    navigate('/manager', { state: { view: 'create' } });
+  };
+
   const openEdit = (event) => {
+    if (!canManageEvent(event)) {
+      toast.error('You do not have permission to edit this event.');
+      return;
+    }
     navigate('/manager', { state: { view: 'create', eventId: event._id || event.id } });
   };
 
@@ -196,8 +254,8 @@ export default function DashboardScreen() {
               Your events
             </h1>
             <p className="mt-3 max-w-xl text-sm text-ink/60">
-              Live, Past, aur Draft — sab ek jagah. Event open karo aur apni
-              role-based dashboard me jao.
+              Live, past and draft events in one place. Open an event to reach
+              the dashboard for your role.
             </p>
           </div>
 
@@ -206,7 +264,7 @@ export default function DashboardScreen() {
               type="button"
               onClick={refreshAll}
               disabled={refreshing}
-              className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider transition hover:border-coral hover:text-coral disabled:opacity-60"
+              className="inline-flex items-center gap-2 border border-ink/15 bg-white px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider transition hover:border-coral hover:text-coral disabled:opacity-60"
             >
               <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
               {refreshing ? 'Refreshing' : 'Refresh'}
@@ -214,22 +272,22 @@ export default function DashboardScreen() {
 
             <Link
               to="/invitations"
-              className="relative inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider transition hover:border-coral hover:text-coral"
+              className="relative inline-flex items-center gap-2 border border-ink/15 bg-white px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider transition hover:border-coral hover:text-coral"
             >
               <Bell size={14} />
               Requests
               {pendingInvites > 0 && (
-                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-coral px-1 text-[10px] font-extrabold text-white">
+                <span className="flex h-4 min-w-4 items-center justify-center bg-coral px-1 text-[10px] font-extrabold text-white">
                   {pendingInvites > 9 ? '9+' : pendingInvites}
                 </span>
               )}
             </Link>
 
-            {isOrganizer && (
+            {canCreate && (
               <button
                 type="button"
-                onClick={() => navigate('/manager', { state: { view: 'create' } })}
-                className="inline-flex items-center gap-2 rounded-full bg-coral px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider text-white transition hover:opacity-90"
+                onClick={createEvent}
+                className="inline-flex items-center gap-2 bg-coral px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider text-white transition hover:opacity-90"
               >
                 <Plus size={14} /> Create event
               </button>
@@ -268,10 +326,10 @@ export default function DashboardScreen() {
         )}
 
         {/* ================= TOOLBAR ================= */}
-        <div className="mt-8 rounded-2xl border border-ink/10 bg-white p-4">
+        <div className="mt-8 border border-ink/10 bg-white p-4">
           {/* Tabs */}
           <div className="flex flex-wrap items-center gap-2 border-b border-ink/10 pb-4">
-            {TABS.map((t) => {
+            {visibleTabs.map((t) => {
               const count = tabs[t.id].items.length;
               const isActive = tab === t.id;
               const Icon = t.icon;
@@ -280,7 +338,7 @@ export default function DashboardScreen() {
                   key={t.id}
                   type="button"
                   onClick={() => setTab(t.id)}
-                  className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-extrabold uppercase tracking-wider transition ${
+                  className={`inline-flex items-center gap-2 px-4 py-2 text-xs font-extrabold uppercase tracking-wider transition ${
                     isActive
                       ? 'bg-ink text-white'
                       : 'border border-ink/15 text-ink/60 hover:border-ink/30 hover:text-ink'
@@ -289,7 +347,7 @@ export default function DashboardScreen() {
                   <Icon size={13} className={isActive ? 'text-white' : 'text-coral'} />
                   {t.label}
                   <span
-                    className={`rounded-full px-1.5 text-[10px] font-extrabold ${
+                    className={`px-1.5 text-[10px] font-extrabold ${
                       isActive ? 'bg-white/20' : 'bg-ink/5 text-ink/60'
                     }`}
                   >
@@ -302,7 +360,7 @@ export default function DashboardScreen() {
 
           {/* Search + sort + layout */}
           <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="flex flex-1 items-center gap-2 rounded-xl border border-ink/15 bg-cream/40 px-3.5 py-2.5 focus-within:border-coral">
+            <div className="flex flex-1 items-center gap-2 border border-ink/15 bg-cream/40 px-3.5 py-2.5 focus-within:border-coral">
               <Search size={15} className="text-ink/40" />
               <input
                 value={query}
@@ -313,7 +371,7 @@ export default function DashboardScreen() {
               {query && (
                 <button
                   onClick={() => setQuery('')}
-                  className="rounded-full p-0.5 text-ink/40 hover:text-ink"
+                  className="p-0.5 text-ink/40 hover:text-ink"
                   aria-label="Clear search"
                 >
                   <X size={13} />
@@ -327,7 +385,7 @@ export default function DashboardScreen() {
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value)}
-                  className="appearance-none rounded-xl border border-ink/15 bg-white px-3.5 py-2.5 pr-9 text-xs font-bold text-ink/70 outline-none focus:border-coral"
+                  className="appearance-none border border-ink/15 bg-white px-3.5 py-2.5 pr-9 text-xs font-bold text-ink/70 outline-none focus:border-coral"
                 >
                   {SORTS.map((s) => (
                     <option key={s.value} value={s.value}>
@@ -342,7 +400,7 @@ export default function DashboardScreen() {
               </div>
 
               {/* Layout toggle */}
-              <div className="inline-flex overflow-hidden rounded-xl border border-ink/15">
+              <div className="inline-flex overflow-hidden border border-ink/15">
                 <button
                   onClick={() => setLayout('grid')}
                   className={`p-2.5 transition ${
@@ -368,7 +426,7 @@ export default function DashboardScreen() {
 
         {/* ================= ERROR ================= */}
         {active.error && (
-          <div className="mt-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm">
+          <div className="mt-6 flex items-start gap-3 border border-red-200 bg-red-50 p-4 text-sm">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
             <div className="flex-1">
               <p className="font-bold text-red-700">Couldn't load events</p>
@@ -376,7 +434,7 @@ export default function DashboardScreen() {
             </div>
             <button
               onClick={() => loadTab(tab)}
-              className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700"
+              className="bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700"
             >
               Retry
             </button>
@@ -402,7 +460,7 @@ export default function DashboardScreen() {
             isOrganizer={isOrganizer}
             isScannerOnly={isScannerOnly}
             pendingInvites={pendingInvites}
-            onCreate={() => navigate('/manager', { state: { view: 'create' } })}
+            onCreate={createEvent}
             onClearSearch={() => setQuery('')}
           />
         )}
@@ -434,7 +492,7 @@ export default function DashboardScreen() {
                   layout={layout}
                   onDashboard={openDashboard}
                   onScan={openScan}
-                  onSell={openSell}
+                  onSell={user?.role === 'admin' ? undefined : openSell}
                   onEdit={openEdit}
                 />
               ))}
@@ -449,7 +507,7 @@ export default function DashboardScreen() {
               type="button"
               disabled={active.loading}
               onClick={() => loadTab(tab, { page: active.page + 1, append: true })}
-              className="inline-flex items-center gap-2 rounded-full border border-ink/20 bg-white px-6 py-3 text-sm font-extrabold transition hover:border-coral hover:text-coral disabled:opacity-60"
+              className="inline-flex items-center gap-2 border border-ink/20 bg-white px-6 py-3 text-sm font-extrabold transition hover:border-coral hover:text-coral disabled:opacity-60"
             >
               {active.loading ? (
                 <>
@@ -493,8 +551,8 @@ function MiniStat({ icon, label, value, tone = 'ink' }) {
     moss: 'bg-emerald-100 text-emerald-700',
   };
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-ink/10 bg-white p-4">
-      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${toneMap[tone]}`}>
+    <div className="flex items-center gap-3 border border-ink/10 bg-white p-4">
+      <div className={`flex h-10 w-10 items-center justify-center ${toneMap[tone]}`}>
         {icon}
       </div>
       <div>
@@ -510,23 +568,23 @@ function MiniStat({ icon, label, value, tone = 'ink' }) {
 function SkeletonCard({ layout }) {
   if (layout === 'list') {
     return (
-      <div className="flex animate-pulse gap-4 rounded-2xl border border-ink/10 bg-white p-4">
-        <div className="h-24 w-32 shrink-0 rounded-xl bg-ink/10" />
+      <div className="flex animate-pulse gap-4 border border-ink/10 bg-white p-4">
+        <div className="h-24 w-32 shrink-0 bg-ink/10" />
         <div className="flex-1 space-y-2">
-          <div className="h-3 w-1/4 rounded bg-ink/10" />
-          <div className="h-4 w-3/4 rounded bg-ink/10" />
-          <div className="h-3 w-1/2 rounded bg-ink/10" />
+          <div className="h-3 w-1/4 bg-ink/10" />
+          <div className="h-4 w-3/4 bg-ink/10" />
+          <div className="h-3 w-1/2 bg-ink/10" />
         </div>
       </div>
     );
   }
   return (
-    <div className="animate-pulse overflow-hidden rounded-2xl border border-ink/10 bg-white">
+    <div className="animate-pulse overflow-hidden border border-ink/10 bg-white">
       <div className="aspect-[16/10] w-full bg-ink/10" />
       <div className="space-y-2 p-4">
-        <div className="h-3 w-1/3 rounded bg-ink/10" />
-        <div className="h-4 w-3/4 rounded bg-ink/10" />
-        <div className="h-3 w-1/2 rounded bg-ink/10" />
+        <div className="h-3 w-1/3 bg-ink/10" />
+        <div className="h-4 w-3/4 bg-ink/10" />
+        <div className="h-3 w-1/2 bg-ink/10" />
       </div>
     </div>
   );
@@ -535,17 +593,17 @@ function SkeletonCard({ layout }) {
 function EmptyState({ tab, query, isOrganizer, isScannerOnly, pendingInvites, onCreate, onClearSearch }) {
   if (query) {
     return (
-      <div className="mt-10 rounded-2xl border border-dashed border-ink/15 bg-white px-6 py-16 text-center">
+      <div className="mt-10 border border-dashed border-ink/15 bg-white px-6 py-16 text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-ink/5">
           <Search className="h-6 w-6 text-ink/40" />
         </div>
         <h3 className="serif mt-5 text-3xl">No matches</h3>
         <p className="mx-auto mt-2 max-w-md text-sm text-ink/60">
-          "{query}" se koi event match nahi hua. Filters clear karke dekho.
+          No events match "{query}". Try clearing your filters.
         </p>
         <button
           onClick={onClearSearch}
-          className="mt-6 inline-flex items-center gap-2 rounded-full bg-coral px-5 py-2.5 text-sm font-bold text-white hover:opacity-90"
+          className="mt-6 inline-flex items-center gap-2 bg-coral px-5 py-2.5 text-sm font-bold text-white hover:opacity-90"
         >
           <X size={14} /> Clear search
         </button>
@@ -555,17 +613,17 @@ function EmptyState({ tab, query, isOrganizer, isScannerOnly, pendingInvites, on
 
   const copyMap = {
     draft: isOrganizer
-      ? { title: 'No drafts yet', body: 'Ek naya event banao aur draft me save karo.' }
-      : { title: 'No drafts', body: 'Drafts tab dikhenge jab koi organizer tumhe invite karega.' },
+      ? { title: 'No drafts yet', body: 'Create an event and save it as a draft.' }
+      : { title: 'No drafts', body: 'Drafts appear here for events you own or manage.' },
     live: isScannerOnly
-      ? { title: 'No live events', body: 'Team invite accept karo, phir event yahan dikhega.' }
-      : { title: 'No live events', body: 'Publish karo ya staff ke roop me join karo — event yahan dikhega.' },
-    past: { title: 'No past events', body: 'Event khatam hone ke baad yahan collect hoga.' },
+      ? { title: 'No live events', body: 'Accept a team invite and the event will show up here.' }
+      : { title: 'No live events', body: 'Publish an event or join one as staff and it will show up here.' },
+    past: { title: 'No past events', body: 'Events move here once they have ended.' },
   };
   const copy = copyMap[tab];
 
   return (
-    <div className="mt-10 rounded-3xl border border-dashed border-ink/15 bg-white px-6 py-16 text-center">
+    <div className="mt-10 border border-dashed border-ink/15 bg-white px-6 py-16 text-center">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-coral/10">
         <Calendar className="h-7 w-7 text-coral" />
       </div>
@@ -576,7 +634,7 @@ function EmptyState({ tab, query, isOrganizer, isScannerOnly, pendingInvites, on
         {tab === 'draft' && isOrganizer && (
           <button
             onClick={onCreate}
-            className="inline-flex items-center gap-2 rounded-full bg-coral px-6 py-3 text-sm font-extrabold text-white hover:opacity-90"
+            className="inline-flex items-center gap-2 bg-coral px-6 py-3 text-sm font-extrabold text-white hover:opacity-90"
           >
             <Plus size={14} /> Create event
           </button>
@@ -584,7 +642,7 @@ function EmptyState({ tab, query, isOrganizer, isScannerOnly, pendingInvites, on
         {pendingInvites > 0 && (
           <Link
             to="/invitations"
-            className="inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 text-sm font-extrabold text-white hover:opacity-90"
+            className="inline-flex items-center gap-2 bg-ink px-6 py-3 text-sm font-extrabold text-white hover:opacity-90"
           >
             <Bell size={14} /> Review {pendingInvites} request{pendingInvites === 1 ? '' : 's'}
           </Link>
@@ -592,7 +650,7 @@ function EmptyState({ tab, query, isOrganizer, isScannerOnly, pendingInvites, on
         {!isOrganizer && pendingInvites === 0 && (
           <Link
             to="/events"
-            className="inline-flex items-center gap-2 rounded-full border border-ink/20 px-6 py-3 text-sm font-extrabold hover:border-coral hover:text-coral"
+            className="inline-flex items-center gap-2 border border-ink/20 px-6 py-3 text-sm font-extrabold hover:border-coral hover:text-coral"
           >
             Browse events <ArrowRight size={14} />
           </Link>

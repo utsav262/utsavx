@@ -85,7 +85,6 @@ export async function register(req, res) {
         name: name || username,
         email,
         passwordHash: await bcrypt.hash(password, 12),
-        passwordPlain: String(password),
         role: safeRole
     });
     const profile = await enrichUser(user);
@@ -96,6 +95,7 @@ export async function login(req, res) {
     const user = await User.findOne({ email: req.body.email }).select('+passwordHash');
     const valid = user && await bcrypt.compare(req.body.password, user.passwordHash);
     if (!valid) return failure(res, 'Invalid credentials', 401);
+    if (user.status === 'suspended') return failure(res, 'This account is suspended. Contact support.', 403);
     const profile = await enrichUser(user);
     res.json({ message: 'Login successful', user: profile, token: tokenFor(user), result: profile, code: 200 });
 }

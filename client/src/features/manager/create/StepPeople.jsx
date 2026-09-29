@@ -50,14 +50,14 @@ export default function StepPeople({ guests, setGuests, handlers, setHandlers, n
           <button
             type="button"
             onClick={addGuest}
-            className="shrink-0 rounded-xl bg-ink px-5 py-3 text-sm font-bold text-white hover:opacity-90"
+            className="shrink-0 bg-ink px-5 py-3 text-sm font-bold text-white hover:opacity-90"
           >
             <Plus size={16} />
           </button>
         </div>
 
         {guests.length > 0 ? (
-          <ul className="divide-y divide-ink/10 rounded-xl border border-ink/10 bg-white">
+          <ul className="divide-y divide-ink/10 border border-ink/10 bg-white">
             {guests.map((g, i) => (
               <li key={`${g.email}-${i}`} className="flex items-center gap-3 px-4 py-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-coral/10 text-xs font-extrabold text-coral">
@@ -70,7 +70,7 @@ export default function StepPeople({ guests, setGuests, handlers, setHandlers, n
                 <button
                   type="button"
                   onClick={() => setGuests((rows) => rows.filter((_, idx) => idx !== i))}
-                  className="rounded-lg p-1.5 text-ink/40 hover:bg-red-50 hover:text-red-600"
+                  className="p-1.5 text-ink/40 hover:bg-red-50 hover:text-red-600"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -78,7 +78,7 @@ export default function StepPeople({ guests, setGuests, handlers, setHandlers, n
             ))}
           </ul>
         ) : (
-          <p className="rounded-xl border border-dashed border-ink/15 px-4 py-6 text-center text-sm text-ink/45">
+          <p className="border border-dashed border-ink/15 px-4 py-6 text-center text-sm text-ink/45">
             No guests yet — optional.
           </p>
         )}
@@ -110,14 +110,14 @@ export default function StepPeople({ guests, setGuests, handlers, setHandlers, n
           <button
             type="button"
             onClick={addHandler}
-            className="shrink-0 rounded-xl bg-ink px-5 py-3 text-sm font-bold text-white hover:opacity-90"
+            className="shrink-0 bg-ink px-5 py-3 text-sm font-bold text-white hover:opacity-90"
           >
             Invite
           </button>
         </div>
 
         {handlers.length > 0 ? (
-          <ul className="divide-y divide-ink/10 rounded-xl border border-ink/10 bg-white">
+          <ul className="divide-y divide-ink/10 border border-ink/10 bg-white">
             {handlers.map((h, i) => (
               <li key={`${h.email}-${i}`} className="flex items-center gap-3 px-4 py-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink/10">
@@ -130,7 +130,7 @@ export default function StepPeople({ guests, setGuests, handlers, setHandlers, n
                 <button
                   type="button"
                   onClick={() => setHandlers((rows) => rows.filter((_, idx) => idx !== i))}
-                  className="rounded-lg p-1.5 text-ink/40 hover:bg-red-50 hover:text-red-600"
+                  className="p-1.5 text-ink/40 hover:bg-red-50 hover:text-red-600"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -138,7 +138,7 @@ export default function StepPeople({ guests, setGuests, handlers, setHandlers, n
             ))}
           </ul>
         ) : (
-          <p className="rounded-xl border border-dashed border-ink/15 px-4 py-6 text-center text-sm text-ink/45">
+          <p className="border border-dashed border-ink/15 px-4 py-6 text-center text-sm text-ink/45">
             No team invites yet.
           </p>
         )}
@@ -149,7 +149,7 @@ export default function StepPeople({ guests, setGuests, handlers, setHandlers, n
 
 function Section({ icon, title, hint, children }) {
   return (
-    <div className="rounded-2xl border border-ink/10 bg-white p-6">
+    <div className="border border-ink/10 bg-white p-6">
       <div className="mb-5 flex items-center justify-between">
         <h3 className="flex items-center gap-2 serif text-2xl leading-none">
           <span className="text-coral">{icon}</span>

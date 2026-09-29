@@ -316,7 +316,10 @@ export async function legacyEventDetails(req, res) {
         .sort({ _id: -1 })
         .lean();
 
-    if (!event) return res.status(404).json({ message: 'Event not found', code: 404 });
+    // Unapproved events aren't public (organizers preview them from their dashboard).
+    if (!event || !['published', 'sold-out', 'cancelled'].includes(event.status)) {
+        return res.status(404).json({ message: 'Event not found', code: 404 });
+    }
 
     const [images, guests, handlers] = await Promise.all([
         EventImage.find({ event: event._id }).sort({ sortOrder: 1, createdAt: 1 }).lean(),

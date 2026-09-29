@@ -1,16 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { BarChart3, Coins, Ticket } from 'lucide-react';
+import { ArrowLeft, BarChart3, Coins, Ticket } from 'lucide-react';
+import { useToast } from '../../components/ui/Toast.jsx';
 import { apiClient } from '../../api/index.js';
 import { unwrap, unwrapList } from '../../lib/unwrap.js';
 import { money } from '../../lib/money.js';
-import EventDashboard from '../manager/EventDashboard.jsx';
+import EventOverviewTab from './EventOverviewTab.jsx';
 import StaffEventDashboard from '../staff/StaffEventDashboard.jsx';
 import StaffCheckIn from '../staff/StaffCheckIn.jsx';
 import {
+    canEditEvent,
     canScan,
+    eventRole,
     isAmbassadorLike,
+    isEventInPast,
     isOwnerLike,
     isScannerLike,
     roleBadge
@@ -18,6 +22,7 @@ import {
 
 const OWNER_TABS = [
     { id: 'overview', label: 'Overview' },
+    { id: 'earnings', label: 'Earnings' },
     { id: 'sales', label: 'Sales' },
     { id: 'checkins', label: 'Check-ins' },
     { id: 'payout', label: 'Payout' }
@@ -93,6 +98,48 @@ function PayoutPanel({ event, payouts, orders }) {
     );
 }
 
+function EarningsPanel({ event, overview, payouts, orders }) {
+    const rows = Array.isArray(overview?.ticket_types) ? overview.ticket_types : [];
+    return (
+        <section className="space-y-6">
+            <div>
+                <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-coral">Earnings</p>
+                <h2 className="serif mt-2 text-4xl">{event?.title || 'Event'}</h2>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+                <Stat label="Gross" value={money(payouts?.gross ?? orders?.gross_sales)} Icon={Coins} />
+                <Stat label="Tickets sold" value={overview?.tickets_sold ?? 0} Icon={Ticket} />
+                <Stat label="Net earnings" value={money(payouts?.payout_due ?? 0)} Icon={BarChart3} />
+            </div>
+            <div className="border-y border-ink/15">
+                {rows.map((row) => (
+                    <div key={row.name} className="flex justify-between border-t border-ink/10 px-3 py-3 text-sm first:border-0">
+                        <span>{row.name}</span>
+                        <span className="text-ink/60">{row.sold}/{row.available} sold</span>
+                    </div>
+                ))}
+                {!rows.length ? <p className="px-3 py-8 text-sm text-ink/50">No ticket types yet.</p> : null}
+            </div>
+        </section>
+    );
+}
+
+function SimpleHeader({ title, subtitle, onBack, bare = false }) {
+    return (
+        <div className={`flex items-center gap-3 ${bare ? '' : 'mb-6 border-b border-ink/10 pb-4'}`}>
+            <button type="button" onClick={onBack} aria-label="Back to dashboard" className="p-2 text-ink/60 hover:text-ink">
+                <ArrowLeft size={18} />
+            </button>
+            <div className="min-w-0">
+                {subtitle ? (
+                    <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-coral">{subtitle}</p>
+                ) : null}
+                <h1 className="serif truncate text-3xl">{title}</h1>
+            </div>
+        </div>
+    );
+}
+
 function HubTabs({ active, onChange, tabs = OWNER_TABS }) {
     return (
         <nav className="sticky top-[73px] z-20 -mx-5 mb-6 border-b border-ink/10 bg-cream/95 px-5 backdrop-blur lg:-mx-8 lg:px-8" aria-label="Event dashboard tabs">
@@ -125,6 +172,7 @@ export default function EventDashboardPage() {
     const navigate = useNavigate();
     const user = useSelector((state) => state.auth.user);
     const seed = location.state || {};
+    const toast = useToast();
 
     const [eventItem, setEventItem] = useState(seed.eventItem || null);
     const [hubTab, setHubTab] = useState(seed.focus === 'checkin' ? 'checkins' : 'overview');
@@ -144,14 +192,46 @@ export default function EventDashboardPage() {
     const [notice, setNotice] = useState('');
 
     const ownerLike = isOwnerLike(eventItem) && (user?.role === 'organizer' || user?.role === 'admin');
-    const scannerLike = isScannerLike(eventItem) || (!ownerLike && canScan(eventItem));
-    const ambassadorLike = isAmbassadorLike(eventItem);
+    const scannerLike = !ownerLike && (Boolean(seed.scannerCheckInView) || isScannerLike(eventItem));
+    const ambassadorLike = !ownerLike && !scannerLike && isAmbassadorLike(eventItem);
+    const isPast = isEventInPast(eventItem, seed.type);
+    const canEdit = canEditEvent(eventItem, isPast);
+    const eventTitle = eventItem?.title || eventItem?.name || seed.name || 'Event';
+
+    const handleEdit = () => {
+        if (eventRole(eventItem) !== 'owner') {
+            toast.error('Only the event owner can edit this event.');
+            return;
+        }
+        if (isPast) {
+            toast.error('Past events cannot be edited.');
+            return;
+        }
+        navigate('/manager', { state: { view: 'create', eventId } });
+    };
 
     useEffect(() => {
         let cancelled = false;
 
         const resolveEventMeta = async () => {
             if (seed.eventItem) return seed.eventItem;
+            // Manager accounts: look the event up directly (works for cancelled events and deep links too).
+            if (user?.role === 'organizer' || user?.role === 'admin') {
+                try {
+                    const full = unwrap(await apiClient.managerEvent(eventId), null);
+                    if (full && !Array.isArray(full)) {
+                        const organizerId = full.organizer?._id || full.organizer;
+                        const owns = user.role === 'admin' || String(organizerId) === String(user._id || user.id);
+                        return {
+                            ...full,
+                            is_owner: owns,
+                            event_handler_type: owns ? 'Owner' : 'Manager'
+                        };
+                    }
+                } catch {
+                    /* not theirs as owner/manager — fall back to the staff lookup below */
+                }
+            }
             for (const type of ['live', 'past', 'draft']) {
                 try {
                     const response = await apiClient.eventsByType({ event_type: type, length: 50 });
@@ -257,7 +337,7 @@ export default function EventDashboardPage() {
             } catch {
                 /* ignore refresh errors */
             } finally {
-                navigate(location.pathname, { replace: true, state: { ...seed, refreshHandlers: false } });
+                navigate(location.pathname, { replace: true, state: { ...seed, refreshHandlers: false, refreshTeamMemberType: null, refreshTeamMembersAt: null } });
             }
         })();
         return () => {
@@ -266,19 +346,6 @@ export default function EventDashboardPage() {
     }, [seed.refreshHandlers, eventId]);
 
     const goHome = () => navigate('/dashboard');
-
-    const openAddMember = (type) => {
-        navigate(`/dashboard/events/${eventId}/team/add`, {
-            state: {
-                type,
-                eventId,
-                eventTitle: eventItem?.title || eventItem?.name || seed.name || 'Event',
-                ticketTypes: ownerData.tickets?.length
-                    ? ownerData.tickets
-                    : eventItem?.ticketTypes || []
-            }
-        });
-    };
 
     const inviteForCheckIn = useMemo(() => {
         if (staffData?.handler) {
@@ -323,27 +390,36 @@ export default function EventDashboardPage() {
                     <div className="mb-5 border border-moss/25 bg-moss/10 px-4 py-3 text-sm text-moss">{notice}</div>
                 ) : null}
 
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+                    <SimpleHeader title={eventTitle} onBack={goHome} bare />
+                    {canEdit ? (
+                        <button
+                            type="button"
+                            onClick={handleEdit}
+                            className="border border-ink/15 px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wider hover:border-coral"
+                        >
+                            Edit event
+                        </button>
+                    ) : null}
+                </div>
+
                 {hubTab === 'overview' ? (
-                    <EventDashboard
+                    <EventOverviewTab
+                        eventId={eventId}
+                        eventName={eventTitle}
                         event={eventItem}
-                        data={ownerData}
-                        loading={loading}
-                        onBack={goHome}
-                        onAddMember={openAddMember}
-                        onEdit={() =>
-                            navigate('/manager', {
-                                state: { view: 'create', eventId }
-                            })
-                        }
-                        canAddManagers={
-                            Boolean(eventItem?.is_owner || eventItem?.event_handler_type === 'Owner') ||
-                            user?.role === 'admin'
-                        }
-                        onGo={(view) => {
-                            if (view === 'gate') setHubTab('checkins');
-                            else if (view === 'sales') setHubTab('sales');
-                            else setHubTab('overview');
-                        }}
+                        refreshTeamMemberType={seed.refreshTeamMemberType}
+                        refreshTeamMembersAt={seed.refreshTeamMembersAt}
+                        refreshOverviewAt={seed.refreshOverviewAt}
+                    />
+                ) : null}
+
+                {hubTab === 'earnings' ? (
+                    <EarningsPanel
+                        event={eventItem}
+                        overview={ownerData.overview}
+                        payouts={ownerData.payouts}
+                        orders={ownerData.orders}
                     />
                 ) : null}
 
@@ -371,66 +447,28 @@ export default function EventDashboardPage() {
         );
     }
 
-    // Scanner hub
-    if (scannerLike && !ownerLike) {
-        const scannerTabs = [
-            { id: 'overview', label: 'Overview' },
-            { id: 'checkins', label: 'Check-ins' }
-        ];
+    // Gate staff: back button, event name, check-ins only. No tabs, no menu.
+    if (scannerLike) {
         return (
             <main className="mx-auto max-w-7xl px-5 py-10 lg:px-8">
-                <HubTabs active={hubTab === 'checkins' ? 'checkins' : 'overview'} onChange={setHubTab} tabs={scannerTabs} />
-                {hubTab === 'checkins' ? (
-                    <StaffCheckIn
-                        invite={inviteForCheckIn}
-                        onNotice={setNotice}
-                        onBack={() => setHubTab('overview')}
-                    />
-                ) : (
-                    <StaffEventDashboard
-                        invite={inviteForCheckIn}
-                        dashboard={staffData}
-                        loading={loading}
-                        onBack={goHome}
-                        onOpenCheckIn={() => setHubTab('checkins')}
-                    />
-                )}
+                <SimpleHeader title={eventTitle} onBack={goHome} />
+                <StaffCheckIn invite={inviteForCheckIn} onNotice={setNotice} onBack={goHome} />
                 {notice ? <p className="mt-4 text-sm text-moss">{notice}</p> : null}
             </main>
         );
     }
 
-    // Ambassador / Outlet hub
+    // Ambassador / Outlet: simple header + only their own sales and commission.
     if (ambassadorLike) {
-        const tabs = canScan(eventItem)
-            ? [
-                { id: 'overview', label: 'Overview' },
-                { id: 'checkins', label: 'Check-ins' }
-            ]
-            : [{ id: 'overview', label: 'Overview' }];
         return (
             <main className="mx-auto max-w-7xl px-5 py-10 lg:px-8">
-                <HubTabs active={hubTab} onChange={setHubTab} tabs={tabs} />
-                <p className="mb-4 text-[11px] font-extrabold uppercase tracking-[0.18em] text-coral">
-                    {roleBadge(eventItem)} dashboard
-                </p>
-                {hubTab === 'checkins' && canScan(eventItem) ? (
-                    <StaffCheckIn invite={inviteForCheckIn} onNotice={setNotice} onBack={() => setHubTab('overview')} />
-                ) : (
-                    <StaffEventDashboard
-                        invite={inviteForCheckIn}
-                        dashboard={staffData}
-                        loading={loading}
-                        onBack={goHome}
-                        onOpenCheckIn={canScan(eventItem) ? () => setHubTab('checkins') : undefined}
-                    />
-                )}
-                <p className="mt-8 text-sm text-ink/55">
-                    Selling tools stay on your staff desk for now.{' '}
-                    <Link to="/invitations" className="font-bold text-coral">
-                        Open staff desk
-                    </Link>
-                </p>
+                <SimpleHeader title={eventTitle} subtitle={`${roleBadge(eventItem)} dashboard`} onBack={goHome} />
+                <StaffEventDashboard
+                    invite={inviteForCheckIn}
+                    dashboard={staffData}
+                    loading={loading}
+                    onBack={goHome}
+                />
             </main>
         );
     }

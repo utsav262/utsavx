@@ -170,7 +170,7 @@ export default function ManagerWorkspace() {
 
   return (
     <main className="mx-auto max-w-7xl px-5 py-10 lg:px-8">
-      {view === 'home' && (
+      {view === 'home' && !isAdmin && (
         <div className="flex flex-col justify-between gap-5 border-b border-ink/15 pb-8 md:flex-row md:items-end">
           <div>
             <p className="text-xs font-extrabold uppercase tracking-[.2em] text-coral">
@@ -188,7 +188,7 @@ export default function ManagerWorkspace() {
           {!isAdmin && (
             <button
               onClick={() => setView('create')}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-coral px-5 py-3.5 text-xs font-extrabold uppercase tracking-wider text-white hover:opacity-90"
+              className="inline-flex items-center justify-center gap-2 bg-coral px-5 py-3.5 text-xs font-extrabold uppercase tracking-wider text-white hover:opacity-90"
             >
               <Plus size={15} /> Create event
             </button>

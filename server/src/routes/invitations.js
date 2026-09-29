@@ -8,6 +8,8 @@ const router = Router();
 
 router.use(requireAuth);
 router.get('/', invitations.listInvitations);
+router.get('/notifications', invitations.listNotifications);
+router.post('/notifications/read', invitations.markNotificationsRead);
 router.get('/catalog', invitations.staffCatalog);
 router.get('/events/:eventId/tickets', invitations.staffSellableTickets);
 router.get('/events/:eventId', invitations.staffEventDashboard);

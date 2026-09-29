@@ -2,7 +2,7 @@ import { Check } from 'lucide-react';
 
 export default function WizardProgress({ steps, current, onJump, canJumpTo }) {
   return (
-    <div className="rounded-2xl border border-ink/10 bg-white p-4">
+    <div className="border border-ink/10 bg-white p-4">
       {/* Desktop: horizontal stepper */}
       <div className="hidden md:block">
         <div className="flex items-center">
@@ -16,7 +16,7 @@ export default function WizardProgress({ steps, current, onJump, canJumpTo }) {
                   type="button"
                   disabled={!canJump}
                   onClick={() => canJump && onJump(i)}
-                  className={`group flex items-center gap-3 rounded-xl px-3 py-2 transition ${
+                  className={`group flex items-center gap-3 px-3 py-2 transition ${
                     canJump ? 'cursor-pointer hover:bg-cream' : 'cursor-not-allowed'
                   }`}
                 >
@@ -67,7 +67,7 @@ export default function WizardProgress({ steps, current, onJump, canJumpTo }) {
               type="button"
               disabled={!canJump}
               onClick={() => canJump && onJump(i)}
-              className={`flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-[11px] font-extrabold uppercase tracking-wider transition ${
+              className={`flex shrink-0 items-center gap-2 px-3 py-2 text-[11px] font-extrabold uppercase tracking-wider transition ${
                 isActive
                   ? 'bg-coral text-white'
                   : isDone

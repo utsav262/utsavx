@@ -15,18 +15,18 @@ export default function Contact() {
   };
 
   return (
-    <StaticPage eyebrow="Get in touch" title="Contact us" subtitle="Sawaal, feedback, ya partnership — sab welcome hai." maxWidth="max-w-5xl">
+    <StaticPage eyebrow="Get in touch" title="Contact us" subtitle="Questions, feedback or partnerships, we would love to hear from you." maxWidth="max-w-5xl">
       <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr]">
         {/* Info */}
         <div className="space-y-4">
-          <a href="mailto:hello@utsavx.com" className="flex items-start gap-3 rounded-2xl border border-ink/10 bg-white p-5 hover:border-coral">
+          <a href="mailto:hello@utsavx.com" className="flex items-start gap-3 border border-ink/10 bg-white p-5 hover:border-coral">
             <Mail className="mt-0.5 h-5 w-5 text-coral" />
             <div>
               <p className="font-bold">Email</p>
               <p className="text-sm text-ink/60">hello@utsavx.com</p>
             </div>
           </a>
-          <a href="tel:+919999999999" className="flex items-start gap-3 rounded-2xl border border-ink/10 bg-white p-5 hover:border-coral">
+          <a href="tel:+919999999999" className="flex items-start gap-3 border border-ink/10 bg-white p-5 hover:border-coral">
             <Phone className="mt-0.5 h-5 w-5 text-coral" />
             <div>
               <p className="font-bold">Phone</p>
@@ -34,7 +34,7 @@ export default function Contact() {
               <p className="text-xs text-ink/45">Mon–Sat, 10am–7pm IST</p>
             </div>
           </a>
-          <div className="flex items-start gap-3 rounded-2xl border border-ink/10 bg-white p-5">
+          <div className="flex items-start gap-3 border border-ink/10 bg-white p-5">
             <MapPin className="mt-0.5 h-5 w-5 text-coral" />
             <div>
               <p className="font-bold">Office</p>
@@ -44,14 +44,14 @@ export default function Contact() {
         </div>
 
         {/* Form */}
-        <div className="rounded-2xl border border-ink/10 bg-white p-6">
+        <div className="border border-ink/10 bg-white p-6">
           {sent ? (
             <div className="py-10 text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-coral/10">
                 <Send className="h-5 w-5 text-coral" />
               </div>
               <h3 className="serif mt-4 text-2xl">Message sent!</h3>
-              <p className="mt-2 text-sm text-ink/60">Hum 24 hours me reply karenge.</p>
+              <p className="mt-2 text-sm text-ink/60">We reply within 24 hours.</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -62,7 +62,7 @@ export default function Contact() {
                 <select
                   value={form.subject}
                   onChange={handleChange('subject')}
-                  className="mt-1 w-full rounded-xl border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none focus:border-coral"
+                  className="mt-1 w-full border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none focus:border-coral"
                 >
                   {['General', 'Support', 'Partnership', 'Press', 'Careers'].map((s) => (
                     <option key={s}>{s}</option>
@@ -76,10 +76,10 @@ export default function Contact() {
                   required
                   value={form.message}
                   onChange={handleChange('message')}
-                  className="mt-1 w-full rounded-xl border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none focus:border-coral"
+                  className="mt-1 w-full border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none focus:border-coral"
                 />
               </div>
-              <button type="submit" className="w-full rounded-full bg-coral px-6 py-3 font-bold text-white hover:opacity-90">
+              <button type="submit" className="w-full bg-coral px-6 py-3 font-bold text-white hover:opacity-90">
                 Send message
               </button>
             </form>
@@ -99,7 +99,7 @@ function Field({ label, type = 'text', value, onChange, required }) {
         required={required}
         value={value}
         onChange={onChange}
-        className="mt-1 w-full rounded-xl border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none focus:border-coral"
+        className="mt-1 w-full border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none focus:border-coral"
       />
     </div>
   );

@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { apiClient } from '../../api/index.js';
 import { useToast } from '../../components/ui/Toast.jsx';
+import { unwrap } from '../../lib/unwrap.js';
+import { isEventOwner } from '../dashboard/dashboardUtils.js';
 
 const TYPES = [
     { id: 'Manager', label: 'Event Manager' },
@@ -21,9 +23,10 @@ export default function AddTeamMember() {
     const user = useSelector((state) => state.auth.user);
 
     const seedType = location.state?.type || 'Event_Scanner';
-    const eventTitle = location.state?.eventTitle || 'Event';
-    const ticketTypes = location.state?.ticketTypes || [];
-    const canAddManager = user?.role === 'organizer' || user?.role === 'admin';
+    const [eventTitle, setEventTitle] = useState(location.state?.eventTitle || location.state?.eventName || 'Event');
+    const [ticketTypes, setTicketTypes] = useState(location.state?.ticketTypes || []);
+    // Only the event owner (or an admin) may invite Event Managers — the server enforces this too.
+    const canAddManager = user?.role === 'admin' || isEventOwner(location.state?.event);
 
     const allowedTypes = useMemo(
         () => TYPES.filter((row) => (row.id === 'Manager' ? canAddManager : true)),
@@ -44,6 +47,20 @@ export default function AddTeamMember() {
         Object.fromEntries((ticketTypes || []).map((tier) => [String(tier._id || tier.id), 0]))
     );
     const [busy, setBusy] = useState(false);
+
+    // Direct visit / refresh: state is gone, so load the event's ticket types and title.
+    useEffect(() => {
+        if (ticketTypes.length || !eventId) return;
+        apiClient.managerEvent(eventId)
+            .then((res) => {
+                const event = unwrap(res, null);
+                if (!event) return;
+                setEventTitle(event.title || 'Event');
+                setTicketTypes(event.ticketTypes || []);
+                setAllotments(Object.fromEntries((event.ticketTypes || []).map((tier) => [String(tier._id), 0])));
+            })
+            .catch(() => {});
+    }, [eventId]);
     const [error, setError] = useState('');
 
     const needsAllotments = type === 'Ambassador' || type === 'Outlet';
@@ -94,6 +111,8 @@ export default function AddTeamMember() {
                 replace: true,
                 state: {
                     refreshHandlers: true,
+                    refreshTeamMemberType: type,
+                    refreshTeamMembersAt: Date.now(),
                     eventId,
                     name: eventTitle
                 }

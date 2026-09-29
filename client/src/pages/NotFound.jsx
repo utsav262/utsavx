@@ -6,10 +6,10 @@ export default function NotFound() {
       <div className="text-center">
         <p className="serif text-[10rem] leading-none text-coral">404</p>
         <h1 className="serif mt-2 text-4xl">Page not found</h1>
-        <p className="mt-3 text-ink/60">Yeh page exist nahi karta ya move ho gaya.</p>
+        <p className="mt-3 text-ink/60">This page doesn't exist or has moved.</p>
         <div className="mt-6 flex justify-center gap-3">
-          <Link to="/" className="rounded-full bg-coral px-6 py-3 font-bold text-white">Go home</Link>
-          <Link to="/events" className="rounded-full border border-ink/20 px-6 py-3 font-bold">Browse events</Link>
+          <Link to="/" className="bg-coral px-6 py-3 font-bold text-white">Go home</Link>
+          <Link to="/events" className="border border-ink/20 px-6 py-3 font-bold">Browse events</Link>
         </div>
       </div>
     </main>

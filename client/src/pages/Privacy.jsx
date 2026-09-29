@@ -5,8 +5,8 @@ export default function Privacy() {
     <StaticPage eyebrow="Legal" title="Privacy Policy" subtitle="Last updated: 1 January 2026">
       <div className="prose prose-lg max-w-none space-y-6 text-ink/70">
         <p>
-          UTSAVX respects your privacy. Yeh policy batati hai ki hum kaunsa data
-          collect karte hain, kaise use karte hain, aur tumhare rights kya hain.
+          UTSAVX respects your privacy. This policy explains what data we
+          collect, how we use it and what your rights are.
         </p>
 
         <h2 className="serif text-2xl text-ink">Data we collect</h2>
@@ -27,7 +27,7 @@ export default function Privacy() {
 
         <h2 className="serif text-2xl text-ink">Sharing</h2>
         <p>
-          Hum tumhara data bechte nahi. We share only with: event organizers (for
+          We never sell your data. We share it only with: event organizers (for
           entry), payment gateways, and legal authorities when required.
         </p>
 
@@ -41,8 +41,8 @@ export default function Privacy() {
 
         <h2 className="serif text-2xl text-ink">Security</h2>
         <p>
-          Hum industry-standard encryption (TLS, AES-256) use karte hain. Card data
-          PCI-DSS compliant gateways ke through jata hai.
+          We use industry-standard encryption (TLS, AES-256). Card data is
+          processed only through PCI-DSS compliant payment gateways.
         </p>
 
         <h2 className="serif text-2xl text-ink">Contact</h2>

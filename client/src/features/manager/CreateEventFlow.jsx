@@ -280,8 +280,8 @@ export default function CreateEventFlow({ reload, notice, onCreated, onCancel, e
   if (hydrating) {
     return (
       <section className="mt-8 space-y-4">
-        <div className="h-12 w-1/3 animate-pulse rounded-xl bg-ink/5" />
-        <div className="h-64 animate-pulse rounded-2xl bg-ink/5" />
+        <div className="h-12 w-1/3 animate-pulse bg-ink/5" />
+        <div className="h-64 animate-pulse bg-ink/5" />
       </section>
     );
   }
@@ -322,7 +322,7 @@ export default function CreateEventFlow({ reload, notice, onCreated, onCancel, e
             {seedEventId ? 'Update the night.' : 'Build the night.'}
           </h2>
         </div>
-        <div className="rounded-full border border-ink/15 bg-white px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-ink/55">
+        <div className="border border-ink/15 bg-white px-4 py-2 text-xs font-extrabold uppercase tracking-wider text-ink/55">
           Step {step + 1} / {STEPS.length}
         </div>
       </div>
@@ -393,7 +393,7 @@ export default function CreateEventFlow({ reload, notice, onCreated, onCancel, e
                 type="button"
                 disabled={step === 0 || busy}
                 onClick={handleBack}
-                className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white px-4 py-2.5 text-sm font-bold hover:border-ink/30 disabled:opacity-30"
+                className="inline-flex items-center gap-2 border border-ink/15 bg-white px-4 py-2.5 text-sm font-bold hover:border-ink/30 disabled:opacity-30"
               >
                 <ArrowLeft size={15} /> Back
               </button>
@@ -401,7 +401,7 @@ export default function CreateEventFlow({ reload, notice, onCreated, onCancel, e
                 type="button"
                 disabled={busy}
                 onClick={handleNext}
-                className="inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 text-sm font-extrabold uppercase tracking-wider text-white hover:opacity-90 disabled:opacity-60"
+                className="inline-flex items-center gap-2 bg-ink px-6 py-3 text-sm font-extrabold uppercase tracking-wider text-white hover:opacity-90 disabled:opacity-60"
               >
                 Continue <ArrowRight size={15} />
               </button>

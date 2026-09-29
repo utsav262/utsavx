@@ -16,7 +16,7 @@ export default function SalesView({ event, orders }) {
         title={event.title}
         subtitle="Revenue, tickets, and payouts at a glance."
         actions={
-          <button className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider hover:border-coral hover:text-coral">
+          <button className="inline-flex items-center gap-2 border border-ink/15 px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider hover:border-coral hover:text-coral">
             <Download size={13} /> Export CSV
           </button>
         }

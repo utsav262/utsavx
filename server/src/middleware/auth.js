@@ -9,6 +9,7 @@ export async function requireAuth(req, res, next) {
         const payload = jwt.verify(token, env.jwtSecret);
         req.user = await User.findById(payload.sub).select('-passwordHash');
         if (!req.user) return res.status(401).json({ message: 'User no longer exists' });
+        if (req.user.status === 'suspended') return res.status(403).json({ message: 'This account is suspended', code: 403 });
         next();
     } catch {
         return res.status(401).json({ message: 'Invalid or expired token' });

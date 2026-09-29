@@ -12,9 +12,24 @@ import User from '../models/User.js';
 import { success } from '../utils/response.js';
 import { sellTicketOrders } from '../services/sellService.js';
 import { invalidateEventCaches } from '../services/cacheService.js';
+import { notifyUser } from '../services/notificationService.js';
 
-const eventFor = (req, eventId) => Event.findOne({ _id: eventId, ...(req.user.role === 'admin' ? {} : { organizer: req.user._id }) });
+// Admins, the organizer, and accepted Manager handlers can run an event.
+const eventFor = async (req, eventId) => {
+    if (req.user.role === 'admin') return Event.findOne({ _id: eventId });
+    const isManagerHandler = await EventHandler.exists({
+        event: eventId,
+        email: req.user.email,
+        userType: 'Manager',
+        invitationStatus: 'A'
+    }).catch(() => null);
+    return Event.findOne({ _id: eventId, ...(isManagerHandler ? {} : { organizer: req.user._id }) });
+};
 const body = (req) => req.body || {};
+/** Admin or the event's organizer — the only people who may manage Event Managers. */
+const isEventOwnerUser = (req, event) =>
+    req.user.role === 'admin' || String(event.organizer?._id || event.organizer) === String(req.user._id);
+const HANDLER_LABELS = { Manager: 'Event Manager', Ambassador: 'Ticket Ambassador', Outlet: 'Ticket Outlet', Event_Scanner: 'Gate Staff' };
 const ok = (res, result = null, message = 'Success') => success(res, result, message);
 const pick = (source, keys) => {
     const out = {};
@@ -124,14 +139,20 @@ export async function listEvents(req, res) {
         .lean();
     return ok(res, rows);
 }
-export async function singleEvent(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); return ok(res, event); }
+export async function singleEvent(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); await event.populate('organizer', 'name email avatarUrl'); return ok(res, event); }
 export async function createOrUpdateEvent(req, res) {
     const data = body(req);
     const event = data.id ? await eventFor(req, data.id) : null;
     if (data.id && !event) return res.status(404).json({ message: 'Event not found', code: 404 });
+    // Editing the event itself is owner-only; invited Managers run tickets, team and sales instead.
+    if (event && !isEventOwnerUser(req, event)) {
+        return res.status(403).json({ message: 'Only the event owner can edit this event', code: 403 });
+    }
     const payload = pick(data, EVENT_WRITABLE);
     if (req.user.role === 'admin' && data.featured !== undefined) payload.featured = Boolean(data.featured);
-    if (!event || !payload.slug) {
+    // Keep the public URL stable: only generate a slug for new events (or ones missing it).
+    if (event?.slug && !data.slug) delete payload.slug;
+    if (!event?.slug && !payload.slug) {
         payload.slug = data.slug || `${String(data.title || event?.title || 'event').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}-${crypto.randomBytes(3).toString('hex')}`;
     }
 
@@ -218,6 +239,7 @@ export async function rejectEvent(req, res) {
 export async function deleteEvent(req, res) {
     const event = await eventFor(req, req.params.id);
     if (!event) return res.status(404).json({ message: 'Event not found', code: 404 });
+    if (!isEventOwnerUser(req, event)) return res.status(403).json({ message: 'Only the event owner can cancel this event', code: 403 });
     event.status = 'cancelled';
     await event.save();
     await invalidateEventCaches(event);
@@ -274,7 +296,8 @@ export async function createTicket(req, res) {
     return ok(res, serializeTicket(event.ticketTypes.at(-1)), 'Ticket type created successfully');
 }
 export async function updateTicket(req, res) {
-    const event = await Event.findOne({ 'ticketTypes._id': req.params.id, ...(req.user.role === 'admin' ? {} : { organizer: req.user._id }) });
+    const owned = await Event.findOne({ 'ticketTypes._id': req.params.id }).select('_id');
+    const event = owned ? await eventFor(req, owned._id) : null;
     if (!event) return res.status(404).json({ message: 'Ticket type not found', code: 404 });
     const ticket = event.ticketTypes.id(req.params.id);
     if (isSystemComplimentary(ticket)) {
@@ -294,7 +317,8 @@ export async function updateTicket(req, res) {
     return ok(res, serializeTicket(ticket), 'Ticket type updated successfully');
 }
 export async function deleteTicket(req, res) {
-    const event = await Event.findOne({ 'ticketTypes._id': req.params.id, ...(req.user.role === 'admin' ? {} : { organizer: req.user._id }) });
+    const owned = await Event.findOne({ 'ticketTypes._id': req.params.id }).select('_id');
+    const event = owned ? await eventFor(req, owned._id) : null;
     if (!event) return res.status(404).json({ message: 'Ticket type not found', code: 404 });
     const ticket = event.ticketTypes.id(req.params.id);
     if (isSystemComplimentary(ticket)) {
@@ -340,7 +364,20 @@ const paged = (rows, page, length) => ({ rows: rows.slice((page - 1) * length, p
 const eventTotals = (event, orders, tickets) => { const gross = orders.reduce((sum, order) => sum + order.total, 0); const sold = orders.reduce((sum, order) => sum + order.items.reduce((count, item) => count + item.quantity, 0), 0); const checkIns = tickets.filter((ticket) => ticket.status === 'used').length; return { gross_sales: money(gross), fees: money(gross * 0.05), earnings: money(gross * 0.95), apsession_earnings: money(gross * 0.05), outlet_earnings: 0, ambassador_earnings: 0, commission: 0, cash_sales: 0, payout_due: money(gross * 0.95), remitted: 0, remittance: { remitted: 0, pending: 0, last_remitted_at: null }, total_sold: sold, claimed_tickets: checkIns, unclaimed_tickets: Math.max(0, sold - checkIns), sales_by_type: event.ticketTypes.map((type) => ({ ticket_type: type.name, name: type.name, sold: orders.reduce((sum, order) => sum + order.items.filter((item) => String(item.ticketTypeId) === String(type._id)).reduce((count, item) => count + item.quantity, 0), 0), available: type.quantity, percent: type.quantity ? Math.round((type.sold / type.quantity) * 100) : 0 })) }; };
 export async function listOrders(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const orders = await BookingOrder.find({ event: event._id, status: 'paid' }).populate('user', 'name email').sort({ createdAt: -1 }).lean(); const type = ['summary', 'purchase_history', 'transactions'].includes(req.query.type) ? req.query.type : 'summary'; const rows = orderRows(orders, String(req.query.search || '').trim()); const page = Math.max(1, Number(req.query.page || 1)); const length = Math.min(100, Math.max(1, Number(req.query.length || 20))); const tickets = await Ticket.find({ event: event._id }).lean(); const result = { type, event_link: event.slug, ...eventTotals(event, orders, tickets), table_data: type === 'summary' ? null : paged(rows, page, length).rows }; return success(res, result, 'Dashboard data fetched successfully', 200, type === 'summary' ? {} : paged(rows, page, length).pagination); }
 export async function salesByType(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const orders = await BookingOrder.find({ event: event._id, status: 'paid' }).lean(); const tickets = await Ticket.find({ event: event._id }).lean(); const summary = eventTotals(event, orders, tickets); const type = ['summary', 'purchase_history', 'transactions'].includes(req.query.type) ? req.query.type : 'purchase_history'; const rows = orderRows(orders, String(req.query.search || '').trim()); const page = Math.max(1, Number(req.query.page || 1)); const length = Math.min(100, Math.max(1, Number(req.query.length || 20))); return success(res, { type, event_link: event.slug, ...summary, table_data: type === 'summary' ? null : paged(rows, page, length).rows }, 'Sales by type fetched successfully', 200, type === 'summary' ? {} : paged(rows, page, length).pagination); }
-export async function salesOverview(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const orders = await BookingOrder.find({ event: event._id, status: 'paid' }).lean(); const sold = orders.reduce((sum, order) => sum + order.items.reduce((count, item) => count + item.quantity, 0), 0); const available = event.ticketTypes.reduce((sum, type) => sum + type.quantity, 0); return ok(res, { event_name: event.title, tickets_sold: sold, tickets_available: available, sold_percent: available ? Math.round((sold / available) * 100) : 0, ticket_types: event.ticketTypes.map((type) => ({ ticket_type: type.name, name: type.name, sold: type.sold, available: type.quantity, percent: type.quantity ? Math.round((type.sold / type.quantity) * 100) : 0 })), sales_sources: [{ source: 'Online', count: sold }] }, 'Sales overview fetched successfully'); }
+/** Tickets sold per team role (managers / ambassadors / outlets), matched via order.soldBy. */
+async function soldByRole(eventId, orders) {
+    const handlers = await EventHandler.find({ event: eventId, invitationStatus: 'A', user: { $ne: null } }).select('user userType').lean();
+    const roleByUser = new Map(handlers.map((row) => [String(row.user), row.userType]));
+    const totals = { manager: 0, ambassador: 0, outlet: 0 };
+    const key = { Manager: 'manager', Ambassador: 'ambassador', Outlet: 'outlet' };
+    for (const order of orders) {
+        const role = key[roleByUser.get(String(order.soldBy))];
+        if (!role) continue;
+        totals[role] += (order.items || []).reduce((count, item) => count + Number(item.quantity || 0), 0);
+    }
+    return totals;
+}
+export async function salesOverview(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const orders = await BookingOrder.find({ event: event._id, status: 'paid' }).lean(); const sold = orders.reduce((sum, order) => sum + order.items.reduce((count, item) => count + item.quantity, 0), 0); const available = event.ticketTypes.reduce((sum, type) => sum + type.quantity, 0); return ok(res, { event_name: event.title, tickets_sold: sold, tickets_available: available, sold_percent: available ? Math.round((sold / available) * 100) : 0, ticket_types: event.ticketTypes.map((type) => ({ ticket_type: type.name, name: type.name, sold: type.sold, available: type.quantity, percent: type.quantity ? Math.round((type.sold / type.quantity) * 100) : 0 })), sales_sources: [{ source: 'Online', count: sold }], sold_by: await soldByRole(event._id, orders) }, 'Sales overview fetched successfully'); }
 export async function payouts(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const orders = await BookingOrder.find({ event: event._id, status: 'paid' }).lean(); const gross = orders.reduce((sum, order) => sum + order.total, 0); return ok(res, { gross: money(gross), fees: money(gross * 0.05), payout_due: money(gross * 0.95), remitted: 0, pending: money(gross * 0.95) }, 'Payout information fetched successfully'); }
 export async function checkIns(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const tickets = await Ticket.find({ event: event._id }).populate('owner', 'name email').lean(); const claimed = tickets.filter((ticket) => ticket.status === 'used').length; return ok(res, { event_name: event.title, claimed_tickets: claimed, unclaimed_tickets: tickets.filter((ticket) => ticket.status === 'valid').length, ticket_types: event.ticketTypes.map((type) => ({ name: type.name, claimed: tickets.filter((ticket) => ticket.ticketType === type.name && ticket.status === 'used').length })), timeline: [] }, 'Check-in stats fetched successfully'); }
 function normalizeTicketCode(raw) {
@@ -474,7 +511,7 @@ const normalizeCoupon = (input, requireEvent = true) => {
     if (result.isActive !== undefined) result.active = result.isActive;
     return result;
 };
-const couponEvent = (req, eventId) => Event.findOne({ _id: eventId, ...(req.user.role === 'admin' ? {} : { organizer: req.user._id }) }).select('_id organizer');
+const couponEvent = (req, eventId) => eventFor(req, eventId);
 export async function coupons(req, res) { const event = await couponEvent(req, req.params.eventId); if (!event) return res.status(404).json({ message: 'Event not found.', code: 404 }); return ok(res, await Coupon.find({ event: event._id }).sort({ createdAt: -1 }).lean(), 'Coupons retrieved successfully'); }
 export async function createCoupon(req, res) { try { const data = normalizeCoupon(body(req)); const event = await couponEvent(req, data.event); if (!event) return res.status(404).json({ message: 'Event not found.', code: 404 }); if (await Coupon.exists({ event: event._id, code: data.code })) return res.status(409).json({ message: 'A coupon with this code already exists for this event.', code: 409 }); const coupon = await Coupon.create({...data, createdBy: req.user._id, createdByRole: req.user.role === 'admin' ? 'admin' : 'host', usedCount: 0 }); return res.status(201).json({ message: 'Coupon created successfully!', code: 200, result: coupon }); } catch (error) { return res.status(error.statusCode || 422).json({ message: error.message, code: error.statusCode || 422 }); } }
 export async function updateCoupon(req, res) {
@@ -510,7 +547,38 @@ async function ownedHandler(req, handlerId) {
     if (!handler) return { error: ['Handler not found', 404] };
     const event = await eventFor(req, handler.event);
     if (!event) return { error: ['You do not have permission to manage this event', 403] };
+    if (handler.userType === 'Manager' && !isEventOwnerUser(req, event)) {
+        return { error: ['Only the event owner can manage Event Managers', 403] };
+    }
     return { handler, event };
+}
+
+/** Validate [{ event_ticket_id, quantity }] against the event's ticket types. */
+function parseAllotments(event, rows) {
+    const allotments = [];
+    for (const row of Array.isArray(rows) ? rows : []) {
+        const ticketTypeId = row.event_ticket_id || row.ticketTypeId || row.ticket_type_id;
+        const quantity = Math.max(0, Math.floor(Number(row.quantity) || 0));
+        if (!ticketTypeId || quantity === 0) continue;
+        const type = event.ticketTypes.id(ticketTypeId);
+        if (!type) throw Object.assign(new Error('Assigned ticket type does not belong to this event.'), { statusCode: 422 });
+        const stock = Number(type.quantity || 0);
+        if (stock > 0 && quantity > stock) {
+            throw Object.assign(new Error(`Cannot assign more than ${stock} ${type.name} tickets.`), { statusCode: 422 });
+        }
+        allotments.push({ ticketTypeId: type._id, quantity });
+    }
+    return allotments;
+}
+
+async function notifyInvite(handler, event) {
+    return notifyUser({
+        email: handler.email,
+        type: 'EVENT_HANDLER_INVITE',
+        title: 'New team invite',
+        message: `You were invited as ${HANDLER_LABELS[handler.userType] || handler.userType} for ${event.title}.`,
+        payload: { handlerId: handler._id, eventId: event._id, userType: handler.userType }
+    });
 }
 async function ownedGuest(req, guestId) {
     const guest = await EventGuest.findById(guestId);
@@ -578,7 +646,8 @@ function mapHandlerUserType(raw) {
     if (lower === 'manager') return 'Manager';
     if (lower === 'ambassador') return 'Ambassador';
     if (lower === 'outlet') return 'Outlet';
-    return 'Event_Scanner';
+    if (['event_scanner', 'scanner', 'gate_staff', 'gate staff'].includes(lower)) return 'Event_Scanner';
+    return null;
 }
 
 export async function handlers(req, res) {
@@ -605,6 +674,14 @@ export async function addHandler(req, res) {
     const email = String(data.email || '').trim().toLowerCase();
     if (!email) return res.status(422).json({ message: 'email is required', code: 422 });
     const userType = mapHandlerUserType(data.userType || data.user_type || data.type);
+    if (!userType) return res.status(422).json({ message: 'type must be Manager, Ambassador, Outlet or Event_Scanner', code: 422 });
+    if (userType === 'Manager' && !isEventOwnerUser(req, event)) {
+        return res.status(403).json({ message: 'Only the event owner can invite Event Managers', code: 403 });
+    }
+    await event.populate('organizer', 'email');
+    if (email === String(req.user.email || '').toLowerCase() || email === String(event.organizer?.email || '').toLowerCase()) {
+        return res.status(422).json({ message: 'You cannot invite yourself or the event owner', code: 422 });
+    }
 
     const existing = await EventHandler.findOne({
         event: event._id,
@@ -620,19 +697,14 @@ export async function addHandler(req, res) {
         });
     }
 
-    const allotments = [];
-    if (Array.isArray(data.tickets)) {
-        for (const row of data.tickets) {
-            const ticketTypeId = row.event_ticket_id || row.ticketTypeId || row.ticket_type_id;
-            const quantity = Math.max(0, Math.floor(Number(row.quantity) || 0));
-            if (ticketTypeId && quantity > 0) allotments.push({ ticketTypeId, quantity });
-        }
-    } else if (Array.isArray(data.allotments)) {
-        for (const row of data.allotments) {
-            const ticketTypeId = row.event_ticket_id || row.ticketTypeId;
-            const quantity = Math.max(0, Math.floor(Number(row.quantity) || 0));
-            if (ticketTypeId && quantity > 0) allotments.push({ ticketTypeId, quantity });
-        }
+    let allotments = [];
+    try {
+        allotments = parseAllotments(event, data.tickets || data.allotments);
+    } catch (error) {
+        return res.status(error.statusCode || 422).json({ message: error.message, code: error.statusCode || 422 });
+    }
+    if ((userType === 'Ambassador' || userType === 'Outlet') && !allotments.length) {
+        return res.status(422).json({ message: 'Assign at least one ticket type to this member', code: 422 });
     }
 
     const scannerPermission = ['scan_only', 'sell_only', 'both'].includes(data.scannerPermission || data.scanner_permission)
@@ -651,6 +723,7 @@ export async function addHandler(req, res) {
         verified: Boolean(data.verified),
         allotments
     });
+    await notifyInvite(handler, event);
     return res.status(201).json({
         message: 'Handler invited successfully',
         code: 200,
@@ -658,24 +731,64 @@ export async function addHandler(req, res) {
     });
 }
 export async function updateAssignedTickets(req, res) {
-    const found = await ownedHandler(req, body(req).id);
+    const data = body(req);
+    const found = await ownedHandler(req, data.id || data.handler_id);
     if (found.error) return res.status(found.error[1]).json({ message: found.error[0], code: found.error[1] });
-    found.handler.commissionPercentage = Number(body(req).assignedTickets || body(req).commissionPercentage || 0) || 0;
-    await found.handler.save();
-    return ok(res, found.handler, 'Assigned tickets updated successfully');
+    const { handler, event } = found;
+    if (data.tickets !== undefined || data.allotments !== undefined) {
+        if (!['Ambassador', 'Outlet'].includes(handler.userType)) {
+            return res.status(422).json({ message: 'Only ambassadors and outlets have assigned tickets', code: 422 });
+        }
+        try {
+            handler.allotments = parseAllotments(event, data.tickets || data.allotments);
+        } catch (error) {
+            return res.status(error.statusCode || 422).json({ message: error.message, code: error.statusCode || 422 });
+        }
+    }
+    const commission = data.commission_percentage ?? data.commissionPercentage;
+    if (commission !== undefined) handler.commissionPercentage = Math.min(100, Math.max(0, Number(commission) || 0));
+    const permission = data.scanner_permission ?? data.scannerPermission;
+    if (permission !== undefined && handler.userType === 'Event_Scanner') {
+        if (!['scan_only', 'sell_only', 'both'].includes(permission)) {
+            return res.status(422).json({ message: 'Invalid scanner permission', code: 422 });
+        }
+        handler.scannerPermission = permission;
+    }
+    await handler.save();
+    return ok(res, handler, 'Team member updated successfully');
+}
+export async function handlerDetails(req, res) {
+    const found = await ownedHandler(req, req.params.id);
+    if (found.error) return res.status(found.error[1]).json({ message: found.error[0], code: found.error[1] });
+    const { handler, event } = found;
+    const sales = handler.user
+        ? await BookingOrder.find({ event: event._id, soldBy: handler.user, status: 'paid' }).select('items total').lean()
+        : [];
+    const soldByType = {};
+    for (const order of sales) {
+        for (const item of order.items || []) {
+            const key = String(item.ticketTypeId);
+            soldByType[key] = (soldByType[key] || 0) + Number(item.quantity || 0);
+        }
+    }
+    return ok(res, {
+        ...handler.toObject(),
+        type: handler.userType,
+        status: handler.invitationStatus,
+        event: { _id: event._id, title: event.title, ticketTypes: event.ticketTypes.map((t) => ({ _id: t._id, name: t.name, price: t.price, quantity: t.quantity })) },
+        sales: {
+            tickets_sold: Object.values(soldByType).reduce((a, b) => a + b, 0),
+            gross: sales.reduce((sum, order) => sum + Number(order.total || 0), 0),
+            by_ticket_type: soldByType
+        },
+        can_manage: handler.userType !== 'Manager' || isEventOwnerUser(req, event)
+    }, 'Team member fetched successfully');
 }
 export async function deleteHandler(req, res) {
     const found = await ownedHandler(req, req.params.id);
     if (found.error) return res.status(found.error[1]).json({ message: found.error[0], code: found.error[1] });
     await found.handler.deleteOne();
     return ok(res, null, 'Handler removed successfully');
-}
-export async function acceptHandler(req, res) {
-    const found = await ownedHandler(req, body(req).id);
-    if (found.error) return res.status(found.error[1]).json({ message: found.error[0], code: found.error[1] });
-    found.handler.invitationStatus = 'A';
-    await found.handler.save();
-    return ok(res, found.handler, 'Invitation accepted successfully');
 }
 export async function rejectHandler(req, res) {
     const found = await ownedHandler(req, req.params.id);
@@ -684,7 +797,17 @@ export async function rejectHandler(req, res) {
     await found.handler.save();
     return ok(res, found.handler, 'Invitation rejected successfully');
 }
-export async function resendInvite(req, res) { return ok(res, null, 'Invitation resent successfully'); }
+export async function resendInvite(req, res) {
+    const found = await ownedHandler(req, req.params.id);
+    if (found.error) return res.status(found.error[1]).json({ message: found.error[0], code: found.error[1] });
+    if (found.handler.invitationStatus !== 'P') {
+        return res.status(409).json({ message: 'Only pending invites can be resent', code: 409 });
+    }
+    const sent = await notifyInvite(found.handler, found.event);
+    return ok(res, { delivered: Boolean(sent) }, sent
+        ? 'Invitation resent successfully'
+        : 'Invite is saved — they will see it after signing up with this email');
+}
 export async function resendNotification(req, res) { return ok(res, null, 'Notification resent successfully'); }
 export async function notifications(req, res) { return ok(res, await Notification.find({ user: req.user._id }).sort({ createdAt: -1 }).limit(100).lean()); }
 export async function notificationSettings(req, res) { return ok(res, { email: true, push: true }); }
@@ -729,7 +852,7 @@ export async function adminOverview(req, res) {
 export async function adminUsers(req, res) {
     if (!requireAdmin(req, res)) return;
     const users = await User.find()
-        .select('name email role createdAt +passwordPlain')
+        .select('name email role createdAt')
         .sort({ createdAt: -1 })
         .lean();
     return ok(
@@ -740,7 +863,6 @@ export async function adminUsers(req, res) {
             email: user.email,
             role: user.role,
             createdAt: user.createdAt,
-            password: user.passwordPlain || null
         })),
         'Users fetched successfully'
     );
@@ -756,7 +878,7 @@ export async function adminUpdateUserRole(req, res) {
         return res.status(422).json({ message: 'You cannot remove your own admin role', code: 422 });
     }
     const user = await User.findByIdAndUpdate(req.params.id, { $set: { role } }, { new: true })
-        .select('name email role createdAt +passwordPlain');
+        .select('name email role createdAt');
     if (!user) return res.status(404).json({ message: 'User not found', code: 404 });
     const payload = user.toObject();
     return ok(
@@ -767,7 +889,6 @@ export async function adminUpdateUserRole(req, res) {
             email: payload.email,
             role: payload.role,
             createdAt: payload.createdAt,
-            password: payload.passwordPlain || null
         },
         'User role updated successfully'
     );
@@ -785,10 +906,9 @@ export async function adminUpdateUserPassword(req, res) {
             code: 422
         });
     }
-    const user = await User.findById(req.params.id).select('+passwordHash +passwordPlain');
+    const user = await User.findById(req.params.id).select('+passwordHash');
     if (!user) return res.status(404).json({ message: 'User not found', code: 404 });
     user.passwordHash = await bcrypt.hash(password, 12);
-    user.passwordPlain = password;
     await user.save();
     return ok(
         res,
@@ -797,8 +917,7 @@ export async function adminUpdateUserPassword(req, res) {
             name: user.name,
             email: user.email,
             role: user.role,
-            createdAt: user.createdAt,
-            password
+            createdAt: user.createdAt
         },
         'User password updated successfully'
     );

@@ -2,11 +2,12 @@ import { CalendarDays, ScanLine, LayoutDashboard } from 'lucide-react';
 import { money } from '../../lib/money.js';
 import { formatDateTime } from '../../lib/datetime.js';
 import {
+    canManageEvent,
     canOpenDashboard,
     canScan,
+    canSeePrice,
     canSell,
     eventCover,
-    isOwnerLike,
     roleBadge
 } from './dashboardUtils.js';
 
@@ -21,9 +22,15 @@ export default function DashboardEventCard({ event, tab, onDashboard, onScan, on
     );
     const awaitingReview = event.status === 'review_pending';
     const showScan = tab === 'live' && canScan(event) && !awaitingReview;
-    const showSell = tab === 'live' && canSell(event) && !awaitingReview;
+    const showSell = Boolean(onSell) && tab === 'live' && canSell(event) && !awaitingReview;
     const showDashboard = canOpenDashboard(event);
-    const showEdit = tab === 'draft' && isOwnerLike(event);
+    const showEdit = tab === 'draft' && canManageEvent(event);
+    const badge = roleBadge(event);
+    const prices = (event.ticketTypes || event.tickets || [])
+        .map((tier) => Number(tier.price))
+        .filter((price) => Number.isFinite(price) && price > 0);
+    const fromPrice = prices.length ? Math.min(...prices) : null;
+    const showPrice = tab !== 'draft' && canSeePrice(event) && fromPrice != null;
 
     return (
         <article className="flex flex-col overflow-hidden border border-ink/10 bg-white transition hover:border-ink/25">
@@ -33,9 +40,11 @@ export default function DashboardEventCard({ event, tab, onDashboard, onScan, on
                 <span className="absolute left-3 top-3 bg-cream px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em]">
                     {(event.status || tab || 'event').replace('_', ' ')}
                 </span>
-                <span className="absolute right-3 top-3 bg-moss px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white">
-                    {roleBadge(event)}
-                </span>
+                {badge ? (
+                    <span className="absolute right-3 top-3 bg-moss px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white">
+                        {badge}
+                    </span>
+                ) : null}
                 <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
                     <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-butter">
                         {event.category || event.genre || 'Event'}
@@ -45,6 +54,11 @@ export default function DashboardEventCard({ event, tab, onDashboard, onScan, on
             </div>
 
             <div className="flex flex-1 flex-col p-4">
+                {showPrice ? (
+                    <p className="mb-2 text-sm font-extrabold">
+                        From {money(fromPrice)}
+                    </p>
+                ) : null}
                 <p className="flex items-center gap-2 text-sm text-ink/60">
                     <CalendarDays size={14} className="text-coral" />
                     {formatDateTime(event.startsAt) || event.date || 'Date TBA'}
@@ -55,7 +69,7 @@ export default function DashboardEventCard({ event, tab, onDashboard, onScan, on
 
                 <div className="mt-4 flex items-center justify-between border-t border-ink/10 pt-3 text-xs font-bold uppercase tracking-wider text-ink/50">
                     <span>
-                        {isOwnerLike(event) || event.event_handler_type === 'Event_Scanner'
+                        {canManageEvent(event) || (canSeePrice(event) && roleBadge(event) === 'Gate Staff')
                             ? `${money(event.gross_sales || 0)} sales`
                             : `${sold}/${capacity || '—'} sold`}
                     </span>

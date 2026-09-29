@@ -40,7 +40,7 @@ export default function Refunds() {
           </ol>
         </Section>
 
-        <div className="rounded-2xl border border-ink/10 bg-white p-5 text-sm">
+        <div className="border border-ink/10 bg-white p-5 text-sm">
           <p className="font-bold text-ink">Need help?</p>
           <p className="mt-1">
             Email <a href="mailto:refunds@utsavx.com" className="font-bold text-coral">refunds@utsavx.com</a>{' '}

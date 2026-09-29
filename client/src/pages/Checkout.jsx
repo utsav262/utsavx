@@ -193,7 +193,7 @@ export default function Checkout() {
             Almost there.
           </h1>
           <p className="mt-3 text-sm text-ink/60">
-            Ek aakhri step — payment complete karo aur tickets turant paao.
+            One last step: complete payment and get your tickets instantly.
           </p>
 
           {/* Progress */}
@@ -213,7 +213,7 @@ export default function Checkout() {
           <div className="space-y-6">
 
             {/* Timer banner */}
-            <div className="flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3.5">
+            <div className="flex items-center justify-between border border-amber-200 bg-amber-50 px-5 py-3.5">
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-amber-600" />
                 <span className="font-bold text-amber-800">
@@ -221,13 +221,13 @@ export default function Checkout() {
                 </span>
                 <span className="text-amber-700">· Complete payment soon</span>
               </div>
-              <span className="rounded-full bg-amber-600 px-3 py-1 text-xs font-bold text-white tabular-nums">
+              <span className="bg-amber-600 px-3 py-1 text-xs font-bold text-white tabular-nums">
                 {mm}:{ss}
               </span>
             </div>
 
             {/* User card */}
-            <div className="rounded-2xl border border-ink/10 bg-white p-6">
+            <div className="border border-ink/10 bg-white p-6">
               <div className="flex items-center justify-between">
                 <h2 className="serif text-2xl">Contact details</h2>
                 <button className="text-xs font-bold text-coral hover:underline">
@@ -250,7 +250,7 @@ export default function Checkout() {
             </div>
 
             {/* Payment methods */}
-            <div className="rounded-2xl border border-ink/10 bg-white p-6">
+            <div className="border border-ink/10 bg-white p-6">
               <h2 className="serif text-2xl">Payment method</h2>
               <p className="mt-1 text-sm text-ink/55">
                 Razorpay ke through secure payment — UPI, cards, netbanking.
@@ -263,7 +263,7 @@ export default function Checkout() {
               </div>
 
               {/* Test-mode card */}
-              <div className="mt-5 overflow-hidden rounded-xl border border-dashed border-coral/40 bg-coral/5">
+              <div className="mt-5 overflow-hidden border border-dashed border-coral/40 bg-coral/5">
                 <button
                   type="button"
                   onClick={() => setShowTestInfo((v) => !v)}
@@ -296,7 +296,7 @@ export default function Checkout() {
 
             {/* Error */}
             {message && (
-              <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm">
+              <div className="flex items-start gap-3 border border-red-200 bg-red-50 p-4 text-sm">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
                 <p className="text-red-700">{message}</p>
               </div>
@@ -313,7 +313,7 @@ export default function Checkout() {
           {/* ============ RIGHT: ORDER SUMMARY ============ */}
           <div>
             <div className="sticky top-24 space-y-4">
-              <div className="overflow-hidden rounded-2xl border border-ink/10 bg-white">
+              <div className="overflow-hidden border border-ink/10 bg-white">
                 <div className="bg-moss p-6 text-white">
                   <p className="text-xs font-extrabold uppercase tracking-wider text-butter">
                     Order summary
@@ -365,7 +365,7 @@ export default function Checkout() {
                 type="button"
                 onClick={submit}
                 disabled={busy}
-                className="group flex w-full items-center justify-center gap-2 rounded-full bg-coral px-6 py-4 font-extrabold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                className="group flex w-full items-center justify-center gap-2 bg-coral px-6 py-4 font-extrabold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {busy ? (
                   <>
@@ -435,7 +435,7 @@ function StepLine() {
 
 function PayChip({ icon, label }) {
   return (
-    <div className="flex flex-col items-center gap-1.5 rounded-xl border border-ink/15 bg-cream/50 px-3 py-3 text-xs font-bold text-ink/70">
+    <div className="flex flex-col items-center gap-1.5 border border-ink/15 bg-cream/50 px-3 py-3 text-xs font-bold text-ink/70">
       <span className="text-coral">{icon}</span>
       {label}
     </div>
@@ -455,7 +455,7 @@ function TestRow({ label, value }) {
       <button
         type="button"
         onClick={copy}
-        className="inline-flex items-center gap-1.5 rounded-md bg-white px-2 py-1 font-mono text-xs font-bold text-ink hover:bg-coral/10"
+        className="inline-flex items-center gap-1.5 bg-white px-2 py-1 font-mono text-xs font-bold text-ink hover:bg-coral/10"
       >
         {value}
         {copied ? (
@@ -470,7 +470,7 @@ function TestRow({ label, value }) {
 
 function Trust({ icon, text }) {
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-ink/10 bg-white px-3 py-2.5 text-xs font-bold text-ink/70">
+    <div className="flex items-center gap-2 border border-ink/10 bg-white px-3 py-2.5 text-xs font-bold text-ink/70">
       <span className="text-coral">{icon}</span>
       {text}
     </div>

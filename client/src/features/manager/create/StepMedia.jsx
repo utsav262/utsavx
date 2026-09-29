@@ -35,7 +35,7 @@ export default function StepMedia({
         </Field>
 
         {imageUrl ? (
-          <div className="group relative overflow-hidden rounded-2xl border border-ink/10">
+          <div className="group relative overflow-hidden border border-ink/10">
             <img
               src={imageUrl}
               alt="Cover preview"
@@ -45,13 +45,13 @@ export default function StepMedia({
             <button
               type="button"
               onClick={() => setImageUrl('')}
-              className="absolute right-3 top-3 rounded-full bg-ink/80 p-2 text-white opacity-0 transition group-hover:opacity-100"
+              className="absolute right-3 top-3 bg-ink/80 p-2 text-white opacity-0 transition group-hover:opacity-100"
             >
               <Trash2 size={14} />
             </button>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-ink/15 bg-cream/40 px-6 py-12 text-center">
+          <div className="flex flex-col items-center justify-center border-2 border-dashed border-ink/15 bg-cream/40 px-6 py-12 text-center">
             <ImageIcon size={32} className="text-ink/30" />
             <p className="mt-3 text-sm font-bold">No cover yet</p>
             <p className="mt-1 text-xs text-ink/50">
@@ -74,7 +74,7 @@ export default function StepMedia({
             <button
               type="button"
               onClick={add}
-              className="shrink-0 rounded-xl bg-ink px-4 text-white hover:opacity-90"
+              className="shrink-0 bg-ink px-4 text-white hover:opacity-90"
             >
               <Plus size={16} />
             </button>
@@ -86,7 +86,7 @@ export default function StepMedia({
             {extraImages.map((url, i) => (
               <div
                 key={`${url}-${i}`}
-                className="group relative overflow-hidden rounded-xl border border-ink/10"
+                className="group relative overflow-hidden border border-ink/10"
               >
                 <img src={url} alt="" className="aspect-square w-full object-cover" />
                 <button
@@ -94,7 +94,7 @@ export default function StepMedia({
                   onClick={() =>
                     setExtraImages((rows) => rows.filter((_, idx) => idx !== i))
                   }
-                  className="absolute right-2 top-2 rounded-full bg-ink/80 p-1.5 text-white opacity-0 transition group-hover:opacity-100"
+                  className="absolute right-2 top-2 bg-ink/80 p-1.5 text-white opacity-0 transition group-hover:opacity-100"
                 >
                   <Trash2 size={12} />
                 </button>
@@ -113,7 +113,7 @@ export default function StepMedia({
 
 function Section({ title, hint, children }) {
   return (
-    <div className="rounded-2xl border border-ink/10 bg-white p-6">
+    <div className="border border-ink/10 bg-white p-6">
       <div className="mb-5 flex items-baseline justify-between">
         <h3 className="serif text-2xl leading-none">{title}</h3>
         {hint && <span className="text-xs text-ink/45">{hint}</span>}

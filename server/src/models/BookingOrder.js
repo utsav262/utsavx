@@ -19,7 +19,16 @@ const bookingOrderSchema = new mongoose.Schema({
     /** When set, pending inventory is released after this time if unpaid. */
     holdExpiresAt: { type: Date, default: null, index: true },
     paymentIntentId: String,
-    razorpayPaymentId: String
+    /** Cash/gate sales: the settlement the platform fee on this order is remitted through. */
+    settlement: { type: mongoose.Schema.Types.ObjectId, ref: 'Settlement', default: null, index: true },
+    razorpayPaymentId: String,
+    /** Refund bookkeeping (admin-initiated). refundRequestedAt doubles as a lock against double refunds. */
+    refundRequestedAt: { type: Date, default: null },
+    refundedAt: Date,
+    refundedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'AdminUser' },
+    refundReason: String,
+    refundMethod: { type: String, enum: ['razorpay', 'stripe', 'manual'] },
+    refundReference: String
 }, { timestamps: true });
 
 bookingOrderSchema.index({ user: 1, idempotencyKey: 1 }, { unique: true });

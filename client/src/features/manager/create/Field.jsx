@@ -24,7 +24,7 @@ export default function Field({
 }
 
 export const inputCls =
-  'w-full rounded-xl border border-ink/15 bg-white px-4 py-3 text-sm outline-none transition focus:border-coral focus:ring-4 focus:ring-coral/10 placeholder:text-ink/35';
+  'w-full border border-ink/15 bg-white px-4 py-3 text-sm outline-none transition focus:border-coral focus:ring-4 focus:ring-coral/10 placeholder:text-ink/35';
 
 export const inputSerifCls =
-  'w-full rounded-xl border border-ink/15 bg-white px-4 py-3 serif text-3xl outline-none transition focus:border-coral focus:ring-4 focus:ring-coral/10 placeholder:text-ink/30';
+  'w-full border border-ink/15 bg-white px-4 py-3 serif text-3xl outline-none transition focus:border-coral focus:ring-4 focus:ring-coral/10 placeholder:text-ink/30';

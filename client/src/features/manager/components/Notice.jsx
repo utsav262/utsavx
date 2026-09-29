@@ -13,7 +13,7 @@ export default function Notice({ message, tone = 'info', onDismiss }) {
   const Icon = tone === 'error' ? AlertCircle : tone === 'success' ? CheckCircle2 : AlertCircle;
 
   return (
-    <div className={`mt-5 flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm ${toneMap[tone] || toneMap.info}`}>
+    <div className={`mt-5 flex items-start gap-3 border px-4 py-3 text-sm ${toneMap[tone] || toneMap.info}`}>
       <Icon className="mt-0.5 h-4 w-4 shrink-0" />
       <p className="flex-1">{message}</p>
       <button
@@ -22,7 +22,7 @@ export default function Notice({ message, tone = 'info', onDismiss }) {
           setHidden(true);
           onDismiss?.();
         }}
-        className="rounded-full p-1 text-ink/40 hover:text-ink"
+        className="p-1 text-ink/40 hover:text-ink"
         aria-label="Dismiss"
       >
         <X size={14} />

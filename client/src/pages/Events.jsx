@@ -112,17 +112,17 @@ export default function Events() {
             All events
           </h1>
           <p className="mt-3 max-w-xl text-sm text-ink/60">
-            Concerts, comedy, workshops, festivals — sab kuch ek jagah.
-            Filter karo, book karo, jao aur enjoy karo.
+            Concerts, comedy, workshops and festivals in one place.
+            Filter, book, and enjoy.
           </p>
 
-          {/* Quick category chips */}
-          <div className="mt-6 flex flex-wrap gap-2">
+          {/* Quick category chips (mobile only — desktop has them in the filter bar) */}
+          <div className="mt-6 flex flex-wrap gap-2 sm:hidden">
             {categories.slice(0, 6).map((c) => (
               <button
                 key={c}
                 onClick={() => setCategory(c)}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
+                className={`px-3.5 py-1.5 text-xs font-bold transition ${
                   category === c
                     ? 'bg-coral text-white'
                     : 'border border-ink/15 text-ink/70 hover:border-coral hover:text-coral'
@@ -140,7 +140,7 @@ export default function Events() {
         <div className="mx-auto max-w-7xl px-5 py-3 lg:px-8">
           <div className="flex items-center gap-2">
             {/* Search */}
-            <div className="relative flex flex-1 items-center rounded-full border border-ink/15 bg-white px-4 py-2.5 transition focus-within:border-coral">
+            <div className="relative flex flex-1 items-center border border-ink/15 bg-white px-4 py-2.5 transition focus-within:border-coral">
               <Search size={16} className="text-ink/45" />
               <input
                 value={term}
@@ -152,7 +152,7 @@ export default function Events() {
               {term && (
                 <button
                   onClick={() => setTerm('')}
-                  className="rounded-full p-1 text-ink/40 hover:text-ink"
+                  className="p-1 text-ink/40 hover:text-ink"
                   aria-label="Clear search"
                 >
                   <X size={14} />
@@ -164,7 +164,7 @@ export default function Events() {
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value)}
-              className="hidden rounded-full border border-ink/15 bg-white px-4 py-2.5 text-sm font-bold text-ink/70 outline-none focus:border-coral sm:block"
+              className="hidden border border-ink/15 bg-white px-4 py-2.5 text-sm font-bold text-ink/70 outline-none focus:border-coral sm:block"
               aria-label="Sort events"
             >
               {SORTS.map((s) => (
@@ -177,7 +177,7 @@ export default function Events() {
             {/* Filter toggle (mobile) */}
             <button
               onClick={() => setShowFilters((v) => !v)}
-              className={`relative inline-flex items-center gap-1.5 rounded-full border px-4 py-2.5 text-sm font-bold transition sm:hidden ${
+              className={`relative inline-flex items-center gap-1.5 border px-4 py-2.5 text-sm font-bold transition sm:hidden ${
                 hasActiveFilters
                   ? 'border-coral bg-coral text-white'
                   : 'border-ink/15 bg-white text-ink/70'
@@ -200,7 +200,7 @@ export default function Events() {
               <button
                 key={t}
                 onClick={() => setEventType(t)}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
+                className={`px-3.5 py-1.5 text-xs font-bold transition ${
                   eventType === t
                     ? 'bg-ink text-white'
                     : 'border border-ink/15 text-ink/70 hover:border-ink/40'
@@ -214,7 +214,7 @@ export default function Events() {
               <button
                 key={c}
                 onClick={() => setCategory(c)}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
+                className={`px-3.5 py-1.5 text-xs font-bold transition ${
                   category === c
                     ? 'bg-coral text-white'
                     : 'border border-ink/15 text-ink/70 hover:border-coral hover:text-coral'
@@ -227,7 +227,7 @@ export default function Events() {
 
           {/* Mobile filters drawer */}
           {showFilters && (
-            <div className="mt-3 space-y-3 rounded-2xl border border-ink/10 bg-white p-4 sm:hidden">
+            <div className="mt-3 space-y-3 border border-ink/10 bg-white p-4 sm:hidden">
               <div>
                 <p className="text-xs font-extrabold uppercase tracking-wider text-ink/45">
                   When
@@ -237,7 +237,7 @@ export default function Events() {
                     <button
                       key={t}
                       onClick={() => setEventType(t)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                      className={`px-3 py-1.5 text-xs font-bold ${
                         eventType === t
                           ? 'bg-ink text-white'
                           : 'border border-ink/15'
@@ -257,7 +257,7 @@ export default function Events() {
                     <button
                       key={c}
                       onClick={() => setCategory(c)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                      className={`px-3 py-1.5 text-xs font-bold ${
                         category === c
                           ? 'bg-coral text-white'
                           : 'border border-ink/15'
@@ -275,7 +275,7 @@ export default function Events() {
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value)}
-                  className="mt-2 w-full rounded-xl border border-ink/15 bg-transparent px-3 py-2 text-sm font-bold"
+                  className="mt-2 w-full border border-ink/15 bg-transparent px-3 py-2 text-sm font-bold"
                 >
                   {SORTS.map((s) => (
                     <option key={s.value} value={s.value}>
@@ -324,7 +324,7 @@ export default function Events() {
 
         {/* Offline notice */}
         {offline && (
-          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm">
+          <div className="mb-6 flex items-start gap-3 border border-amber-200 bg-amber-50 p-4 text-sm">
             <span className="mt-0.5 inline-block h-2 w-2 shrink-0 rounded-full bg-amber-500" />
             <p className="text-amber-800">
               Showing the local catalog while the API is offline. Live events
@@ -357,7 +357,7 @@ export default function Events() {
                 <button
                   disabled={loading}
                   onClick={() => setPage((p) => p + 1)}
-                  className="inline-flex items-center gap-2 rounded-full border border-ink/20 bg-white px-6 py-3 text-sm font-extrabold transition hover:border-coral hover:text-coral disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center gap-2 border border-ink/20 bg-white px-6 py-3 text-sm font-extrabold transition hover:border-coral hover:text-coral disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading ? (
                     <>
@@ -376,26 +376,26 @@ export default function Events() {
           </>
         ) : (
           /* Empty state */
-          <div className="rounded-3xl border border-ink/10 bg-white px-6 py-16 text-center">
+          <div className="border border-ink/10 bg-white px-6 py-16 text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-coral/10">
               <Search className="h-6 w-6 text-coral" />
             </div>
             <h2 className="serif mt-5 text-3xl">No events found</h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-ink/60">
               {term
-                ? `"${term}" se match karta koi event nahi mila. Filters change karke dekho.`
-                : 'Is category me abhi events nahi hain. Filters clear karke dobara try karo.'}
+                ? `No events match "${term}". Try changing your filters.`
+                : 'No events in this category yet. Clear your filters and try again.'}
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-2">
               <button
                 onClick={clearAll}
-                className="rounded-full bg-coral px-5 py-2.5 text-sm font-bold text-white hover:opacity-90"
+                className="bg-coral px-5 py-2.5 text-sm font-bold text-white hover:opacity-90"
               >
                 Clear all filters
               </button>
               <button
                 onClick={() => setCategory('All events')}
-                className="rounded-full border border-ink/20 px-5 py-2.5 text-sm font-bold hover:border-coral hover:text-coral"
+                className="border border-ink/20 px-5 py-2.5 text-sm font-bold hover:border-coral hover:text-coral"
               >
                 Browse all categories
               </button>
@@ -411,11 +411,11 @@ export default function Events() {
 function SkeletonCard() {
   return (
     <div className="animate-pulse">
-      <div className="aspect-[4/5] w-full rounded-2xl bg-ink/10" />
+      <div className="aspect-[4/5] w-full bg-ink/10" />
       <div className="mt-4 space-y-2">
-        <div className="h-3 w-1/3 rounded bg-ink/10" />
-        <div className="h-4 w-3/4 rounded bg-ink/10" />
-        <div className="h-3 w-1/2 rounded bg-ink/10" />
+        <div className="h-3 w-1/3 bg-ink/10" />
+        <div className="h-4 w-3/4 bg-ink/10" />
+        <div className="h-3 w-1/2 bg-ink/10" />
       </div>
     </div>
   );
