@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { reportApiError } from '../lib/apiErrors.js';
 
 /** Admin console API — own base path and own token; never sends the customer/organizer token. */
 export const ADMIN_TOKEN_KEY = 'utsavx_admin_token';
@@ -22,7 +23,9 @@ adminApi.interceptors.response.use(
             localStorage.removeItem(ADMIN_TOKEN_KEY);
             window.dispatchEvent(new Event('utsavx-admin-logout'));
         }
-        return Promise.reject(error);
+        // A wrong password on the login form is shown inline there, not as a toast.
+        if (error.config?.url === '/auth/login') return Promise.reject(error);
+        return reportApiError(error);
     }
 );
 

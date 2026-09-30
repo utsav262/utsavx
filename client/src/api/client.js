@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { reportApiError } from '../lib/apiErrors.js';
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api/v1' : 'http://localhost:5050/api/v1')
@@ -17,7 +18,7 @@ api.interceptors.response.use(
             localStorage.removeItem('utsavx_token');
             localStorage.removeItem('utsavx_user');
         }
-        return Promise.reject(error);
+        return reportApiError(error);
     }
 );
 

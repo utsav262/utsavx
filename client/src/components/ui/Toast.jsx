@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, X, XCircle } from 'lucide-react';
+import { API_ERROR_EVENT } from '../../lib/apiErrors.js';
 
 const ToastContext = createContext(null);
 
@@ -7,6 +8,7 @@ let toastId = 0;
 
 export function ToastProvider({ children }) {
     const [toasts, setToasts] = useState([]);
+    const lastPageErrorAt = useRef(0);
 
     const dismiss = useCallback((id) => {
         setToasts((rows) => rows.filter((toast) => toast.id !== id));
@@ -14,16 +16,38 @@ export function ToastProvider({ children }) {
 
     const push = useCallback((message, tone = 'success', ms = 3200) => {
         const id = ++toastId;
-        setToasts((rows) => [...rows, { id, message, tone }]);
+        // Never stack the same message twice (retries, double effects, page + global error).
+        setToasts((rows) => (rows.some((row) => row.message === message && row.tone === tone) ? rows : [...rows, { id, message, tone }]));
         window.setTimeout(() => dismiss(id), ms);
         return id;
     }, [dismiss]);
 
     const api = useMemo(() => ({
         success: (message, ms) => push(message, 'success', ms),
-        error: (message, ms) => push(message, 'error', ms),
+        error: (message, ms) => {
+            lastPageErrorAt.current = Date.now();
+            return push(message, 'error', ms);
+        },
         info: (message, ms) => push(message, 'info', ms)
     }), [push]);
+
+    // Global API errors: wait a beat so a page that shows its own error toast wins, and never repeat a visible message.
+    useEffect(() => {
+        const onApiError = (event) => {
+            const { message, at } = event.detail || {};
+            window.setTimeout(() => {
+                if (lastPageErrorAt.current >= at) return;
+                setToasts((rows) => {
+                    if (rows.some((row) => row.message === message)) return rows;
+                    const id = ++toastId;
+                    window.setTimeout(() => dismiss(id), 4000);
+                    return [...rows, { id, message, tone: 'error' }];
+                });
+            }, 300);
+        };
+        window.addEventListener(API_ERROR_EVENT, onApiError);
+        return () => window.removeEventListener(API_ERROR_EVENT, onApiError);
+    }, [dismiss]);
 
     return (
         <ToastContext.Provider value={api}>

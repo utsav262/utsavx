@@ -11,8 +11,9 @@ export const apiClient = {
     siteSettings: () => api.get('/site-settings'),
     cityCounts: (params = {}) => api.get('/event/city-counts', { params }),
     eventsByType: (params = {}) => api.get('/event/list-by-type', { params }),
-    login: (payload) => api.post('/auth/login', payload),
-    register: (payload) => api.post('/auth/register', payload),
+    // Sign-in/sign-up forms show their errors inline, so no global toast.
+    login: (payload) => api.post('/auth/login', payload, { silentError: true }),
+    register: (payload) => api.post('/auth/register', payload, { silentError: true }),
     becomeOrganizer: () => api.post('/auth/become-organizer'),
     me: () => api.get('/auth/me'),
     accountProfile: () => api.get('/account/profile'),
