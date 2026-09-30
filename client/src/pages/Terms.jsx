@@ -1,8 +1,10 @@
 import StaticPage from '../components/layout/StaticPage.jsx';
+import { useSiteSettings } from '../lib/useSiteSettings.js';
 
 export default function Terms() {
+  const site = useSiteSettings();
   return (
-    <StaticPage eyebrow="Legal" title="Terms of Service" subtitle="Last updated: 1 January 2026">
+    <StaticPage eyebrow="Legal" title="Terms of Service" subtitle="Last updated: 1 October 2026">
       <div className="prose prose-lg max-w-none space-y-6 text-ink/70">
         <p>
           Welcome to MXO. By using our platform you agree to these terms. Please
@@ -31,7 +33,7 @@ export default function Terms() {
         <h2 className="serif text-2xl text-ink">4. Event changes</h2>
         <p>
           Organizers may reschedule or cancel events. In such cases, you will be
-          notified via email and refunds will be processed as per policy.
+          notified in the app and refunds will be handled as described in our Refunds page.
         </p>
 
         <h2 className="serif text-2xl text-ink">5. Prohibited conduct</h2>
@@ -54,7 +56,7 @@ export default function Terms() {
         <h2 className="serif text-2xl text-ink">8. Contact</h2>
         <p>
           Questions? Email{' '}
-          <a href="mailto:legal@utsavx.com" className="font-bold text-coral">legal@utsavx.com</a>
+          <a href={`mailto:${site.support_email}`} className="font-bold text-coral">{site.support_email}</a>
         </p>
       </div>
     </StaticPage>

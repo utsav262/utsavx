@@ -107,7 +107,8 @@ export default function AppRoutes() {
 
         {/* ---------- GUEST ONLY (login/signup) ---------- */}
         <Route path="/login" element={<RequireGuest><Login /></RequireGuest>} />
-        <Route path="/organizer" element={<RequireGuest><Organizer /></RequireGuest>} />
+        {/* Guests see the pitch; signed-in buyers can upgrade to a host account here. */}
+        <Route path="/organizer" element={<Organizer />} />
         <Route path="/manager/login" element={<RequireGuest><ManagerSignIn /></RequireGuest>} />
         <Route path="/manager/signin" element={<RequireGuest><ManagerSignIn /></RequireGuest>} />
         <Route path="/manager/signup" element={<RequireGuest><ManagerSignUp /></RequireGuest>} />

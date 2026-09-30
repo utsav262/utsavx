@@ -59,8 +59,8 @@ function Skeleton({ className = '' }) {
     return <div className={`animate-pulse bg-ink/10 ${className}`} />;
 }
 
-function Card({ children, className = '' }) {
-    return <section className={`border border-ink/10 bg-white p-5 sm:p-6 ${className}`}>{children}</section>;
+function Card({ children, className = '', flush = false }) {
+    return <section className={`border border-ink/10 bg-white ${flush ? '' : 'p-5 sm:p-6'} ${className}`}>{children}</section>;
 }
 
 function CardTitle({ children, Icon }) {
@@ -115,7 +115,7 @@ function Avatar({ member, onClick }) {
 
 function TeamSection({ config, state, canAdd, onToggle, onAdd, onOpenMember }) {
     return (
-        <Card className="p-0 sm:p-0">
+        <Card flush>
             <button
                 type="button"
                 onClick={onToggle}

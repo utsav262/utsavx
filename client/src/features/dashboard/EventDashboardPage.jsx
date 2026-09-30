@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { ArrowLeft, BarChart3, Coins, Ticket } from 'lucide-react';
+import { BarChart3, Coins, ExternalLink, Pencil, Ticket } from 'lucide-react';
+import { PageHeader, PageShell, buttonCls } from '../../components/ui/Page.jsx';
 import { useToast } from '../../components/ui/Toast.jsx';
 import { apiClient } from '../../api/index.js';
 import { unwrap, unwrapList } from '../../lib/unwrap.js';
@@ -124,25 +125,16 @@ function EarningsPanel({ event, overview, payouts, orders }) {
     );
 }
 
-function SimpleHeader({ title, subtitle, onBack, bare = false }) {
-    return (
-        <div className={`flex items-center gap-3 ${bare ? '' : 'mb-6 border-b border-ink/10 pb-4'}`}>
-            <button type="button" onClick={onBack} aria-label="Back to dashboard" className="p-2 text-ink/60 hover:text-ink">
-                <ArrowLeft size={18} />
-            </button>
-            <div className="min-w-0">
-                {subtitle ? (
-                    <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-coral">{subtitle}</p>
-                ) : null}
-                <h1 className="serif truncate text-3xl">{title}</h1>
-            </div>
-        </div>
-    );
+/** "Live · Sat, 18 Oct 2026" style line above the event title. */
+function eventEyebrow(event) {
+    const status = { published: 'Live', 'sold-out': 'Sold out', review_pending: 'In review', draft: 'Draft', cancelled: 'Cancelled' }[event?.status] || 'Event';
+    const when = event?.startsAt ? new Date(event.startsAt).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    return when ? `${status} · ${when}` : status;
 }
 
 function HubTabs({ active, onChange, tabs = OWNER_TABS }) {
     return (
-        <nav className="sticky top-[73px] z-20 -mx-5 mb-6 border-b border-ink/10 bg-cream/95 px-5 backdrop-blur lg:-mx-8 lg:px-8" aria-label="Event dashboard tabs">
+        <nav className="sticky top-[var(--app-header,73px)] z-20 mb-6 border-b border-ink/10 bg-cream" aria-label="Event dashboard tabs">
             <div className="flex gap-1 overflow-x-auto">
                 {tabs.map((item) => {
                     const selected = active === item.id;
@@ -383,25 +375,38 @@ export default function EventDashboardPage() {
     // Owner / Manager hub — tabs stay mounted while content switches
     if (ownerLike && (user?.role === 'organizer' || user?.role === 'admin')) {
         return (
-            <main className="mx-auto max-w-7xl px-5 py-10 lg:px-8">
-                <HubTabs active={hubTab} onChange={setHubTab} />
+            <PageShell>
+                <PageHeader
+                    back={{ to: '/dashboard', label: 'All events' }}
+                    eyebrow={eventEyebrow(eventItem)}
+                    title={eventTitle}
+                    actions={(
+                        <>
+                            {eventItem?.slug && ['published', 'sold-out'].includes(eventItem?.status) ? (
+                                <a href={`/events/${eventItem.slug}`} target="_blank" rel="noreferrer" className={buttonCls.secondary}>
+                                    <ExternalLink size={13} /> View page
+                                </a>
+                            ) : null}
+                            {canEdit ? (
+                                <button type="button" onClick={handleEdit} className={buttonCls.secondary}>
+                                    <Pencil size={13} /> Edit event
+                                </button>
+                            ) : null}
+                            {['published', 'sold-out'].includes(eventItem?.status) && !isPast ? (
+                                <button type="button" onClick={() => navigate(`/dashboard/sell/${eventId}`)} className={buttonCls.primary}>
+                                    <Ticket size={13} /> Sell tickets
+                                </button>
+                            ) : null}
+                        </>
+                    )}
+                />
+                <div className="mt-2">
+                    <HubTabs active={hubTab} onChange={setHubTab} />
+                </div>
 
                 {notice ? (
                     <div className="mb-5 border border-moss/25 bg-moss/10 px-4 py-3 text-sm text-moss">{notice}</div>
                 ) : null}
-
-                <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-                    <SimpleHeader title={eventTitle} onBack={goHome} bare />
-                    {canEdit ? (
-                        <button
-                            type="button"
-                            onClick={handleEdit}
-                            className="border border-ink/15 px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wider hover:border-coral"
-                        >
-                            Edit event
-                        </button>
-                    ) : null}
-                </div>
 
                 {hubTab === 'overview' ? (
                     <EventOverviewTab
@@ -443,33 +448,36 @@ export default function EventDashboardPage() {
                 {hubTab === 'payout' ? (
                     <PayoutPanel event={eventItem} payouts={ownerData.payouts} orders={ownerData.orders} />
                 ) : null}
-            </main>
+            </PageShell>
         );
     }
 
     // Gate staff: back button, event name, check-ins only. No tabs, no menu.
     if (scannerLike) {
         return (
-            <main className="mx-auto max-w-7xl px-5 py-10 lg:px-8">
-                <SimpleHeader title={eventTitle} onBack={goHome} />
-                <StaffCheckIn invite={inviteForCheckIn} onNotice={setNotice} onBack={goHome} />
+            <PageShell>
+                <PageHeader back={{ to: '/dashboard', label: 'All events' }} eyebrow="Gate check-in" title={eventTitle} />
+                <div className="mt-6">
+                    <StaffCheckIn invite={inviteForCheckIn} onNotice={setNotice} onBack={goHome} />
+                </div>
                 {notice ? <p className="mt-4 text-sm text-moss">{notice}</p> : null}
-            </main>
+            </PageShell>
         );
     }
 
     // Ambassador / Outlet: simple header + only their own sales and commission.
     if (ambassadorLike) {
         return (
-            <main className="mx-auto max-w-7xl px-5 py-10 lg:px-8">
-                <SimpleHeader title={eventTitle} subtitle={`${roleBadge(eventItem)} dashboard`} onBack={goHome} />
+            <PageShell>
+                <PageHeader back={{ to: '/dashboard', label: 'All events' }} eyebrow={`${roleBadge(eventItem)} dashboard`} title={eventTitle} />
+                <div className="mt-6" />
                 <StaffEventDashboard
                     invite={inviteForCheckIn}
                     dashboard={staffData}
                     loading={loading}
                     onBack={goHome}
                 />
-            </main>
+            </PageShell>
         );
     }
 

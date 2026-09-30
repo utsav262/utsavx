@@ -84,6 +84,7 @@ export default function Header() {
     links.push({ to: '/dashboard', label: 'Dashboard' });
     links.push({ to: '/manager', label: 'Workspace' });
   } else if (isCustomer) {
+    links.push({ to: '/tickets', label: 'My tickets' });
     if (isStaff) {
       links.push({ to: '/dashboard', label: 'Dashboard' });
     } else {

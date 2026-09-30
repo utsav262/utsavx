@@ -1,4 +1,4 @@
-import { Plus, CalendarDays, Coins, Ticket, BarChart3, Sparkles } from 'lucide-react';
+import { Plus, CalendarDays, Coins, Ticket, BarChart3 } from 'lucide-react';
 import StatCard from '../components/StatCard.jsx';
 import EventTile from '../components/EventTile.jsx';
 import PanelHeader from '../components/PanelHeader.jsx';
@@ -55,14 +55,9 @@ export default function ManagerHome({ dashboard, events = [], onCreate, onOpenDa
       {/* Recent events */}
       <div>
         <PanelHeader
-          eyebrow="Your catalog"
+          eyebrow="Your events"
           title="Recent events"
           subtitle={`${events.length} event${events.length === 1 ? '' : 's'}`}
-          actions={
-            <button onClick={onCreate} className="inline-flex items-center gap-2 bg-coral px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider text-white hover:opacity-90">
-              <Sparkles size={13} /> New
-            </button>
-          }
         />
 
         {events.length ? (

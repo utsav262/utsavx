@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
+import { PageHeader, PageShell } from '../../components/ui/Page.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { Plus } from 'lucide-react';
 import { apiClient } from '../../api/index.js';
 import { unwrap, unwrapList as list } from '../../lib/unwrap.js';
 import Notice from './components/Notice.jsx';
@@ -172,31 +172,13 @@ export default function ManagerWorkspace() {
   const goHome = () => { setView('home'); setNotice({ message: '', tone: 'info' }); };
 
   return (
-    <main className="mx-auto max-w-7xl px-5 py-10 lg:px-8">
+    <PageShell>
       {view === 'home' && !isAdmin && (
-        <div className="flex flex-col justify-between gap-5 border-b border-ink/15 pb-8 md:flex-row md:items-end">
-          <div>
-            <p className="text-xs font-extrabold uppercase tracking-[.2em] text-coral">
-              {isAdmin ? 'MXO admin' : 'Create / tools'}
-            </p>
-            <h1 className="serif mt-2 text-6xl">
-              {isAdmin ? 'Full access.' : 'Build & ship.'}
-            </h1>
-            <p className="mt-3 max-w-xl text-sm text-ink/60">
-              {isAdmin
-                ? 'Approve events, manage catalogs, change roles, and open any event dashboard.'
-                : 'Create events and use hosting tools here. Your event list lives on Dashboard.'}
-            </p>
-          </div>
-          {!isAdmin && (
-            <button
-              onClick={() => setView('create')}
-              className="inline-flex items-center justify-center gap-2 bg-coral px-5 py-3.5 text-xs font-extrabold uppercase tracking-wider text-white hover:opacity-90"
-            >
-              <Plus size={15} /> Create event
-            </button>
-          )}
-        </div>
+        <PageHeader
+          eyebrow="Host tools"
+          title="Workspace"
+          description="Your sales at a glance, quick actions and your most recent events."
+        />
       )}
 
       <Notice message={notice.message} tone={notice.tone} onDismiss={() => setNotice({ message: '', tone: 'info' })} />
@@ -294,7 +276,7 @@ export default function ManagerWorkspace() {
           />
         </SubView>
       )}
-    </main>
+    </PageShell>
   );
 }
 

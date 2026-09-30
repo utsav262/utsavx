@@ -4,6 +4,7 @@ import {
   Mail, MapPin, Phone, ArrowUpRight, ShieldCheck
 } from 'lucide-react';
 import { telHref, useSiteSettings } from '../../lib/useSiteSettings.js';
+import { useCategories } from '../../lib/useCategories.js';
 
 const SOCIALS = [
   ['instagram', 'Instagram', Instagram],
@@ -16,6 +17,7 @@ const SOCIALS = [
 export default function Footer() {
   const year = new Date().getFullYear();
   const site = useSiteSettings();
+  const categories = useCategories();
   const socials = SOCIALS.filter(([key]) => site.social?.[key]);
 
   return (
@@ -85,10 +87,9 @@ export default function Footer() {
         <div className="mt-14 grid grid-cols-2 gap-8 border-t border-ink/10 pt-10 sm:grid-cols-4">
           <FooterCol title="Explore">
             <FooterLink to="/events">All events</FooterLink>
-            <FooterLink to="/events?category=music">Music</FooterLink>
-            <FooterLink to="/events?category=comedy">Comedy</FooterLink>
-            <FooterLink to="/events?category=workshop">Workshops</FooterLink>
-            <FooterLink to="/events?category=festival">Festivals</FooterLink>
+            {categories.slice(0, 5).map((c) => (
+              <FooterLink key={c.slug} to={`/events?category=${encodeURIComponent(c.slug)}`}>{c.name}</FooterLink>
+            ))}
           </FooterCol>
 
           <FooterCol title="For Organizers">
@@ -112,7 +113,7 @@ export default function Footer() {
             <FooterLink to="/about">About MXO</FooterLink>
             <FooterLink to="/careers">Careers</FooterLink>
             <FooterLink to="/blog">Blog</FooterLink>
-            <FooterLink to="/press">Press kit</FooterLink>
+            <FooterLink to="/press">Press</FooterLink>
           </FooterCol>
         </div>
 

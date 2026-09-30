@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, FileText, Landmark, Paperclip, Upload, X } from 'lucide-react';
+import { FileText, Landmark, Paperclip, Upload, X } from 'lucide-react';
 import { apiClient } from '../api/index.js';
 import { unwrap } from '../lib/unwrap.js';
 import { money } from '../lib/money.js';
 import { useToast } from '../components/ui/Toast.jsx';
+import { EmptyState, PageHeader, PageShell } from '../components/ui/Page.jsx';
 
 const STATUS = {
     pending: { label: 'Due', cls: 'bg-amber-100 text-amber-700' },
@@ -106,16 +106,12 @@ export default function Settlements() {
     const history = data?.history || [];
 
     return (
-        <main className="mx-auto max-w-4xl px-5 py-10 lg:px-8">
-            <Link to="/dashboard" className="inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider text-ink/50 hover:text-ink">
-                <ArrowLeft size={14} /> Dashboard
-            </Link>
-            <p className="mt-6 text-[11px] font-extrabold uppercase tracking-[0.2em] text-coral">Payouts</p>
-            <h1 className="serif mt-1 text-5xl">Settlements</h1>
-            <p className="mt-2 max-w-2xl text-sm text-ink/60">
-                Cash and gate sales are collected by you, so the platform service fee on them is paid back here.
-                Transfer the amount below, then upload the bank receipt for review.
-            </p>
+        <PageShell>
+            <PageHeader
+                eyebrow="Payouts"
+                title="Settlements"
+                description="You keep the cash from cash and gate sales, so the platform service fee on them is paid back here. Transfer the amount due, then upload the bank receipt for review."
+            />
 
             {loading && !data ? (
                 <div className="mt-8 space-y-3">
@@ -126,7 +122,7 @@ export default function Settlements() {
 
             {data ? (
                 <>
-                    <section className="mt-8 bg-ink p-6 text-white sm:p-8">
+                    <section className="mt-6 bg-ink p-6 text-white sm:p-8">
                         <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/60">Amount to remit</p>
                         <p className="serif mt-2 text-5xl">{money(data.total_to_remit)}</p>
                         <p className="mt-2 text-sm text-white/60">
@@ -170,9 +166,9 @@ export default function Settlements() {
                             </ul>
                         </section>
                     ) : (
-                        <p className="mt-8 border border-dashed border-ink/20 px-5 py-8 text-center text-sm text-ink/55">
-                            No remittance is due. Cash and gate sales will show up here automatically.
-                        </p>
+                        <div className="mt-6">
+                            <EmptyState icon={Landmark} title="Nothing to settle" text="When you or your team sell tickets for cash, the service fee on those sales shows up here automatically." />
+                        </div>
                     )}
 
                     {due.length ? (
@@ -283,6 +279,6 @@ export default function Settlements() {
                     ) : null}
                 </>
             ) : null}
-        </main>
+        </PageShell>
     );
 }

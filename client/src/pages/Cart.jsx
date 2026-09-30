@@ -52,7 +52,7 @@ export default function Cart() {
           </div>
           <h1 className="serif mt-6 text-4xl">Your cart is empty</h1>
           <p className="mx-auto mt-3 max-w-md text-sm text-ink/60">
-            Your cart is empty. Let's find some great events to make
+            Let's find some great events to make
             your weekend memorable.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">

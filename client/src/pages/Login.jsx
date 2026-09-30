@@ -38,7 +38,7 @@ export default function Login() {
                     <br />
                     close.
                 </h1>
-                <p className="mt-8 text-sm text-white/70">Demo: emma@utsavx.com / password123</p>
+                {import.meta.env.DEV ? <p className="mt-8 text-sm text-white/70">Demo: emma@utsavx.com / password123</p> : null}
             </div>
             <form onSubmit={submit} className="mx-auto w-full max-w-md">
                 <p className="text-xs font-extrabold uppercase tracking-[.2em] text-coral">Welcome back</p>

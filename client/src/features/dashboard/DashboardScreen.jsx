@@ -242,18 +242,18 @@ export default function DashboardScreen() {
   /* ---------------- render ---------------- */
   return (
     <main className="bg-cream">
-      <div className="mx-auto max-w-7xl px-5 py-10 lg:px-8 lg:py-12">
+      <div className="mx-auto max-w-6xl px-5 py-8 lg:px-8 lg:py-10">
 
         {/* ================= HEADER ================= */}
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-xs font-extrabold uppercase tracking-[.2em] text-coral">
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-coral">
               Dashboard
             </p>
-            <h1 className="serif mt-2 text-5xl leading-none sm:text-6xl">
+            <h1 className="serif mt-1 text-4xl leading-tight sm:text-5xl">
               Your events
             </h1>
-            <p className="mt-3 max-w-xl text-sm text-ink/60">
+            <p className="mt-2 max-w-xl text-sm text-ink/55">
               Live, past and draft events in one place. Open an event to reach
               the dashboard for your role.
             </p>

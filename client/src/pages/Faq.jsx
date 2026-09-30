@@ -7,43 +7,55 @@ const SECTIONS = [
     id: 'buying',
     title: 'Buying tickets',
     items: [
-      { q: 'How do I book a ticket?', a: 'Browse event page → Select tickets → Choose quantity → Proceed to checkout. Your ticket is delivered instantly via email and available in your account.' },
-      { q: 'Can I buy for a friend?', a: 'Yes — select the "Send as gift" option during checkout to send the ticket directly to your friend’s email.' },
-      { q: 'What payment methods work?', a: 'We support UPI, Credit/Debit cards, Net Banking, and popular digital wallets.' },
+      { q: 'How do I book a ticket?', a: 'Open an event, choose your ticket type and quantity, and tap Get tickets. Sign in (or create a free account), then pay on the checkout page. Your tickets appear in My tickets as soon as the payment goes through.' },
+      { q: 'How do I pay?', a: 'Online payments go through Razorpay, so you can use UPI or a debit/credit card. Some organisers also sell tickets for cash through their team or partner shops.' },
+      { q: 'Is there a booking fee?', a: 'No. The price shown on the event page is exactly what you pay.' },
+      { q: 'Where are my tickets?', a: 'In My tickets, in your MXO account. Each ticket has its own QR code, and you can download it as an image or PDF if you want a copy offline.' },
+      { q: 'Can I buy tickets for friends?', a: 'Yes — pick more than one ticket. Every ticket gets its own QR code in your account, so you can share or download them for your group.' },
+      { q: 'Why are the seats only held for 15 minutes?', a: 'When you tap Pay, we hold your seats while you finish paying so nobody else can take them. If payment isn’t completed within 15 minutes, the seats go back on sale.' },
     ],
   },
   {
     id: 'event-day',
-    title: 'Event day',
+    title: 'At the event',
     items: [
-      { q: 'What do I need at the gate?', a: 'A valid government photo ID along with your QR ticket (mobile screen or printout).' },
-      { q: 'Can I re-enter?', a: 'Most events do not allow re-entry once inside. Check specific event policies on the event page.' },
-      { q: 'Is there an age limit?', a: 'Age restrictions vary by event. 18+ events require mandatory photo ID verification at entry.' },
+      { q: 'What do I show at the entrance?', a: 'Your QR code from My tickets, on your phone or printed. Door staff scan it once — a ticket can’t be used twice.' },
+      { q: 'Do I need ID?', a: 'That depends on the event. Some organisers check photo ID or age at the door, so read the event page before you go.' },
+      { q: 'Can I leave and come back in?', a: 'Re-entry is up to the organiser. If it isn’t mentioned on the event page, ask them before the day.' },
+    ],
+  },
+  {
+    id: 'changes',
+    title: 'Cancellations & refunds',
+    items: [
+      { q: 'What if an event is cancelled?', a: 'If an organiser cancels, paid orders are refunded. Online payments go back to the card or UPI account you paid with.' },
+      { q: 'Can I cancel my own ticket?', a: 'Tickets can’t be cancelled from the app. Contact us with your order number and we’ll check the organiser’s policy with you.' },
+      { q: 'How long does a refund take?', a: 'Once a refund is issued it usually reaches your account in 5–7 working days, depending on your bank.' },
     ],
   },
   {
     id: 'organizers',
-    title: 'For organizers',
+    title: 'For organisers',
     items: [
-      { q: 'How do I start hosting?', a: 'Sign up as a Manager → verify your organization details → create your event → publish. Free plan available.' },
-      { q: 'When do I get paid?', a: 'Payouts are processed within 3 business days after the event ends, directly to your registered bank account.' },
-      { q: 'Can I customize fees?', a: 'Yes, platform fee customization is supported on Pro and Business plans.' },
+      { q: 'How do I start hosting?', a: 'Create a host account (or switch your buyer account on the Host events page), add your event and ticket types, and submit it. Our team reviews it before it goes live.' },
+      { q: 'What does it cost?', a: 'Listing is free. A service fee applies to each paid ticket — see the Pricing page for current rates and a fee calculator. Free tickets have no fees.' },
+      { q: 'How do I get paid?', a: 'Add your bank account in Profile. Online earnings, after fees, are paid to that account. Cash sales stay with you, and the service fee on them is settled from your Settlements page.' },
     ],
   },
   {
     id: 'account',
-    title: 'Account & security',
+    title: 'Your account',
     items: [
-      { q: 'How do I reset my password?', a: 'Go to the login page → Click "Forgot password" → Follow the reset link sent to your email.' },
-      { q: 'Do you support 2FA?', a: 'Yes, you can enable Two-Factor Authentication under Settings → Security.' },
-      { q: 'How do I delete my account?', a: 'Go to Settings → Privacy → Delete Account. Personal data will be permanently purged within 30 days.' },
+      { q: 'How do I change my name, phone or password?', a: 'Open Profile from the account menu. You can edit your details, add a photo and change your password there.' },
+      { q: 'I forgot my password.', a: 'Contact us from the email address on your account and we’ll help you get back in.' },
+      { q: 'Can I change my sign-in email?', a: 'Not from the app yet. Contact us and we’ll update it for you.' },
     ],
   },
 ];
 
 export default function Faq() {
   return (
-    <StaticPage eyebrow="Help" title="FAQs" subtitle="Most common questions, answered." maxWidth="max-w-3xl">
+    <StaticPage eyebrow="Help" title="Questions & answers" subtitle="Everything about booking, event day, refunds and hosting on MXO." maxWidth="max-w-3xl">
       <div className="space-y-10">
         {SECTIONS.map((section) => (
           <div key={section.id} id={section.id}>

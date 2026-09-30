@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, X, SlidersHorizontal, Sparkles, MapPin, Calendar, TrendingUp, Filter } from 'lucide-react';
 import { apiClient } from '../api/index.js';
 import { unwrap } from '../lib/unwrap.js';
-import { categories, events as demoEvents } from '../data/demo.js';
+import { useCategories } from '../lib/useCategories.js';
 import EventCard from '../components/events/EventCard.jsx';
 
 const EVENT_TYPES = ['All', 'This Weekend', 'Next Weekend', 'This Month'];
@@ -15,8 +16,18 @@ const SORTS = [
 ];
 
 export default function Events() {
-  const [term, setTerm] = useState('');
+  const [params] = useSearchParams();
+  const catalog = useCategories();
+  const categories = useMemo(() => ['All events', ...catalog.map((c) => c.name)], [catalog]);
+  const [term, setTerm] = useState(params.get('q') || '');
+  // ?category= may be a name ("Music") or slug ("food-drink"); resolved once categories load.
   const [category, setCategory] = useState('All events');
+  useEffect(() => {
+    const wanted = (params.get('category') || '').toLowerCase();
+    if (!wanted || !catalog.length) return;
+    const hit = catalog.find((c) => c.slug === wanted || c.name.toLowerCase() === wanted);
+    if (hit) setCategory(hit.name);
+  }, [params, catalog]);
   const [eventType, setEventType] = useState('All');
   const [sort, setSort] = useState('relevance');
   const [items, setItems] = useState([]);
@@ -65,19 +76,8 @@ export default function Events() {
           setOffline(true);
           setError('offline');
 
-          // Local fallback filter
-          const filtered = demoEvents.filter((event) => {
-            const matchesCategory =
-              category === 'All events' || event.category === category;
-            const matchesTerm =
-              !term ||
-              `${event.title} ${event.city} ${event.category}`
-                .toLowerCase()
-                .includes(term.toLowerCase());
-            return matchesCategory && matchesTerm;
-          });
-          setItems(filtered);
-          setTotal(filtered.length);
+          setItems([]);
+          setTotal(0);
           setHasMore(false);
         })
         .finally(() => setLoading(false));
@@ -106,14 +106,13 @@ export default function Events() {
       <section className="border-b border-ink/10 bg-white">
         <div className="mx-auto max-w-7xl px-5 py-10 lg:px-8 lg:py-14">
           <p className="text-xs font-extrabold uppercase tracking-[.2em] text-coral">
-            Browse the good stuff
+            Discover
           </p>
-          <h1 className="serif mt-2 text-5xl leading-none sm:text-6xl lg:text-7xl">
-            All events
+          <h1 className="serif mt-2 text-5xl leading-none sm:text-6xl">
+            What's on near you
           </h1>
           <p className="mt-3 max-w-xl text-sm text-ink/60">
-            Concerts, comedy, workshops and festivals in one place.
-            Filter, book, and enjoy.
+            Search by name or city, pick a category, and book in a couple of taps with UPI or card.
           </p>
 
           {/* Quick category chips (mobile only — desktop has them in the filter bar) */}
@@ -136,7 +135,7 @@ export default function Events() {
       </section>
 
       {/* ================= STICKY FILTER BAR ================= */}
-      <div className="sticky top-[65px] z-30 border-b border-ink/10 bg-cream/95 backdrop-blur-md">
+      <div className="sticky top-[var(--app-header,69px)] z-30 border-b border-ink/10 bg-cream/95 backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-5 py-3 lg:px-8">
           <div className="flex items-center gap-2">
             {/* Search */}
@@ -327,8 +326,7 @@ export default function Events() {
           <div className="mb-6 flex items-start gap-3 border border-amber-200 bg-amber-50 p-4 text-sm">
             <span className="mt-0.5 inline-block h-2 w-2 shrink-0 rounded-full bg-amber-500" />
             <p className="text-amber-800">
-              Showing the local catalog while the API is offline. Live events
-              may not appear.
+              We couldn't load events right now. Check your connection and try again in a moment.
             </p>
           </div>
         )}

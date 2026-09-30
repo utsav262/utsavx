@@ -5,6 +5,7 @@ import { apiClient } from '../../api/index.js';
 import { unwrap } from '../../lib/unwrap.js';
 import { money } from '../../lib/money.js';
 import { useToast } from '../../components/ui/Toast.jsx';
+import { PageHeader, PageShell } from '../../components/ui/Page.jsx';
 import { isOwnerLike } from '../dashboard/dashboardUtils.js';
 import {
     buildSellPayload,
@@ -14,6 +15,7 @@ import {
 } from './sellUtils.js';
 
 const STEPS = ['tickets', 'registration', 'payment'];
+const STEP_LABELS = { tickets: 'Tickets', registration: 'Buyer details', payment: 'Confirm' };
 
 export default function SellFlow() {
     const { eventId } = useParams();
@@ -200,43 +202,40 @@ export default function SellFlow() {
     const eventStatus = catalog?.event?.status || eventItem?.status || eventItem?.post_visibility;
     const salesClosed = Boolean(eventStatus) && !['published', 'sold-out'].includes(eventStatus);
 
+    const visibleSteps = STEPS.filter((id) => !(mode === 'gate' && id === 'registration'));
     const modeLabel =
         mode === 'gate' ? 'Gate ticket' : mode === 'complimentary' ? 'Complimentary' : 'Digital ticket';
 
     return (
-        <main className="mx-auto max-w-3xl px-5 py-10 lg:px-8">
-            <button
-                type="button"
-                onClick={() => navigate('/dashboard')}
-                className="text-[11px] font-extrabold uppercase tracking-wider text-ink/50"
-            >
-                ← Dashboard
-            </button>
+        <PageShell>
+            <PageHeader
+                back={{ to: `/dashboard/events/${eventId}`, label: 'Event dashboard' }}
+                eyebrow={`Sell · ${modeLabel}`}
+                title={catalog?.event?.title || eventItem?.title || 'Sell tickets'}
+            />
 
-            <p className="mt-6 text-[11px] font-extrabold uppercase tracking-[0.2em] text-coral">{modeLabel}</p>
-            <h1 className="serif mt-2 text-5xl">{catalog?.event?.title || eventItem?.title || 'Sell tickets'}</h1>
+            <ol className="mt-6 flex flex-wrap gap-2" aria-label="Steps">
+                {visibleSteps.map((id, i) => {
+                    const current = step === id;
+                    const done = visibleSteps.indexOf(step) > i;
+                    return (
+                        <li key={id} className={`flex items-center gap-2 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider ${current ? 'bg-ink text-white' : done ? 'bg-moss/10 text-moss' : 'border border-ink/15 text-ink/45'}`}>
+                            <span>{i + 1}</span> {STEP_LABELS[id] || id}
+                        </li>
+                    );
+                })}
+            </ol>
 
-            <div className="mt-6 flex gap-2">
-                {STEPS.filter((id) => !(mode === 'gate' && id === 'registration')).map((id) => (
-                    <span
-                        key={id}
-                        className={`px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider ${
-                            step === id ? 'bg-ink text-white' : 'border border-ink/15 text-ink/45'
-                        }`}
-                    >
-                        {id}
-                    </span>
-                ))}
-            </div>
-
+            <div className="mt-6 grid items-start gap-6 lg:grid-cols-[1fr_320px]">
+            <div className="min-w-0">
             {error ? (
                 <div className="mt-5 border border-coral/25 bg-coral/10 px-4 py-3 text-sm text-coral">{error}</div>
             ) : null}
 
-            {loading ? <p className="mt-10 text-sm text-ink/50">Loading tickets…</p> : null}
+            {loading ? <div className="space-y-3">{[0, 1].map((i) => <div key={i} className="h-20 animate-pulse bg-ink/5" />)}</div> : null}
 
             {!loading && salesClosed ? (
-                <p className="mt-8 border border-dashed border-ink/20 px-4 py-10 text-center text-sm text-ink/60">
+                <p className="border border-dashed border-ink/20 bg-white px-4 py-10 text-center text-sm text-ink/60">
                     {eventStatus === 'cancelled'
                         ? 'This event is cancelled, so ticket sales are closed.'
                         : 'Tickets can be sold once this event is approved and live.'}
@@ -244,7 +243,7 @@ export default function SellFlow() {
             ) : null}
 
             {!loading && !salesClosed && step === 'tickets' ? (
-                <section className="mt-8 space-y-4">
+                <section className="space-y-4">
                     {!tiers.length ? (
                         <p className="border border-dashed border-ink/20 px-4 py-10 text-center text-sm text-ink/55">
                             No ticket types available for this sell mode.
@@ -288,7 +287,7 @@ export default function SellFlow() {
                         })
                     )}
 
-                    <div className="flex items-center justify-between border-t border-ink/10 pt-4">
+                    <div className="flex items-center justify-between border-t border-ink/10 pt-4 lg:hidden">
                         <p className="text-sm text-ink/60">
                             {totalTickets} ticket{totalTickets === 1 ? '' : 's'} · {money(totalAmount)}
                         </p>
@@ -297,14 +296,14 @@ export default function SellFlow() {
                             onClick={goCheckout}
                             className="bg-coral px-5 py-3 text-xs font-extrabold uppercase tracking-wider text-white"
                         >
-                            Check out
+                            Continue
                         </button>
                     </div>
                 </section>
             ) : null}
 
             {!loading && step === 'registration' ? (
-                <section className="mt-8 space-y-4">
+                <section className="space-y-4">
                     <p className="text-sm text-ink/55">One attendee slot per ticket. Fees / commission preview uses cash total.</p>
                     {attendees.map((person, index) => (
                         <div key={index} className="border border-ink/15 bg-white p-4">
@@ -374,7 +373,7 @@ export default function SellFlow() {
             ) : null}
 
             {!loading && step === 'payment' ? (
-                <section className="mt-8 border border-ink/15 bg-white p-6">
+                <section className="border border-ink/15 bg-white p-6">
                     <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-coral">Confirm cash sale</p>
                     <h2 className="serif mt-3 text-3xl">Collect {money(totalAmount)}</h2>
                     <ul className="mt-5 space-y-2 text-sm text-ink/65">
@@ -410,6 +409,34 @@ export default function SellFlow() {
                 </section>
             ) : null}
 
+            </div>
+
+            <aside className="hidden border border-ink/10 bg-white lg:sticky lg:top-24 lg:block">
+                <p className="border-b border-ink/10 px-5 py-4 text-[11px] font-extrabold uppercase tracking-[0.18em] text-ink/50">Order summary</p>
+                <div className="px-5 py-4 text-sm">
+                    {selections.length ? (
+                        <ul className="space-y-2">
+                            {selections.map((row) => (
+                                <li key={row.ticketId} className="flex justify-between gap-3">
+                                    <span className="text-ink/70">{row.qty} × {row.name}</span>
+                                    <span className="font-bold">{money(row.qty * row.unitPrice)}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : <p className="text-ink/45">No tickets selected yet.</p>}
+                    <div className="mt-4 flex items-baseline justify-between border-t border-ink/10 pt-4">
+                        <span className="font-extrabold">{mode === 'complimentary' ? 'Tickets' : 'Collect'}</span>
+                        <span className="serif text-3xl">{mode === 'complimentary' ? totalTickets : money(totalAmount)}</span>
+                    </div>
+                    {step === 'tickets' && !salesClosed ? (
+                        <button type="button" onClick={goCheckout} disabled={!totalTickets} className="mt-4 w-full bg-coral px-5 py-3 text-xs font-extrabold uppercase tracking-wider text-white disabled:opacity-40">
+                            Continue
+                        </button>
+                    ) : null}
+                </div>
+            </aside>
+            </div>
+
             {gateSuccess ? (
                 <div className="fixed inset-0 z-[70] flex items-center justify-center bg-ink/40 p-4">
                     <div className="w-full max-w-md border border-ink/10 bg-cream p-6">
@@ -441,6 +468,6 @@ export default function SellFlow() {
                     </div>
                 </div>
             ) : null}
-        </main>
+        </PageShell>
     );
 }

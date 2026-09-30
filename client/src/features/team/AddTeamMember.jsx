@@ -3,8 +3,16 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { apiClient } from '../../api/index.js';
 import { useToast } from '../../components/ui/Toast.jsx';
+import { PageHeader, PageShell } from '../../components/ui/Page.jsx';
 import { unwrap } from '../../lib/unwrap.js';
 import { isEventOwner } from '../dashboard/dashboardUtils.js';
+
+const ROLE_HELP = [
+    ['Manager', 'Event manager', 'Runs tickets, discount codes, team and sales with you. Can’t edit or cancel the event.'],
+    ['Event_Scanner', 'Gate staff', 'Checks tickets in at the door. Can also sell at the gate if you allow it.'],
+    ['Ambassador', 'Ticket ambassador', 'Sells from their phone and collects cash, only from the tickets you assign.'],
+    ['Outlet', 'Ticket outlet', 'A shop selling over the counter from its own allocation.']
+];
 
 const TYPES = [
     { id: 'Manager', label: 'Event Manager' },
@@ -125,22 +133,16 @@ export default function AddTeamMember() {
     };
 
     return (
-        <main className="mx-auto max-w-2xl px-5 py-10 lg:px-8">
-            <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className="text-[11px] font-extrabold uppercase tracking-wider text-ink/50"
-            >
-                ← Overview
-            </button>
+        <PageShell>
+            <PageHeader
+                back={{ to: `/dashboard/events/${eventId}`, label: 'Event dashboard' }}
+                eyebrow="Add team member"
+                title={eventTitle}
+                description="They get an invite by email and accept it from their Requests page."
+            />
 
-            <p className="mt-6 text-[11px] font-extrabold uppercase tracking-[0.2em] text-coral">Add team member</p>
-            <h1 className="serif mt-2 text-5xl">{eventTitle}</h1>
-            <p className="mt-3 text-sm text-ink/55">
-                Invite a manager, gate staff, ambassador, or outlet. They accept from Requests / Invitations.
-            </p>
-
-            <form onSubmit={submit} className="mt-8 space-y-6">
+            <div className="mt-6 grid items-start gap-6 lg:grid-cols-[1fr_300px]">
+            <form onSubmit={submit} className="min-w-0 space-y-6 border border-ink/10 bg-white p-5 sm:p-6">
                 <div>
                     <p className="text-xs font-bold uppercase tracking-wider text-ink/45">Role</p>
                     <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -325,6 +327,19 @@ export default function AddTeamMember() {
                     {busy ? 'Sending…' : 'Send invite'}
                 </button>
             </form>
-        </main>
+
+            <aside className="border border-ink/10 bg-white lg:sticky lg:top-24">
+                <p className="border-b border-ink/10 px-5 py-4 text-[11px] font-extrabold uppercase tracking-[0.18em] text-ink/50">What each role can do</p>
+                <dl className="divide-y divide-ink/10 text-sm">
+                    {ROLE_HELP.filter(([id]) => allowedTypes.some((r) => r.id === id)).map(([id, name, text]) => (
+                        <div key={id} className={`px-5 py-3 ${type === id ? 'bg-coral/5' : ''}`}>
+                            <dt className={`font-extrabold ${type === id ? 'text-coral' : ''}`}>{name}</dt>
+                            <dd className="mt-0.5 text-ink/55">{text}</dd>
+                        </div>
+                    ))}
+                </dl>
+            </aside>
+            </div>
+        </PageShell>
     );
 }

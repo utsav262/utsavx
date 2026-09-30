@@ -1,5 +1,5 @@
 import { CalendarCheck2, Inbox, ScanLine, Ticket } from 'lucide-react';
-import { eventCover, EventMeta, roleLabel, SectionHeader } from './staffHelpers.jsx';
+import { eventCover, EventMeta, roleLabel } from './staffHelpers.jsx';
 
 function Stat({ label, value, Icon }) {
     return (
@@ -23,24 +23,8 @@ export default function StaffOverview({
 }) {
     return (
         <section>
-            <SectionHeader
-                eyebrow="Staff desk"
-                title={
-                    <>
-                        Ready at
-                        <br />
-                        <i>the door.</i>
-                    </>
-                }
-                subtitle={
-                    user?.staffRoleLabel
-                        ? `Signed in as ${user.staffRoleLabel}. Manage invites, open your catalog, and use the dashboard your role allows.`
-                        : 'Accept team invites to unlock your event catalog and dashboard.'
-                }
-            />
-
-            <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                <Stat label="Catalog events" value={acceptedCount} Icon={Ticket} />
+            <div className="grid gap-4 sm:grid-cols-3">
+                <Stat label="My events" value={acceptedCount} Icon={Ticket} />
                 <Stat label="Pending invites" value={pendingCount} Icon={Inbox} />
                 <Stat label="Declined" value={declinedCount} Icon={CalendarCheck2} />
             </div>
@@ -52,8 +36,8 @@ export default function StaffOverview({
                     className="border border-ink/15 bg-white p-5 text-left transition hover:border-ink/30"
                 >
                     <Ticket size={18} className="text-coral" />
-                    <p className="serif mt-4 text-2xl">Your catalog</p>
-                    <p className="mt-2 text-sm text-ink/55">Accepted events appear here. Open dashboard by role.</p>
+                    <p className="serif mt-4 text-2xl">My events</p>
+                    <p className="mt-2 text-sm text-ink/55">Events you have joined. Open one to see what your role can do.</p>
                 </button>
                 <button
                     type="button"
@@ -61,7 +45,7 @@ export default function StaffOverview({
                     className="border border-ink/15 bg-white p-5 text-left transition hover:border-ink/30"
                 >
                     <Inbox size={18} className="text-coral" />
-                    <p className="serif mt-4 text-2xl">Invitations</p>
+                    <p className="serif mt-4 text-2xl">Invites</p>
                     <p className="mt-2 text-sm text-ink/55">Accept or decline pending team invites.</p>
                 </button>
                 <button

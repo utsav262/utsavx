@@ -1,50 +1,33 @@
+import { Link } from 'react-router-dom';
+import { Banknote, CalendarX, CreditCard, MessageCircle } from 'lucide-react';
 import StaticPage from '../components/layout/StaticPage.jsx';
-import { AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { useSiteSettings } from '../lib/useSiteSettings.js';
 
 export default function Refunds() {
+  const site = useSiteSettings();
   return (
-    <StaticPage eyebrow="Policies" title="Refund policy" subtitle="Clear rules. No surprises.">
-      <div className="space-y-8 text-ink/70">
-        <Section icon={<CheckCircle2 className="h-5 w-5 text-green-600" />} title="When you get a full refund">
-          <ul className="list-disc space-y-1 pl-5">
-            <li>Event organizer cancels the event</li>
-            <li>Event is postponed and you can't attend the new date</li>
-            <li>Technical error caused a duplicate charge</li>
-            <li>Request made within 24 hours of purchase AND 7+ days before event</li>
-          </ul>
-        </Section>
+    <StaticPage eyebrow="Policies" title="Refunds" subtitle="What happens to your money if plans change." maxWidth="max-w-3xl">
+      <div className="space-y-5">
+        <Card icon={CalendarX} title="If the event is cancelled">
+          Paid orders for a cancelled event are refunded in full. You don’t need to do anything — the refund is issued to the way you paid.
+        </Card>
+        <Card icon={MessageCircle} title="If you can’t make it">
+          Tickets can’t be cancelled from the app, and whether a refund is possible depends on the organiser’s policy for that event.
+          Contact us with your order number (you’ll find it in My tickets) and we’ll check it with the organiser.
+        </Card>
+        <Card icon={CreditCard} title="Paid online (UPI or card)">
+          Refunds go back to the same UPI account or card. Once issued, they usually arrive within 5–7 working days, depending on your bank.
+        </Card>
+        <Card icon={Banknote} title="Paid in cash">
+          Tickets bought for cash from an organiser’s team or a partner shop are refunded by the organiser directly. We’ll help you reach them.
+        </Card>
 
-        <Section icon={<AlertCircle className="h-5 w-5 text-amber-500" />} title="Partial refunds">
-          <ul className="list-disc space-y-1 pl-5">
-            <li>Platform fee (2% + ₹5) non-refundable in most cases</li>
-            <li>Payment gateway fee non-refundable (cards only)</li>
-            <li>50% refund if cancelled 48–72 hours before event</li>
-          </ul>
-        </Section>
-
-        <Section icon={<XCircle className="h-5 w-5 text-red-500" />} title="No refund">
-          <ul className="list-disc space-y-1 pl-5">
-            <li>Cancellation less than 48 hours before event</li>
-            <li>No-show at the venue</li>
-            <li>Denied entry due to invalid ID or age</li>
-            <li>Event already started</li>
-          </ul>
-        </Section>
-
-        <Section title="How to request a refund">
-          <ol className="list-decimal space-y-1 pl-5">
-            <li>Go to <b>My Tickets</b> in your account</li>
-            <li>Select the order → click <b>Request refund</b></li>
-            <li>Choose a reason and submit</li>
-            <li>Refund processed in 5–7 business days to source</li>
-          </ol>
-        </Section>
-
-        <div className="border border-ink/10 bg-white p-5 text-sm">
-          <p className="font-bold text-ink">Need help?</p>
+        <div className="border border-ink/10 bg-white p-5 text-sm text-ink/70">
+          <p className="font-extrabold text-ink">Need a refund or have a question?</p>
           <p className="mt-1">
-            Email <a href="mailto:refunds@utsavx.com" className="font-bold text-coral">refunds@utsavx.com</a>{' '}
-            with your order ID.
+            Email{' '}
+            <a href={`mailto:${site.support_email}`} className="font-bold text-coral">{site.support_email}</a>
+            {' '}with your order number, or use the <Link to="/contact" className="font-bold text-coral">contact page</Link>.
           </p>
         </div>
       </div>
@@ -52,14 +35,14 @@ export default function Refunds() {
   );
 }
 
-function Section({ icon, title, children }) {
+function Card({ icon: Icon, title, children }) {
   return (
-    <div>
-      <div className="flex items-center gap-2">
-        {icon}
-        <h2 className="serif text-2xl text-ink">{title}</h2>
+    <section className="flex gap-4 border border-ink/10 bg-white p-5">
+      <Icon className="mt-0.5 h-5 w-5 shrink-0 text-coral" />
+      <div>
+        <h2 className="font-extrabold text-ink">{title}</h2>
+        <p className="mt-1 text-sm leading-6 text-ink/65">{children}</p>
       </div>
-      <div className="mt-3">{children}</div>
-    </div>
+    </section>
   );
 }

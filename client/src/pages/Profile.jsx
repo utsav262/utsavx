@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Camera, KeyRound, Landmark, Pencil, Trash2, UserRound } from 'lucide-react';
+import { BadgeCheck, Camera, KeyRound, Landmark, Pencil, Trash2, UserRound } from 'lucide-react';
 import api from '../api/client.js';
 import { apiClient } from '../api/index.js';
 import { unwrap } from '../lib/unwrap.js';
@@ -31,9 +31,9 @@ function Field({ label, error, hint, children }) {
     );
 }
 
-function Card({ icon, title, subtitle, action, children }) {
+function Card({ id, icon, title, subtitle, action, children }) {
     return (
-        <section className="border border-ink/10 bg-white">
+        <section id={id} className="scroll-mt-24 border border-ink/10 bg-white">
             <header className="flex items-start justify-between gap-3 border-b border-ink/10 px-5 py-4">
                 <div className="flex items-start gap-3">
                     <span className="mt-0.5 text-coral">{icon}</span>
@@ -71,32 +71,10 @@ function Row({ label, value }) {
     );
 }
 
-function AccountCard({ profile, onSaved }) {
+function ProfileSummary({ profile, onSaved }) {
     const toast = useToast();
     const fileRef = useRef(null);
-    const [editing, setEditing] = useState(false);
-    const [form, setForm] = useState({ name: '', phone: '' });
-    const [errors, setErrors] = useState({});
     const [busy, setBusy] = useState(false);
-
-    const start = () => {
-        setForm({ name: profile.name || '', phone: profile.phone || '' });
-        setErrors({});
-        setEditing(true);
-    };
-    const save = async () => {
-        setBusy(true);
-        try {
-            onSaved(unwrap(await apiClient.updateAccountProfile({ name: form.name, phone: form.phone })));
-            toast.success('Profile updated.');
-            setEditing(false);
-        } catch (failure) {
-            setErrors(fieldErrors(failure));
-            toast.error(failure.response?.data?.message || 'Could not save your profile.');
-        } finally {
-            setBusy(false);
-        }
-    };
     const pickPhoto = async (event) => {
         const file = event.target.files?.[0];
         event.target.value = '';
@@ -127,29 +105,92 @@ function AccountCard({ profile, onSaved }) {
     };
 
     const initials = (profile.name || profile.email || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+    const isHost = profile.role === 'organizer';
+    const since = profile.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : null;
+    const sections = [['account', 'Account details', UserRound], ...(isHost ? [['bank', 'Payout bank', Landmark]] : []), ['password', 'Password', KeyRound]];
 
     return (
+        <aside className="border border-ink/10 bg-white lg:sticky lg:top-24">
+            <div className="flex items-center gap-4 p-5 lg:flex-col lg:items-start">
+                <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={busy}
+                    aria-label={profile.avatarUrl ? 'Change photo' : 'Add photo'}
+                    className="group relative h-20 w-20 shrink-0 overflow-hidden bg-ink text-white lg:h-24 lg:w-24"
+                >
+                    {profile.avatarUrl
+                        ? <img src={avatarSrc(profile.avatarUrl)} alt="" className="h-full w-full object-cover" />
+                        : <span className="grid h-full w-full place-items-center text-2xl font-extrabold">{initials}</span>}
+                    <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-ink/75 py-1 text-[10px] font-extrabold uppercase tracking-wider opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
+                        <Camera size={11} /> {busy ? '…' : 'Change'}
+                    </span>
+                </button>
+                <input ref={fileRef} type="file" accept={AVATAR_TYPES.join(',')} hidden onChange={pickPhoto} />
+                <div className="min-w-0">
+                    <p className="truncate text-lg font-extrabold">{profile.name}</p>
+                    <p className="truncate text-sm text-ink/55">{profile.email}</p>
+                    <p className="mt-2 flex flex-wrap items-center gap-1.5">
+                        <span className={`px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider ${isHost ? 'bg-coral/10 text-coral' : 'bg-ink/5 text-ink/60'}`}>{isHost ? 'Host' : 'Buyer'}</span>
+                        {profile.hostVerified ? <span className="flex items-center gap-1 bg-sky/15 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-sky"><BadgeCheck size={11} /> Verified</span> : null}
+                    </p>
+                </div>
+            </div>
+            <div className="flex gap-2 border-t border-ink/10 px-5 py-3 text-xs">
+                <button type="button" disabled={busy} onClick={() => fileRef.current?.click()} className="font-bold text-coral hover:underline disabled:opacity-50">
+                    {profile.avatarUrl ? 'Change photo' : 'Add photo'}
+                </button>
+                {profile.avatarUrl ? (
+                    <button type="button" disabled={busy} onClick={removePhoto} className="font-bold text-ink/50 hover:text-red-600 disabled:opacity-50">Remove</button>
+                ) : <span className="text-ink/40">JPG, PNG or WebP · 1 MB</span>}
+            </div>
+            <nav aria-label="Profile sections" className="hidden border-t border-ink/10 py-2 lg:block">
+                {sections.map(([id, label, Icon]) => (
+                    <a key={id} href={`#${id}`} className="flex items-center gap-3 px-5 py-2 text-sm font-bold text-ink/65 hover:bg-ink/5 hover:text-ink">
+                        <Icon size={15} className="text-ink/40" /> {label}
+                    </a>
+                ))}
+            </nav>
+            {since ? <p className="border-t border-ink/10 px-5 py-3 text-xs text-ink/45">Member since {since}</p> : null}
+        </aside>
+    );
+}
+
+function AccountCard({ profile, onSaved }) {
+    const toast = useToast();
+    const [editing, setEditing] = useState(false);
+    const [form, setForm] = useState({ name: '', phone: '' });
+    const [errors, setErrors] = useState({});
+    const [busy, setBusy] = useState(false);
+
+    const start = () => {
+        setForm({ name: profile.name || '', phone: profile.phone || '' });
+        setErrors({});
+        setEditing(true);
+    };
+    const save = async () => {
+        setBusy(true);
+        try {
+            onSaved(unwrap(await apiClient.updateAccountProfile({ name: form.name, phone: form.phone })));
+            toast.success('Profile updated.');
+            setEditing(false);
+        } catch (failure) {
+            setErrors(fieldErrors(failure));
+            toast.error(failure.response?.data?.message || 'Could not save your profile.');
+        } finally {
+            setBusy(false);
+        }
+    };
+    return (
         <Card
+            id="account"
             icon={<UserRound size={18} />}
             title="Account"
             subtitle="Your name and phone appear to buyers and your team."
             action={!editing ? <SmallButton onClick={start}><Pencil size={12} /> Edit</SmallButton> : null}
         >
-            <div className="flex flex-wrap items-center gap-4">
-                <div className="relative h-20 w-20 shrink-0 overflow-hidden bg-ink text-white">
-                    {profile.avatarUrl
-                        ? <img src={avatarSrc(profile.avatarUrl)} alt="" className="h-full w-full object-cover" />
-                        : <span className="grid h-full w-full place-items-center text-xl font-extrabold">{initials}</span>}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                    <input ref={fileRef} type="file" accept={AVATAR_TYPES.join(',')} hidden onChange={pickPhoto} />
-                    <SmallButton disabled={busy} onClick={() => fileRef.current?.click()}><Camera size={12} /> {profile.avatarUrl ? 'Change photo' : 'Add photo'}</SmallButton>
-                    {profile.avatarUrl ? <SmallButton tone="danger" disabled={busy} onClick={removePhoto}><Trash2 size={12} /> Remove</SmallButton> : null}
-                </div>
-            </div>
-
             {editing ? (
-                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="Full name" error={errors.name}>
                         <input className={inputCls} value={form.name} maxLength={120} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                     </Field>
@@ -165,7 +206,7 @@ function AccountCard({ profile, onSaved }) {
                     </div>
                 </div>
             ) : (
-                <div className="mt-5">
+                <div>
                     <Row label="Name" value={profile.name} />
                     <Row label="Email" value={profile.email} />
                     <Row label="Phone" value={profile.phone} />
@@ -204,6 +245,7 @@ function PasswordCard() {
 
     return (
         <Card
+            id="password"
             icon={<KeyRound size={18} />}
             title="Password"
             subtitle="At least 8 characters, with a letter and a number."
@@ -275,10 +317,11 @@ function BankCard({ bank, onSaved }) {
 
     return (
         <Card
+            id="bank"
             icon={<Landmark size={18} />}
             title="Payout bank account"
             subtitle="Where we send your ticket earnings from online sales."
-            action={!editing ? <SmallButton onClick={start}><Pencil size={12} /> {bank ? 'Edit' : 'Add'}</SmallButton> : null}
+            action={!editing && bank ? <SmallButton onClick={start}><Pencil size={12} /> Edit</SmallButton> : null}
         >
             {editing ? (
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -328,9 +371,13 @@ function BankCard({ bank, onSaved }) {
                     </div>
                 </>
             ) : (
-                <p className="border-l-2 border-amber-400 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                    Add a bank account so we can pay out your online ticket sales.
-                </p>
+                <div className="flex flex-col items-start gap-3 border border-dashed border-amber-300 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-amber-900">
+                        <span className="block font-bold">No bank account yet</span>
+                        Add one so we can pay out your online ticket sales.
+                    </p>
+                    <SmallButton tone="primary" onClick={start}><Landmark size={12} /> Add bank account</SmallButton>
+                </div>
             )}
         </Card>
     );
@@ -355,22 +402,27 @@ export default function Profile() {
     };
 
     return (
-        <main className="mx-auto max-w-3xl px-5 py-10 lg:px-8">
+        <main className="mx-auto max-w-6xl px-5 py-8 lg:px-8 lg:py-10">
             <div className="border-b border-ink/10 pb-5">
                 <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-coral">Settings</p>
-                <h1 className="serif mt-1 text-5xl">Profile</h1>
+                <h1 className="serif mt-1 text-4xl sm:text-5xl">Your profile</h1>
+                <p className="mt-2 text-sm text-ink/55">Manage your details{profile?.role === 'organizer' ? ', payout bank' : ''} and password.</p>
             </div>
             {!profile ? (
-                <div className="mt-6 space-y-4">
-                    {[0, 1, 2].map((i) => <div key={i} className="h-40 animate-pulse bg-ink/5" />)}
+                <div className="mt-6 grid gap-6 lg:grid-cols-[280px_1fr]">
+                    <div className="h-72 animate-pulse bg-ink/5" />
+                    <div className="space-y-5">{[0, 1, 2].map((i) => <div key={i} className="h-40 animate-pulse bg-ink/5" />)}</div>
                 </div>
             ) : (
-                <div className="mt-6 space-y-5">
-                    <AccountCard profile={profile} onSaved={applyProfile} />
-                    {profile.role === 'organizer' ? (
-                        <BankCard bank={profile.payoutBank} onSaved={(bank) => setProfile((p) => ({ ...p, payoutBank: bank }))} />
-                    ) : null}
-                    <PasswordCard />
+                <div className="mt-6 grid items-start gap-6 lg:grid-cols-[280px_1fr]">
+                    <ProfileSummary profile={profile} onSaved={applyProfile} />
+                    <div className="min-w-0 space-y-5">
+                        <AccountCard profile={profile} onSaved={applyProfile} />
+                        {profile.role === 'organizer' ? (
+                            <BankCard bank={profile.payoutBank} onSaved={(bank) => setProfile((p) => ({ ...p, payoutBank: bank }))} />
+                        ) : null}
+                        <PasswordCard />
+                    </div>
                 </div>
             )}
         </main>

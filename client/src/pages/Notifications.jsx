@@ -5,6 +5,7 @@ import { apiClient } from '../api/index.js';
 import { unwrapList } from '../lib/unwrap.js';
 import { formatDateTime } from '../lib/datetime.js';
 import { useToast } from '../components/ui/Toast.jsx';
+import { EmptyState, PageHeader, PageShell, buttonCls } from '../components/ui/Page.jsx';
 
 /** Where tapping a notification should go. Only in-app paths are followed. */
 function targetFor(row) {
@@ -61,54 +62,48 @@ export default function Notifications() {
     const unread = rows.filter((row) => !row.readAt).length;
 
     return (
-        <main className="mx-auto max-w-3xl px-5 py-10 lg:px-8">
-            <div className="flex flex-wrap items-end justify-between gap-3 border-b border-ink/10 pb-5">
-                <div>
-                    <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-coral">Inbox</p>
-                    <h1 className="serif mt-1 text-5xl">Notifications</h1>
-                </div>
-                {unread > 0 ? (
-                    <button
-                        type="button"
-                        onClick={markAllRead}
-                        className="inline-flex items-center gap-2 border border-ink/15 px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wider hover:border-coral"
-                    >
+        <PageShell>
+            <PageHeader
+                eyebrow="Inbox"
+                title="Notifications"
+                description={unread ? `${unread} unread` : 'Approvals, team invites, refunds and settlement updates.'}
+                actions={unread > 0 ? (
+                    <button type="button" onClick={markAllRead} className={buttonCls.secondary}>
                         <CheckCheck size={14} /> Mark all read
                     </button>
                 ) : null}
-            </div>
+            />
 
-            {loading ? (
-                <div className="mt-6 space-y-3">
-                    {Array.from({ length: 4 }).map((_, i) => (
-                        <div key={i} className="h-20 animate-pulse bg-ink/5" />
-                    ))}
-                </div>
-            ) : !rows.length ? (
-                <div className="mt-16 text-center text-ink/50">
-                    <Bell size={28} className="mx-auto text-ink/25" />
-                    <p className="mt-3 text-sm">You're all caught up.</p>
-                </div>
-            ) : (
-                <ul className="mt-6 divide-y divide-ink/10 border-y border-ink/10">
-                    {rows.map((row) => (
-                        <li key={row._id}>
-                            <button
-                                type="button"
-                                onClick={() => open(row)}
-                                className={`flex w-full gap-3 px-2 py-4 text-left transition hover:bg-ink/5 ${row.readAt ? '' : 'bg-coral/5'}`}
-                            >
-                                <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${row.readAt ? 'bg-transparent' : 'bg-coral'}`} />
-                                <span className="min-w-0 flex-1">
-                                    <span className="block text-sm font-extrabold">{row.title || 'Notification'}</span>
-                                    <span className="mt-0.5 block text-sm text-ink/65">{row.message}</span>
-                                    <span className="mt-1 block text-xs text-ink/40">{formatDateTime(row.createdAt)}</span>
-                                </span>
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </main>
+            <div className="mt-6">
+                {loading ? (
+                    <div className="space-y-3">
+                        {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-20 animate-pulse bg-ink/5" />)}
+                    </div>
+                ) : !rows.length ? (
+                    <EmptyState icon={Bell} title="You're all caught up" text="New approvals, team invites and payment updates will show up here." />
+                ) : (
+                    <ul className="divide-y divide-ink/10 border border-ink/10 bg-white">
+                        {rows.map((row) => (
+                            <li key={row._id}>
+                                <button
+                                    type="button"
+                                    onClick={() => open(row)}
+                                    className={`flex w-full gap-4 px-5 py-4 text-left transition hover:bg-ink/[0.03] ${row.readAt ? '' : 'bg-coral/[0.04]'}`}
+                                >
+                                    <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${row.readAt ? 'bg-ink/15' : 'bg-coral'}`} />
+                                    <span className="min-w-0 flex-1">
+                                        <span className="flex flex-wrap items-baseline justify-between gap-x-4">
+                                            <span className={`text-sm ${row.readAt ? 'font-bold text-ink/80' : 'font-extrabold'}`}>{row.title || 'Notification'}</span>
+                                            <span className="text-xs text-ink/40">{formatDateTime(row.createdAt)}</span>
+                                        </span>
+                                        <span className="mt-0.5 block text-sm text-ink/60">{row.message}</span>
+                                    </span>
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+        </PageShell>
     );
 }

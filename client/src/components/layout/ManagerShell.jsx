@@ -11,6 +11,28 @@ import { roleLabel } from './Header.jsx';
 /** Sign-in/sign-up screens keep the public layout; every other page uses the host shell. */
 const PUBLIC_ONLY = [/^\/login\/?$/, /^\/organizer\/?$/, /^\/manager\/(login|signin|signup)\/?$/, /^\/admin-legacy/];
 
+/** Name shown in the sticky top bar, so people know where they are after scrolling. */
+const TITLES = [
+  [/^\/dashboard\/events\/[^/]+\/team\/add/, 'Add team member'],
+  [/^\/dashboard\/events\/[^/]+\/team\//, 'Team member'],
+  [/^\/dashboard\/events\//, 'Event dashboard'],
+  [/^\/dashboard\/sell\//, 'Sell tickets'],
+  [/^\/dashboard\/settlements/, 'Settlements'],
+  [/^\/dashboard\/?$/, 'Dashboard'],
+  [/^\/manager\/?$/, 'Workspace'],
+  [/^\/invitations/, 'Requests'],
+  [/^\/notifications/, 'Notifications'],
+  [/^\/profile/, 'Profile & bank'],
+  [/^\/tickets/, 'My tickets'],
+  [/^\/how-it-works/, 'How it works'],
+  [/^\/ticket-outlets/, 'Ticket outlets'],
+  [/^\/physical-tickets/, 'Physical tickets'],
+  [/^\/pricing/, 'Pricing'],
+  [/^\/events\/./, 'Event'],
+  [/^\/events\/?$/, 'Browse events']
+];
+const titleFor = (pathname) => TITLES.find(([re]) => re.test(pathname))?.[1] || 'MXO';
+
 export function useInManagerShell() {
   const user = useSelector((s) => s.auth.user);
   const { pathname } = useLocation();
@@ -143,6 +165,18 @@ function Sidebar({ onNavigate }) {
 export default function ManagerShell({ children }) {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
+  const user = useSelector((s) => s.auth.user);
+  const title = titleFor(pathname);
+  // The page shows its own big heading at the top; the bar only repeats it once that heading has scrolled away.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 120);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [pathname]);
+  const titleCls = `transition-opacity duration-200 ${scrolled ? 'opacity-100' : 'pointer-events-none opacity-0'}`;
+  const initials = (user?.name || user?.email || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
   useEffect(() => { setOpen(false); }, [pathname]);
   useEffect(() => {
@@ -151,17 +185,20 @@ export default function ManagerShell({ children }) {
   }, [open]);
 
   return (
-    <div className="min-h-screen bg-cream">
+    <div className="min-h-screen bg-cream" style={{ '--app-header': '56px' }}>
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 lg:block">
         <Sidebar />
       </aside>
 
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-ink/10 bg-white px-4 lg:hidden">
-        <button type="button" onClick={() => setOpen(true)} aria-label="Open menu" className="grid h-10 w-10 place-items-center border border-ink/15">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-ink/10 bg-white px-4 lg:hidden">
+        <button type="button" onClick={() => setOpen(true)} aria-label="Open menu" className="grid h-10 w-10 shrink-0 place-items-center border border-ink/15">
           <Menu size={18} />
         </button>
-        <Link to="/dashboard" className="serif text-xl italic">MXO<span className="text-coral">.</span></Link>
-        <Link to="/notifications" aria-label="Notifications" className="grid h-10 w-10 place-items-center border border-ink/15">
+        <div className="relative min-w-0 flex-1 text-center">
+          <Link to="/dashboard" aria-hidden={scrolled} className={`serif absolute inset-0 flex items-center justify-center text-xl italic transition-opacity duration-200 ${scrolled ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>MXO<span className="text-coral">.</span></Link>
+          <p aria-hidden={!scrolled} className={`truncate text-sm font-extrabold ${titleCls}`}>{title}</p>
+        </div>
+        <Link to="/notifications" aria-label="Notifications" className="grid h-10 w-10 shrink-0 place-items-center border border-ink/15">
           <Bell size={17} />
         </Link>
       </header>
@@ -179,6 +216,18 @@ export default function ManagerShell({ children }) {
       ) : null}
 
       <div className="flex min-h-screen flex-col lg:pl-64">
+        {/* Desktop top bar: stays put while the page scrolls. */}
+        <header className="sticky top-0 z-30 hidden h-14 items-center justify-between gap-4 border-b border-ink/10 bg-white px-8 lg:flex">
+          <p aria-hidden={!scrolled} className={`truncate text-sm font-extrabold uppercase tracking-[.14em] ${titleCls}`}>{title}</p>
+          <div className="flex items-center gap-2">
+            <Link to="/notifications" aria-label="Notifications" className="grid h-9 w-9 place-items-center border border-ink/15 hover:border-coral">
+              <Bell size={16} />
+            </Link>
+            <Link to="/profile" aria-label="Profile" className="grid h-9 w-9 place-items-center bg-ink text-[11px] font-extrabold text-white hover:bg-coral">
+              {initials}
+            </Link>
+          </div>
+        </header>
         <div className="flex-1">{children}</div>
         <footer className="border-t border-ink/10 bg-white">
           <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 text-xs text-ink/50 lg:px-8">

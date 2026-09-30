@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { PageHeader, PageShell } from '../../components/ui/Page.jsx';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setUser } from '../../store/index.js';
@@ -13,8 +14,8 @@ import StaffEventDashboard from './StaffEventDashboard.jsx';
 
 const SECTIONS = [
     { id: 'overview', label: 'Overview' },
-    { id: 'events', label: 'Your catalog' },
-    { id: 'invites', label: 'Invitations' },
+    { id: 'events', label: 'My events' },
+    { id: 'invites', label: 'Invites' },
     { id: 'checkin', label: 'Check-in' }
 ];
 
@@ -136,24 +137,13 @@ export default function StaffWorkspace() {
     const nextEvent = accepted.find((row) => row.permissions?.canCheckIn || row.canScan) || accepted[0] || null;
 
     return (
-        <main className="mx-auto max-w-7xl px-5 py-10 lg:px-8">
+        <PageShell>
             {section !== 'dashboard' ? (
-                <div className="flex flex-col justify-between gap-5 border-b border-ink/15 pb-8 md:flex-row md:items-end">
-                    <div>
-                        <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-coral">
-                            {user?.staffRoleLabel || 'Staff workspace'}
-                        </p>
-                        <h1 className="serif mt-2 text-5xl sm:text-6xl">Staff desk</h1>
-                        <p className="mt-3 max-w-xl text-sm text-ink/60">
-                            Accept invites, open your catalog, and use the dashboard your handler role allows.
-                        </p>
-                    </div>
-                    {user?.staffRoleLabel ? (
-                        <span className="inline-flex self-start bg-moss/10 px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-moss md:self-auto">
-                            Role · {user.staffRoleLabel}
-                        </span>
-                    ) : null}
-                </div>
+                <PageHeader
+                    eyebrow={user?.staffRoleLabel ? `Your role · ${user.staffRoleLabel}` : 'Team'}
+                    title="Requests"
+                    description="Invites to join other hosts' events, and the events you help run once you accept."
+                />
             ) : null}
 
             {section !== 'dashboard' ? (
@@ -196,7 +186,7 @@ export default function StaffWorkspace() {
                 <div className="mt-5 border border-moss/25 bg-moss/10 px-4 py-3 text-sm text-moss">{notice}</div>
             ) : null}
 
-            <div className={section === 'dashboard' ? 'mt-2' : 'mt-10'}>
+            <div className={section === 'dashboard' ? 'mt-2' : 'mt-8'}>
                 {loading ? (
                     <p className="text-sm text-ink/50">Loading staff workspace…</p>
                 ) : null}
@@ -249,6 +239,6 @@ export default function StaffWorkspace() {
                     />
                 ) : null}
             </div>
-        </main>
+        </PageShell>
     );
 }

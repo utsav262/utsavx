@@ -63,7 +63,8 @@ export default function ManagerSignIn() {
         >
             <p className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-coral">Manager sign in</p>
             <h2 className="serif mt-3 text-4xl leading-none sm:text-5xl">Enter your workspace</h2>
-            <p className="mt-3 text-sm text-ink/55">Demo: leo@utsavx.com / password123</p>
+            {/* Demo logins are for local development only. */}
+            {import.meta.env.DEV ? <p className="mt-3 text-sm text-ink/55">Demo: leo@utsavx.com / password123</p> : null}
 
             <form onSubmit={submit} className="mt-2">
                 <ManagerAuthField

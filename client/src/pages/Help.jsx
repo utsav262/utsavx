@@ -7,7 +7,7 @@ const TOPICS = [
   { icon: <CreditCard className="h-5 w-5 text-coral" />, title: 'Payments & refunds', desc: 'UPI, cards, cancellations, refunds.', to: '/refunds' },
   { icon: <Calendar className="h-5 w-5 text-coral" />, title: 'Event day', desc: 'Entry rules, ID checks, gates timing.', to: '/faq#event-day' },
   { icon: <Users className="h-5 w-5 text-coral" />, title: 'For organizers', desc: 'Hosting, payouts, dashboard.', to: '/faq#organizers' },
-  { icon: <Shield className="h-5 w-5 text-coral" />, title: 'Account & security', desc: 'Password, 2FA, privacy.', to: '/faq#account' },
+  { icon: <Shield className="h-5 w-5 text-coral" />, title: 'Account & security', desc: 'Profile, password and privacy.', to: '/faq#account' },
   { icon: <LifeBuoy className="h-5 w-5 text-coral" />, title: 'Still stuck?', desc: 'Contact our support team.', to: '/contact' },
 ];
 

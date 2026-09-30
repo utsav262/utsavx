@@ -1,8 +1,10 @@
 import StaticPage from '../components/layout/StaticPage.jsx';
+import { useSiteSettings } from '../lib/useSiteSettings.js';
 
 export default function Privacy() {
+  const site = useSiteSettings();
   return (
-    <StaticPage eyebrow="Legal" title="Privacy Policy" subtitle="Last updated: 1 January 2026">
+    <StaticPage eyebrow="Legal" title="Privacy Policy" subtitle="Last updated: 1 October 2026">
       <div className="prose prose-lg max-w-none space-y-6 text-ink/70">
         <p>
           MXO respects your privacy. This policy explains what data we
@@ -13,16 +15,15 @@ export default function Privacy() {
         <ul className="list-disc space-y-1 pl-5">
           <li>Account info: name, email, phone</li>
           <li>Transaction data: orders, payment method (not full card)</li>
-          <li>Usage data: pages visited, device, IP</li>
-          <li>Location: city-level for event recommendations</li>
+          <li>Technical data: device and IP address, kept in server logs for security</li>
         </ul>
 
         <h2 className="serif text-2xl text-ink">How we use it</h2>
         <ul className="list-disc space-y-1 pl-5">
-          <li>Process bookings and send tickets</li>
-          <li>Fraud prevention and security</li>
-          <li>Personalized event recommendations</li>
-          <li>Product improvements and analytics</li>
+          <li>Process bookings and show your tickets in your account</li>
+          <li>Let organisers check your ticket at the door</li>
+          <li>Send in-app notifications about your orders and account</li>
+          <li>Prevent fraud and keep the platform secure</li>
         </ul>
 
         <h2 className="serif text-2xl text-ink">Sharing</h2>
@@ -35,20 +36,19 @@ export default function Privacy() {
         <ul className="list-disc space-y-1 pl-5">
           <li>Access your data</li>
           <li>Correct inaccuracies</li>
-          <li>Delete your account</li>
-          <li>Opt out of marketing</li>
+          <li>Ask us to delete your account</li>
         </ul>
 
         <h2 className="serif text-2xl text-ink">Security</h2>
         <p>
-          We use industry-standard encryption (TLS, AES-256). Card data is
-          processed only through PCI-DSS compliant payment gateways.
+          Connections to MXO are encrypted (HTTPS) and passwords are stored hashed. Card and UPI details are handled
+          by our payment partner, Razorpay, and are never stored by MXO.
         </p>
 
         <h2 className="serif text-2xl text-ink">Contact</h2>
         <p>
           Privacy questions? Email{' '}
-          <a href="mailto:privacy@utsavx.com" className="font-bold text-coral">privacy@utsavx.com</a>
+          <a href={`mailto:${site.support_email}`} className="font-bold text-coral">{site.support_email}</a>
         </p>
       </div>
     </StaticPage>
