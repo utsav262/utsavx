@@ -87,7 +87,7 @@ const TicketPass = forwardRef(function TicketPass({ ticket }, ref) {
               marginTop: '6px',
             }}
           >
-            UTSAVX<span style={{ opacity: 0.7 }}>.</span>
+            MXO<span style={{ opacity: 0.7 }}>.</span>
           </div>
         </div>
         <div
@@ -307,7 +307,7 @@ const TicketPass = forwardRef(function TicketPass({ ticket }, ref) {
           Show this pass at the venue entrance
         </span>
         <span style={{ opacity: 0.7, fontWeight: 700 }}>
-          utsavx.com
+          MXO
         </span>
       </div>
     </div>

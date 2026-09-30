@@ -1,4 +1,4 @@
-/** India-first locale defaults for UTSAVX. */
+/** India-first locale defaults for MXO. */
 export const APP_COUNTRY = 'India';
 export const APP_CURRENCY = 'INR';
 export const APP_LOCALE = 'en-IN';

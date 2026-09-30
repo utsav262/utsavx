@@ -20,9 +20,9 @@ const FEATURES = [
 const FAQS = [
     ['How do I start selling tickets?', 'Create a host account, add your event with ticket types and prices, and submit it for review. Once approved, it goes live and you can sell online and through your team. Getting started is free.'],
     ['Can I sell online and for cash?', 'Yes. Buyers can pay online on your event page, and your managers, ambassadors and outlets can sell for cash from their phones.'],
-    ['How do buyers get their tickets?', 'Each ticket, with its own QR code, appears in the buyer’s UTSAVX account straight after purchase. You can resend tickets if a buyer needs them again.'],
+    ['How do buyers get their tickets?', 'Each ticket, with its own QR code, appears in the buyer’s MXO account straight after purchase. You can resend tickets if a buyer needs them again.'],
     ['Are free events free to run?', 'Yes. Fees only apply to paid tickets — there’s no charge for free tickets.'],
-    ['How do cash sales work?', 'Cash stays with you and your team. The UTSAVX service fee on cash sales is totalled per event, and you settle it from the Settlements page.'],
+    ['How do cash sales work?', 'Cash stays with you and your team. The MXO service fee on cash sales is totalled per event, and you settle it from the Settlements page.'],
     ['How do I get paid for online sales?', 'Add your bank account in your Profile. Online earnings, after fees, are paid out to that account.']
 ];
 
@@ -74,7 +74,7 @@ function Calculator({ fees }) {
                     className="mt-5 w-full accent-coral"
                 />
                 <div className="mt-6 space-y-3 text-sm">
-                    <p className="flex justify-between"><span className="text-ink/60">UTSAVX service fee</span><span className="font-bold">{rate(fees.servicePct, fees.serviceFlat)}</span></p>
+                    <p className="flex justify-between"><span className="text-ink/60">MXO service fee</span><span className="font-bold">{rate(fees.servicePct, fees.serviceFlat)}</span></p>
                     <p className="flex justify-between"><span className="text-ink/60">Online payment processing</span><span className="font-bold">{rate(fees.paymentPct, fees.paymentFlat)}</span></p>
                     <p className="flex justify-between"><span className="text-ink/60">Free tickets</span><span className="font-bold">No fees</span></p>
                 </div>

@@ -4,7 +4,7 @@ import {
 import OrganizerPage, { FeatureCard, SectionHead } from '../components/marketing/OrganizerPage.jsx';
 
 const CHANNELS = [
-    { icon: Globe, title: 'Online', text: 'Your event page on UTSAVX takes UPI and card payments. Buyers get their QR ticket the moment they pay.' },
+    { icon: Globe, title: 'Online', text: 'Your event page on MXO takes UPI and card payments. Buyers get their QR ticket the moment they pay.' },
     { icon: Smartphone, title: 'Ambassadors', text: 'Your street team sells from their phones and collects cash, only from the tickets you assign them.' },
     { icon: Store, title: 'Ticket outlets', text: 'Shops you trust sell your tickets over the counter for cash, from an allocation you control.' },
     { icon: ScanLine, title: 'At the gate', text: 'Sell walk-ups at the door, then scan everyone in from the same dashboard.' }

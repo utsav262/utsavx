@@ -7,7 +7,7 @@ const schema = new mongoose.Schema({
     supportEmail: { type: String, trim: true, lowercase: true, default: 'hello@utsavx.com' },
     supportPhone: { type: String, trim: true, default: '+91 99999 99999' },
     supportHours: { type: String, trim: true, default: 'Mon–Sat, 10am–7pm IST' },
-    officeAddress: { type: String, trim: true, default: 'UTSAVX Pvt Ltd\nBandra West, Mumbai 400050' },
+    officeAddress: { type: String, trim: true, default: 'MXO Pvt Ltd\nBandra West, Mumbai 400050' },
     social: {
         instagram: { type: String, trim: true, default: '' },
         twitter: { type: String, trim: true, default: '' },

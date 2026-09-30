@@ -1,4 +1,4 @@
-# UTSAVX
+# MXO
 
 A MERN event ticketing platform for India — customer, organizer, and admin workflows with INR pricing.
 

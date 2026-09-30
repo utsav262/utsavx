@@ -118,7 +118,7 @@ async function start() {
     await configureRateLimiter();
     startHoldExpiryJob({ intervalMs: 30_000 });
     app.listen(env.port, () => {
-        console.log(`UTSAVX API listening on ${env.port}`);
+        console.log(`MXO API listening on ${env.port}`);
         console.log(`Swagger docs: http://localhost:${env.port}/api-docs`);
         console.log(`Checkout hold TTL: ${env.holdTtlMinutes} minute(s)`);
     });

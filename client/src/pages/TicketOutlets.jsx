@@ -64,7 +64,7 @@ export default function TicketOutlets() {
             </section>
 
             <section className="space-y-8">
-                <SectionHead eyebrow="Why switch" title="Paper tickets vs. UTSAVX outlets" />
+                <SectionHead eyebrow="Why switch" title="Paper tickets vs. MXO outlets" />
                 <div className="grid gap-4 md:grid-cols-2">
                     <div className="border border-ink/10 bg-white p-6">
                         <p className="flex items-center gap-2 text-sm font-extrabold uppercase tracking-wider text-ink/50"><Printer size={16} /> Traditional paper tickets</p>
@@ -78,7 +78,7 @@ export default function TicketOutlets() {
                         </ul>
                     </div>
                     <div className="border-2 border-coral bg-white p-6">
-                        <p className="flex items-center gap-2 text-sm font-extrabold uppercase tracking-wider text-coral"><Ticket size={16} /> UTSAVX digital outlets</p>
+                        <p className="flex items-center gap-2 text-sm font-extrabold uppercase tracking-wider text-coral"><Ticket size={16} /> MXO digital outlets</p>
                         <ul className="mt-5 space-y-4">
                             {NEW_WAY.map(([title, text]) => (
                                 <li key={title} className="flex gap-3">

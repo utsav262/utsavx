@@ -40,7 +40,7 @@ export default function AdminHome({
             </div>
             <div>
               <p className="text-sm font-extrabold">Admin panel</p>
-              <p className="text-[11px] text-white/50">UTSAVX platform</p>
+              <p className="text-[11px] text-white/50">MXO platform</p>
             </div>
           </div>
           <nav className="mt-3 flex gap-1 overflow-x-auto lg:flex-col">

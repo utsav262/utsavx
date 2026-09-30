@@ -177,7 +177,7 @@ export default function ManagerWorkspace() {
         <div className="flex flex-col justify-between gap-5 border-b border-ink/15 pb-8 md:flex-row md:items-end">
           <div>
             <p className="text-xs font-extrabold uppercase tracking-[.2em] text-coral">
-              {isAdmin ? 'UTSAVX admin' : 'Create / tools'}
+              {isAdmin ? 'MXO admin' : 'Create / tools'}
             </p>
             <h1 className="serif mt-2 text-6xl">
               {isAdmin ? 'Full access.' : 'Build & ship.'}

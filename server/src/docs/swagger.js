@@ -12,7 +12,7 @@ export function setupSwagger(app) {
         '/api-docs',
         swaggerUi.serve,
         swaggerUi.setup(openApiSpec, {
-            customSiteTitle: 'UTSAVX API Docs',
+            customSiteTitle: 'MXO API Docs',
             customCss: '.swagger-ui .topbar { display: none }',
             swaggerOptions: {
                 persistAuthorization: true,

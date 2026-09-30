@@ -6,7 +6,7 @@ const POSTS = [
   { slug: 'top-10-concerts-2026', title: 'Top 10 concerts to catch in 2026', excerpt: 'From AR Rahman to Diljit, the full lineup you cannot miss.', category: 'Music', date: '2026-03-12', author: 'Aarav M.' },
   { slug: 'how-to-host-first-event', title: 'How to host your first event', excerpt: 'Zero se hero tak — ek complete playbook for new organizers.', category: 'Guides', date: '2026-03-08', author: 'Priya S.' },
   { slug: 'comedy-scene-india', title: 'The comedy scene in India is exploding', excerpt: 'Why 2026 is the year of Indian stand-up.', category: 'Culture', date: '2026-02-28', author: 'Rohan K.' },
-  { slug: 'upi-tickets-guide', title: 'Pay for tickets with UPI in 2 taps', excerpt: 'New checkout flow live for all users.', category: 'Product', date: '2026-02-15', author: 'UTSAVX Team' },
+  { slug: 'upi-tickets-guide', title: 'Pay for tickets with UPI in 2 taps', excerpt: 'New checkout flow live for all users.', category: 'Product', date: '2026-02-15', author: 'MXO Team' },
   { slug: 'festival-packing-list', title: 'The ultimate festival packing list', excerpt: 'Everything from sunscreen to a power bank.', category: 'Guides', date: '2026-02-01', author: 'Neha T.' },
   { slug: 'artist-spotlight-nucleya', title: 'Artist spotlight: Nucleya', excerpt: 'Bass music ka baap — ek deep dive.', category: 'Music', date: '2026-01-20', author: 'Aarav M.' },
 ];

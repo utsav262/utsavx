@@ -87,7 +87,7 @@ function Sidebar({ onNavigate }) {
     <div className="flex h-full flex-col bg-ink text-white">
       <div className="flex h-16 shrink-0 items-center px-5">
         <Link to="/dashboard" onClick={onNavigate} className="serif text-2xl italic">
-          UTSAVX<span className="text-coral">.</span>
+          MXO<span className="text-coral">.</span>
         </Link>
         <span className="ml-2 border border-white/20 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-[.16em] text-white/60">
           {host ? 'Host' : 'Team'}
@@ -115,7 +115,7 @@ function Sidebar({ onNavigate }) {
             {learn.map((item) => <Item key={item.to} item={item} onNavigate={onNavigate} />)}
           </>
         ) : null}
-        <p className="mt-6 px-5 pb-2 text-[10px] font-extrabold uppercase tracking-[.2em] text-white/35">UTSAVX</p>
+        <p className="mt-6 px-5 pb-2 text-[10px] font-extrabold uppercase tracking-[.2em] text-white/35">MXO</p>
         <Item item={{ to: '/events', label: 'Browse events', icon: Compass }} onNavigate={onNavigate} />
       </nav>
 
@@ -160,7 +160,7 @@ export default function ManagerShell({ children }) {
         <button type="button" onClick={() => setOpen(true)} aria-label="Open menu" className="grid h-10 w-10 place-items-center border border-ink/15">
           <Menu size={18} />
         </button>
-        <Link to="/dashboard" className="serif text-xl italic">UTSAVX<span className="text-coral">.</span></Link>
+        <Link to="/dashboard" className="serif text-xl italic">MXO<span className="text-coral">.</span></Link>
         <Link to="/notifications" aria-label="Notifications" className="grid h-10 w-10 place-items-center border border-ink/15">
           <Bell size={17} />
         </Link>
@@ -182,7 +182,7 @@ export default function ManagerShell({ children }) {
         <div className="flex-1">{children}</div>
         <footer className="border-t border-ink/10 bg-white">
           <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 text-xs text-ink/50 lg:px-8">
-            <span>© {new Date().getFullYear()} UTSAVX · Prices in ₹ (INR)</span>
+            <span>© {new Date().getFullYear()} MXO · Prices in ₹ (INR)</span>
             <nav className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Footer">
               {[['/help', 'Help'], ['/contact', 'Contact'], ['/faq', 'FAQs'], ['/refunds', 'Refunds'], ['/terms', 'Terms'], ['/privacy', 'Privacy']].map(([to, label]) => (
                 <Link key={to} to={to} className="hover:text-coral">{label}</Link>

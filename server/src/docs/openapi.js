@@ -1,8 +1,8 @@
-/** OpenAPI 3.0 document for UTSAVX API */
+/** OpenAPI 3.0 document for MXO API */
 export const openApiSpec = {
     openapi: '3.0.3',
     info: {
-        title: 'UTSAVX API',
+        title: 'MXO API',
         version: '1.0.0',
         description:
             'Event ticketing API for India — auth, events, orders, Razorpay payments, manager tools, and staff invitations.\n\n' +

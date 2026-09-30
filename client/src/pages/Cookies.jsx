@@ -5,7 +5,7 @@ export default function Cookies() {
     <StaticPage eyebrow="Legal" title="Cookie Policy" subtitle="Last updated: 1 January 2026">
       <div className="prose prose-lg max-w-none space-y-6 text-ink/70">
         <p>
-          UTSAVX uses cookies and similar technologies to improve your
+          MXO uses cookies and similar technologies to improve your
           experience. This page explains how.
         </p>
 

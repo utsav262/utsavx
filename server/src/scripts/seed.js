@@ -13,7 +13,7 @@ const DEMO_PASSWORD = 'password123';
 const demoUsers = [
     { name: 'Ananya Sharma', email: 'emma@utsavx.com', role: 'customer' },
     { name: 'Rohan Mehta', email: 'leo@utsavx.com', role: 'organizer' },
-    { name: 'UTSAVX Admin', email: 'admin@utsavx.com', role: 'admin' }
+    { name: 'MXO Admin', email: 'admin@utsavx.com', role: 'admin' }
 ];
 
 const demoEvents = [

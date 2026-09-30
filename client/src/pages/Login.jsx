@@ -30,7 +30,7 @@ export default function Login() {
     return (
         <main className="mx-auto grid min-h-[calc(100vh-73px)] max-w-7xl items-center gap-14 px-5 py-14 lg:grid-cols-2 lg:px-8">
             <div className="hidden bg-moss p-12 text-white lg:block">
-                <p className="text-xs font-extrabold uppercase tracking-[.2em] text-butter">UTSAVX members</p>
+                <p className="text-xs font-extrabold uppercase tracking-[.2em] text-butter">MXO members</p>
                 <h1 className="serif mt-5 text-7xl leading-[.9]">
                     Keep the
                     <br />
@@ -42,7 +42,7 @@ export default function Login() {
             </div>
             <form onSubmit={submit} className="mx-auto w-full max-w-md">
                 <p className="text-xs font-extrabold uppercase tracking-[.2em] text-coral">Welcome back</p>
-                <h1 className="serif mt-3 text-5xl">{signup ? 'Create account' : 'Log in to UTSAVX'}</h1>
+                <h1 className="serif mt-3 text-5xl">{signup ? 'Create account' : 'Log in to MXO'}</h1>
                 {from === '/checkout' && (
                     <p className="mt-3 text-sm text-ink/55">Sign in to finish checkout. Your cart is saved.</p>
                 )}

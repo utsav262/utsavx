@@ -8,7 +8,7 @@ export const DEFAULT_SITE = {
     support_email: 'hello@utsavx.com',
     support_phone: '+91 99999 99999',
     support_hours: 'Mon–Sat, 10am–7pm IST',
-    office_address: 'UTSAVX Pvt Ltd\nBandra West, Mumbai 400050',
+    office_address: 'MXO Pvt Ltd\nBandra West, Mumbai 400050',
     social: { instagram: '', twitter: '', facebook: '', youtube: '', linkedin: '' }
 };
 

@@ -123,7 +123,7 @@ function CountryForm({ row, canEdit, onClose, onSaved }) {
                     </select>
                 </Field>
 
-                <Section title="Service fee (UTSAVX)">
+                <Section title="Service fee (MXO)">
                     <div className="grid grid-cols-2 gap-3">
                         <NumberField label="Percent" name="Online_Service_Fee_percentage" suffix="%" form={form} setForm={setForm} errors={errors} />
                         <NumberField label="Flat per ticket" name="Online_Service_Fee_dollar_amount" suffix={cur} form={form} setForm={setForm} errors={errors} />

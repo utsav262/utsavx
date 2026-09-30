@@ -5,7 +5,7 @@ export default function Privacy() {
     <StaticPage eyebrow="Legal" title="Privacy Policy" subtitle="Last updated: 1 January 2026">
       <div className="prose prose-lg max-w-none space-y-6 text-ink/70">
         <p>
-          UTSAVX respects your privacy. This policy explains what data we
+          MXO respects your privacy. This policy explains what data we
           collect, how we use it and what your rights are.
         </p>
 

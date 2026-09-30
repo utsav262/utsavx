@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 
 export default function ManagerAuthShell({
-    eyebrow = 'UTSAVX manager',
+    eyebrow = 'MXO manager',
     title,
     subtitle,
     features = [

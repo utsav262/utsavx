@@ -16,7 +16,7 @@ export default function Careers() {
     <StaticPage eyebrow="Join us" title="Careers" subtitle="Help us shape how India experiences live events.">
       <div className="space-y-6">
         <div className="border border-ink/10 bg-white p-6">
-          <h2 className="serif text-2xl">Why UTSAVX?</h2>
+          <h2 className="serif text-2xl">Why MXO?</h2>
           <ul className="mt-4 grid gap-3 text-sm text-ink/70 sm:grid-cols-2">
             <li>• Remote-first culture</li>
             <li>• Free tickets to every event</li>

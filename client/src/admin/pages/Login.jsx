@@ -34,7 +34,7 @@ export default function AdminLogin() {
                 <span className="flex h-10 w-10 items-center justify-center bg-coral text-white">
                     <Shield size={18} />
                 </span>
-                <p className="mt-6 text-[11px] font-extrabold uppercase tracking-[0.2em] text-coral">UTSAVX admin console</p>
+                <p className="mt-6 text-[11px] font-extrabold uppercase tracking-[0.2em] text-coral">MXO admin console</p>
                 <h1 className="serif mt-2 text-4xl">Sign in</h1>
                 <p className="mt-2 text-sm text-ink/55">Staff accounts only. Customer and organizer logins don't work here.</p>
 

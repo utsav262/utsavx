@@ -77,7 +77,7 @@ function Layout({ theme, onToggleTheme }) {
                     <Shield size={17} />
                 </span>
                 <div>
-                    <p className="serif text-xl italic leading-none">UTSAVX</p>
+                    <p className="serif text-xl italic leading-none">MXO</p>
                     <p className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/50">Admin console</p>
                 </div>
             </div>

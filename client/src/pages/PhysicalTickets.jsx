@@ -16,7 +16,7 @@ function TicketMock() {
         <div className="relative mx-auto max-w-sm">
             <div className="flex overflow-hidden border border-ink/15 bg-white shadow-xl">
                 <div className="flex-1 p-5">
-                    <p className="text-[10px] font-extrabold uppercase tracking-[.2em] text-coral">UTSAVX · Admit one</p>
+                    <p className="text-[10px] font-extrabold uppercase tracking-[.2em] text-coral">MXO · Admit one</p>
                     <p className="serif mt-2 text-2xl leading-tight">Your Event Name</p>
                     <p className="mt-2 text-xs text-ink/55">Sat, 14 Dec · 7:00 PM</p>
                     <p className="text-xs text-ink/55">Venue, City</p>

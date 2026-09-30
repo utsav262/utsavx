@@ -5,11 +5,11 @@ import { useToast } from '../../components/ui/Toast.jsx';
 import { Button, Field, PageHead, Section, dateTime, errorText, inputCls } from '../components/kit.jsx';
 
 const SOCIALS = [
-    ['instagram', 'Instagram', 'https://instagram.com/utsavx'],
-    ['twitter', 'X / Twitter', 'https://x.com/utsavx'],
-    ['facebook', 'Facebook', 'https://facebook.com/utsavx'],
-    ['youtube', 'YouTube', 'https://youtube.com/@utsavx'],
-    ['linkedin', 'LinkedIn', 'https://linkedin.com/company/utsavx']
+    ['instagram', 'Instagram', 'https://instagram.com/mxo'],
+    ['twitter', 'X / Twitter', 'https://x.com/mxo'],
+    ['facebook', 'Facebook', 'https://facebook.com/mxo'],
+    ['youtube', 'YouTube', 'https://youtube.com/@mxo'],
+    ['linkedin', 'LinkedIn', 'https://linkedin.com/company/mxo']
 ];
 
 /** zod errors arrive as { social: [...] } or { 'social.instagram': [...] } depending on depth. */

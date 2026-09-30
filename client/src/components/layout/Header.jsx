@@ -117,10 +117,10 @@ export default function Header() {
         <Link
           to="/"
           className="group flex items-center gap-2 shrink-0"
-          aria-label="UTSAVX home"
+          aria-label="MXO home"
         >
           <span className="serif text-3xl italic leading-none tracking-tight">
-            UTSAVX
+            MXO
           </span>
           <span className="h-2 w-2 rounded-full bg-coral transition group-hover:scale-125" />
         </Link>

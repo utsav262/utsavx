@@ -18,11 +18,11 @@ export default function About() {
   ];
 
   return (
-    <StaticPage eyebrow="Our story" title="About UTSAVX" subtitle="India's home for live experiences — built by fans, for fans.">
+    <StaticPage eyebrow="Our story" title="About MXO" subtitle="India's home for live experiences — built by fans, for fans.">
       <div className="space-y-12">
         <div className="prose prose-lg max-w-none text-ink/70">
           <p>
-            UTSAVX started in 2024 with a simple idea: discovering and booking live
+            MXO started in 2024 with a simple idea: discovering and booking live
             events in India should be as easy as playing a song.
           </p>
           <p>

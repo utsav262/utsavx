@@ -126,17 +126,17 @@ export default function Tickets() {
   /* ---------- download handlers ---------- */
   const handleDownloadPng = () => {
     setDownloadOpen(false);
-    downloadPng(ticketRef.current, `ticket-${active?.confirmationCode || 'utsavx'}`);
+    downloadPng(ticketRef.current, `ticket-${active?.confirmationCode || 'mxo'}`);
   };
 
   const handleDownloadPdf = () => {
     setDownloadOpen(false);
-    downloadPdf(ticketRef.current, `ticket-${active?.confirmationCode || 'utsavx'}`);
+    downloadPdf(ticketRef.current, `ticket-${active?.confirmationCode || 'mxo'}`);
   };
 
   const handleDownloadQr = () => {
     setDownloadOpen(false);
-    downloadQrOnly(qrValue, `ticket-${active?.confirmationCode || 'utsavx'}`);
+    downloadQrOnly(qrValue, `ticket-${active?.confirmationCode || 'mxo'}`);
   };
 
   /* ---------- render ---------- */
@@ -590,7 +590,7 @@ function ScreenPassView({ ticket, qrValue }) {
 
       {/* Footer strip */}
       <div className="flex items-center justify-between bg-ink/[0.02] px-6 py-3 text-xs">
-        <span className="font-bold text-ink/60">UTSAVX · Entry Pass</span>
+        <span className="font-bold text-ink/60">MXO · Entry Pass</span>
         <Link
           to="/contact"
           className="font-bold text-coral hover:underline"

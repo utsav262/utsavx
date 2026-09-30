@@ -25,7 +25,7 @@ export default function Footer() {
         {/* ---------- TOP: BRAND + NEWSLETTER ---------- */}
         <div className="grid gap-10 lg:grid-cols-[1.2fr_1fr] lg:items-start">
           <div>
-            <Link to="/" className="serif text-3xl italic text-ink">UTSAVX.</Link>
+            <Link to="/" className="serif text-3xl italic text-ink">MXO.</Link>
             <p className="mt-3 max-w-md text-sm leading-6 text-ink/60">
               India's home for live experiences — concerts, comedy, workshops, festivals
               and more. Discover, book and make the moments that matter.
@@ -109,7 +109,7 @@ export default function Footer() {
           </FooterCol>
 
           <FooterCol title="Company">
-            <FooterLink to="/about">About UTSAVX</FooterLink>
+            <FooterLink to="/about">About MXO</FooterLink>
             <FooterLink to="/careers">Careers</FooterLink>
             <FooterLink to="/blog">Blog</FooterLink>
             <FooterLink to="/press">Press kit</FooterLink>
@@ -142,7 +142,7 @@ export default function Footer() {
 
         {/* ---------- BOTTOM BAR ---------- */}
         <div className="mt-8 flex flex-col gap-3 border-t border-ink/10 pt-6 text-xs text-ink/55 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {year} UTSAVX. All rights reserved. · Prices in ₹ (INR)</p>
+          <p>© {year} MXO. All rights reserved. · Prices in ₹ (INR)</p>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <Link to="/terms" className="hover:text-coral">Terms</Link>
             <Link to="/privacy" className="hover:text-coral">Privacy</Link>

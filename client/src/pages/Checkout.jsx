@@ -34,7 +34,7 @@ function openRazorpayCheckout(payment) {
       key: payment.keyId,
       amount: payment.amount,
       currency: payment.currency || 'INR',
-      name: 'UTSAVX',
+      name: 'MXO',
       description: `Order ${payment.orderNumber || ''}`.trim(),
       order_id: payment.razorpayOrderId,
       prefill: {

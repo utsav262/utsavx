@@ -5,13 +5,13 @@ export default function Terms() {
     <StaticPage eyebrow="Legal" title="Terms of Service" subtitle="Last updated: 1 January 2026">
       <div className="prose prose-lg max-w-none space-y-6 text-ink/70">
         <p>
-          Welcome to UTSAVX. By using our platform you agree to these terms. Please
+          Welcome to MXO. By using our platform you agree to these terms. Please
           read them carefully.
         </p>
 
         <h2 className="serif text-2xl text-ink">1. Acceptance of terms</h2>
         <p>
-          By accessing or using UTSAVX, you confirm that you are at least 18 years
+          By accessing or using MXO, you confirm that you are at least 18 years
           old (or have guardian consent) and agree to be bound by these terms.
         </p>
 
@@ -42,7 +42,7 @@ export default function Terms() {
 
         <h2 className="serif text-2xl text-ink">6. Limitation of liability</h2>
         <p>
-          UTSAVX acts as a ticketing platform and is not responsible for the actual
+          MXO acts as a ticketing platform and is not responsible for the actual
           event experience, artist performance, or venue conditions.
         </p>
 

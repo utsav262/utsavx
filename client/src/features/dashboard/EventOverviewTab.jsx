@@ -22,7 +22,7 @@ const TEAM_TYPES = [
 ];
 
 const BOOST_BULLETS = [
-    'Feature your event on the UTSAVX homepage and emails',
+    'Feature your event on the MXO homepage and emails',
     'Retarget confirmed ticket buyers for similar events',
     'Priority placement in "Recommended" search results'
 ];
