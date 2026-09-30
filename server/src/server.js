@@ -19,6 +19,7 @@ import { notFound, errorHandler } from './middleware/error.js';
 import { webhook } from './controllers/paymentController.js';
 import { seedIfEmpty } from './scripts/seed.js';
 import { bootstrapSuperAdmin } from './admin/bootstrap.js';
+import { migrateCountrySettings } from './scripts/migrateCountrySettings.js';
 import { publicSiteSettings } from './services/siteSettings.js';
 import { asyncHandler } from './middleware/asyncHandler.js';
 import { setupSwagger } from './docs/swagger.js';
@@ -50,10 +51,10 @@ app.use((req, res, next) => limiter(req, res, next));
 app.get('/health', (req, res) => res.json({ ok: true, service: 'utsavx-api' }));
 setupSwagger(app);
 app.use('/api/v1/auth', (req, res, next) => authLimiter(req, res, next), authRoutes);
-app.get('/api/v1/getCountryList', asyncHandler(getCountryList));
+app.get('/api/v1/catalog/countries', asyncHandler(getCountryList));
 app.get('/api/v1/site-settings', asyncHandler(publicSiteSettings));
-app.get('/api/v1/getCities/:country', asyncHandler(getCities));
-app.get('/api/v1/getCategories', asyncHandler(getCategories));
+app.get('/api/v1/catalog/cities/:country', asyncHandler(getCities));
+app.get('/api/v1/catalog/categories', asyncHandler(getCategories));
 app.use('/api/v1/events', eventRoutes);
 app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/payments', paymentRoutes);
@@ -111,6 +112,7 @@ async function configureRateLimiter() {
 
 async function start() {
     await mongoose.connect(env.mongoUri);
+    await migrateCountrySettings();
     // Ensure README demo accounts exist in every environment (including Render).
     await seedIfEmpty();
     await bootstrapSuperAdmin();

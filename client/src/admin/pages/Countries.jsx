@@ -7,16 +7,12 @@ import ConfirmModal from '../components/ConfirmModal.jsx';
 import { Badge, Button, DataTable, Drawer, Field, PageHead, Section, day, errorText, inputCls } from '../components/kit.jsx';
 
 const blank = {
-    country: '', currency: 'INR', payment_gateway: 'razorpay',
-    Online_Service_Fee_percentage: 5, Online_Service_Fee_dollar_amount: 0,
-    Online_Payment_Fee_percentage: 2, Online_Payment_Fee_dollar_amount: 0,
-    timezones: [{ label: 'India Standard Time', value: 'Asia/Kolkata' }],
-    verified_ambassador_unlock_fee: 0, ticket_outlet_unlock_fee: 0, boost_package_unlock_fee: 0, complimentary_ticket_bundles: 0
+    country: '', currency: 'INR', paymentGateway: 'razorpay',
+    serviceFeePercent: 5, serviceFeeFlat: 0,
+    paymentFeePercent: 2, paymentFeeFlat: 0,
+    timezones: [{ label: 'India Standard Time', value: 'Asia/Kolkata' }]
 };
-const NUMBER_FIELDS = [
-    'Online_Service_Fee_percentage', 'Online_Service_Fee_dollar_amount', 'Online_Payment_Fee_percentage', 'Online_Payment_Fee_dollar_amount',
-    'verified_ambassador_unlock_fee', 'ticket_outlet_unlock_fee', 'boost_package_unlock_fee', 'complimentary_ticket_bundles'
-];
+const NUMBER_FIELDS = ['serviceFeePercent', 'serviceFeeFlat', 'paymentFeePercent', 'paymentFeeFlat'];
 const rate = (pct, flat, currency) => [pct ? `${pct}%` : null, flat ? `${currency} ${flat}` : null].filter(Boolean).join(' + ') || 'Free';
 const firstError = (e) => (Array.isArray(e) ? e[0] : e);
 
@@ -51,7 +47,7 @@ function CountryForm({ row, canEdit, onClose, onSaved }) {
     const body = () => ({
         country: form.country.trim(),
         currency: form.currency.trim(),
-        payment_gateway: form.payment_gateway,
+        paymentGateway: form.paymentGateway,
         timezones: form.timezones.map((z) => ({ label: z.label.trim(), value: z.value.trim() })).filter((z) => z.label || z.value),
         ...Object.fromEntries(NUMBER_FIELDS.map((k) => [k, Number(form[k]) || 0]))
     });
@@ -94,7 +90,7 @@ function CountryForm({ row, canEdit, onClose, onSaved }) {
         <Drawer
             open
             onClose={onClose}
-            eyebrow={isNew ? 'New country' : `Country #${row.country_id}`}
+            eyebrow={isNew ? 'New country' : 'Country'}
             title={isNew ? 'Add country' : row.country}
             footer={canEdit ? (
                 <>
@@ -116,8 +112,8 @@ function CountryForm({ row, canEdit, onClose, onSaved }) {
                         <input value={form.currency} maxLength={3} onChange={set('currency')} className={`${inputCls} uppercase`} />
                     </Field>
                 </div>
-                <Field label="Payment gateway" error={firstError(errors.payment_gateway)}>
-                    <select value={form.payment_gateway} onChange={set('payment_gateway')} className={inputCls}>
+                <Field label="Payment gateway" error={firstError(errors.paymentGateway)}>
+                    <select value={form.paymentGateway} onChange={set('paymentGateway')} className={inputCls}>
                         <option value="razorpay">Razorpay</option>
                         <option value="stripe">Stripe</option>
                     </select>
@@ -125,14 +121,14 @@ function CountryForm({ row, canEdit, onClose, onSaved }) {
 
                 <Section title="Service fee (MXO)">
                     <div className="grid grid-cols-2 gap-3">
-                        <NumberField label="Percent" name="Online_Service_Fee_percentage" suffix="%" form={form} setForm={setForm} errors={errors} />
-                        <NumberField label="Flat per ticket" name="Online_Service_Fee_dollar_amount" suffix={cur} form={form} setForm={setForm} errors={errors} />
+                        <NumberField label="Percent" name="serviceFeePercent" suffix="%" form={form} setForm={setForm} errors={errors} />
+                        <NumberField label="Flat per ticket" name="serviceFeeFlat" suffix={cur} form={form} setForm={setForm} errors={errors} />
                     </div>
                 </Section>
                 <Section title="Online payment processing">
                     <div className="grid grid-cols-2 gap-3">
-                        <NumberField label="Percent" name="Online_Payment_Fee_percentage" suffix="%" form={form} setForm={setForm} errors={errors} />
-                        <NumberField label="Flat per ticket" name="Online_Payment_Fee_dollar_amount" suffix={cur} form={form} setForm={setForm} errors={errors} />
+                        <NumberField label="Percent" name="paymentFeePercent" suffix="%" form={form} setForm={setForm} errors={errors} />
+                        <NumberField label="Flat per ticket" name="paymentFeeFlat" suffix={cur} form={form} setForm={setForm} errors={errors} />
                     </div>
                 </Section>
 
@@ -158,20 +154,12 @@ function CountryForm({ row, canEdit, onClose, onSaved }) {
                     </div>
                 </Section>
 
-                <Section title="Add-on prices">
-                    <div className="grid grid-cols-2 gap-3">
-                        <NumberField label="Verified ambassadors unlock" name="verified_ambassador_unlock_fee" suffix={cur} form={form} setForm={setForm} errors={errors} />
-                        <NumberField label="Ticket outlets unlock" name="ticket_outlet_unlock_fee" suffix={cur} form={form} setForm={setForm} errors={errors} />
-                        <NumberField label="Boost package" name="boost_package_unlock_fee" suffix={cur} form={form} setForm={setForm} errors={errors} />
-                        <NumberField label="Complimentary ticket bundles" name="complimentary_ticket_bundles" form={form} setForm={setForm} errors={errors} />
-                    </div>
-                </Section>
             </fieldset>
 
             <ConfirmModal
                 open={confirm === 'save'}
                 title={`Change ${row.country} fees?`}
-                body={`New rates apply to sales from now on, and show on the public Pricing page. Service fee: ${rate(Number(form.Online_Service_Fee_percentage), Number(form.Online_Service_Fee_dollar_amount), cur)}. Processing: ${rate(Number(form.Online_Payment_Fee_percentage), Number(form.Online_Payment_Fee_dollar_amount), cur)}.`}
+                body={`New rates apply to sales from now on, and show on the public Pricing page. Service fee: ${rate(Number(form.serviceFeePercent), Number(form.serviceFeeFlat), cur)}. Processing: ${rate(Number(form.paymentFeePercent), Number(form.paymentFeeFlat), cur)}.`}
                 confirmLabel="Save fees"
                 busy={busy}
                 onConfirm={save}
@@ -227,9 +215,9 @@ export default function AdminCountries() {
                 columns={[
                     { key: 'country', label: 'Country', render: (r) => <><p className="font-bold">{r.country}</p><p className="text-xs text-ink/50 dark:text-white/50">{r.timezones.map((z) => z.value).join(', ')}</p></> },
                     { key: 'currency', label: 'Currency', render: (r) => <span className="font-mono">{r.currency}</span> },
-                    { key: 'service', label: 'Service fee', render: (r) => rate(r.Online_Service_Fee_percentage, r.Online_Service_Fee_dollar_amount, r.currency) },
-                    { key: 'processing', label: 'Processing', render: (r) => rate(r.Online_Payment_Fee_percentage, r.Online_Payment_Fee_dollar_amount, r.currency) },
-                    { key: 'gateway', label: 'Gateway', render: (r) => <Badge>{r.payment_gateway}</Badge> },
+                    { key: 'service', label: 'Service fee', render: (r) => rate(r.serviceFeePercent, r.serviceFeeFlat, r.currency) },
+                    { key: 'processing', label: 'Processing', render: (r) => rate(r.paymentFeePercent, r.paymentFeeFlat, r.currency) },
+                    { key: 'gateway', label: 'Gateway', render: (r) => <Badge>{r.paymentGateway}</Badge> },
                     { key: 'events', label: 'Events', align: 'right', render: (r) => r.events },
                     { key: 'updated_at', label: 'Updated', render: (r) => day(r.updated_at) }
                 ]}

@@ -244,9 +244,8 @@ describe('admin users & audit', () => {
 
 describe('countries & fees', () => {
     const IN = {
-        country: 'India', currency: 'inr', payment_gateway: 'razorpay',
-        Online_Service_Fee_percentage: 5, Online_Service_Fee_dollar_amount: 0,
-        Online_Payment_Fee_percentage: 2, Online_Payment_Fee_dollar_amount: 0,
+        country: 'India', currency: 'inr', paymentGateway: 'razorpay',
+        serviceFeePercent: 5, serviceFeeFlat: 0, paymentFeePercent: 2, paymentFeeFlat: 0,
         timezones: [{ label: 'India Standard Time', value: 'Asia/Kolkata' }]
     };
 
@@ -254,18 +253,32 @@ describe('countries & fees', () => {
         expect((await api('post', '/catalog/countries', 'admin', IN)).status).toBe(403);
         const created = await api('post', '/catalog/countries', 'super', IN);
         expect(created.status).toBe(201);
-        expect(created.body.result).toMatchObject({ currency: 'INR', country_id: 1, timezones: IN.timezones });
+        expect(created.body.result).toMatchObject({ currency: 'INR', serviceFeePercent: 5, timezones: IN.timezones });
         expect((await api('get', '/catalog/countries', 'support')).body.result).toHaveLength(1);
         expect((await api('post', '/catalog/countries', 'super', { ...IN, country: 'india' })).status).toBe(409);
     });
 
     it('validates fees and time zones, and audits edits', async () => {
-        const bad = await api('post', '/catalog/countries', 'super', { ...IN, Online_Service_Fee_percentage: 80, timezones: [{ label: 'x', value: 'Mars/Base' }] });
+        const bad = await api('post', '/catalog/countries', 'super', { ...IN, serviceFeePercent: 80, timezones: [{ label: 'x', value: 'Mars/Base' }] });
         expect(bad.status).toBe(422);
         const { body } = await api('post', '/catalog/countries', 'super', IN);
-        const edited = await api('patch', `/catalog/countries/${body.result._id}`, 'super', { ...IN, Online_Service_Fee_percentage: 4.5 });
-        expect(edited.body.result.Online_Service_Fee_percentage).toBe(4.5);
+        const edited = await api('patch', `/catalog/countries/${body.result._id}`, 'super', { ...IN, serviceFeePercent: 4.5 });
+        expect(edited.body.result.serviceFeePercent).toBe(4.5);
         expect(await AuditLog.exists({ action: 'country.update' })).toBeTruthy();
+    });
+
+    it('migrates old-style country settings once', async () => {
+        const { migrateCountrySettings } = await import('../src/scripts/migrateCountrySettings.js');
+        await mongoose.connection.db.collection('globalsettings').insertOne({
+            type: 'country', country_id: 7, country: 'Nepal', currency: 'NPR', payment_gateway: 'stripe',
+            Online_Service_Fee_percentage: 6, Online_Service_Fee_dollar_amount: 10, Online_Payment_Fee_percentage: 3, Online_Payment_Fee_dollar_amount: 0,
+            timezone: '[{"label":"Nepal Time","value":"Asia/Kathmandu"}]', boost_package_unlock_fee: 99
+        });
+        await migrateCountrySettings();
+        await migrateCountrySettings();
+        const doc = await mongoose.connection.db.collection('globalsettings').findOne({ country: 'Nepal' });
+        expect(doc).toMatchObject({ serviceFeePercent: 6, serviceFeeFlat: 10, paymentFeePercent: 3, paymentGateway: 'stripe', timezones: [{ label: 'Nepal Time', value: 'Asia/Kathmandu' }] });
+        expect(Object.keys(doc).some((k) => k.startsWith('Online_') || k === 'country_id' || k.endsWith('_unlock_fee'))).toBe(false);
     });
 
     it('refuses to delete or rename a country that events use', async () => {

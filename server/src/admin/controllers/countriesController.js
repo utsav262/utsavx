@@ -21,51 +21,32 @@ const percent = z.coerce.number().min(0, 'Can’t be negative').max(50, 'Must be
 const countrySchema = z.object({
     country: z.string().trim().min(2, 'Country name is required').max(80),
     currency: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/, 'Use a 3-letter currency code, e.g. INR'),
-    Online_Service_Fee_percentage: percent,
-    Online_Service_Fee_dollar_amount: money,
-    Online_Payment_Fee_percentage: percent,
-    Online_Payment_Fee_dollar_amount: money,
-    payment_gateway: z.enum(['razorpay', 'stripe']),
+    serviceFeePercent: percent,
+    serviceFeeFlat: money,
+    paymentFeePercent: percent,
+    paymentFeeFlat: money,
+    paymentGateway: z.enum(['razorpay', 'stripe']),
     timezones: z.array(z.object({
         label: z.string().trim().min(1).max(80),
         value: z.string().trim().refine(isTimeZone, 'Unknown time zone')
-    })).min(1, 'Add at least one time zone').max(10),
-    verified_ambassador_unlock_fee: money.default(0),
-    ticket_outlet_unlock_fee: money.default(0),
-    boost_package_unlock_fee: money.default(0),
-    complimentary_ticket_bundles: z.coerce.number().int().min(0).max(100_000).default(0)
+    })).min(1, 'Add at least one time zone').max(10)
 });
-
-function decodeZones(raw) {
-    if (Array.isArray(raw)) return raw;
-    try {
-        const parsed = JSON.parse(String(raw || '[]'));
-        return Array.isArray(parsed) ? parsed : [];
-    } catch {
-        return [];
-    }
-}
 
 const serialize = (row, events = 0) => ({
     _id: row._id,
-    country_id: row.country_id,
     country: row.country,
     currency: row.currency,
-    Online_Service_Fee_percentage: row.Online_Service_Fee_percentage,
-    Online_Service_Fee_dollar_amount: row.Online_Service_Fee_dollar_amount,
-    Online_Payment_Fee_percentage: row.Online_Payment_Fee_percentage,
-    Online_Payment_Fee_dollar_amount: row.Online_Payment_Fee_dollar_amount,
-    payment_gateway: row.payment_gateway,
-    timezones: decodeZones(row.timezone),
-    verified_ambassador_unlock_fee: row.verified_ambassador_unlock_fee,
-    ticket_outlet_unlock_fee: row.ticket_outlet_unlock_fee,
-    boost_package_unlock_fee: row.boost_package_unlock_fee,
-    complimentary_ticket_bundles: row.complimentary_ticket_bundles,
+    serviceFeePercent: row.serviceFeePercent,
+    serviceFeeFlat: row.serviceFeeFlat,
+    paymentFeePercent: row.paymentFeePercent,
+    paymentFeeFlat: row.paymentFeeFlat,
+    paymentGateway: row.paymentGateway,
+    timezones: row.timezones || [],
     events,
     updated_at: row.updatedAt
 });
 
-const build = ({ timezones, ...rest }) => ({ ...rest, type: 'country', timezone: JSON.stringify(timezones) });
+const build = (data) => ({ ...data, type: 'country' });
 const nameRegex = (name) => new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
 
 export async function list(req, res) {
@@ -81,8 +62,7 @@ export async function create(req, res) {
     const data = parseBody(countrySchema, req, res);
     if (!data) return undefined;
     if (await GlobalSetting.exists({ type: 'country', country: nameRegex(data.country) })) return fail(res, 409, 'That country already exists');
-    const last = await GlobalSetting.findOne().sort({ country_id: -1 }).select('country_id').lean();
-    const doc = (await GlobalSetting.create({ ...build(data), country_id: (last?.country_id || 0) + 1 })).toObject();
+    const doc = (await GlobalSetting.create(build(data))).toObject();
     await invalidateCatalogCache();
     await audit(req, { action: 'country.create', targetType: 'GlobalSetting', targetId: doc._id, after: serialize(doc) });
     return res.status(201).json({ message: 'Country added', code: 200, result: serialize(doc) });

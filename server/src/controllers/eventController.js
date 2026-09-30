@@ -62,28 +62,10 @@ function monthBounds() {
     return { from, to };
 }
 
-function decodeCountryTimezones(raw) {
-    if (Array.isArray(raw)) return raw;
-    const text = String(raw || '').trim();
-    if (!text) return [];
-    try {
-        const decoded = JSON.parse(text);
-        return Array.isArray(decoded) ? decoded : [];
-    } catch {
-        const repaired = text.replace(/([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*:)/g, '$1"$2"$3');
-        try {
-            const decoded = JSON.parse(repaired);
-            return Array.isArray(decoded) ? decoded : [];
-        } catch {
-            return [];
-        }
-    }
-}
-
 function publicTicketTypes(ticketTypes = []) {
     return ticketTypes.filter((ticket) => {
         const type = String(ticket.type || ticket.name || '').toLowerCase();
-        return type !== 'apsession_complimentary' && type !== 'complimentary';
+        return type !== 'complimentary';
     }).map((ticket) => ({
         id: ticket._id,
         _id: ticket._id,
@@ -334,14 +316,7 @@ export async function legacyEventDetails(req, res) {
     const cover = covers[0]?.url || event.imageUrl || null;
     const flyer1 = flyers[0]?.url || null;
     const flyer2 = flyers[1]?.url || null;
-    const feeSetting = setting || {
-        currency: 'INR',
-        Online_Payment_Fee_percentage: 2.9,
-        Online_Payment_Fee_dollar_amount: 0.3,
-        Online_Service_Fee_percentage: 5,
-        Online_Service_Fee_dollar_amount: 0
-    };
-    const currency = feeSetting.currency || 'INR';
+    const currency = setting?.currency || 'INR';
     const tickets = publicTicketTypes(event.ticketTypes).map((ticket) => ({ ...ticket, currency }));
 
     Event.updateOne({ _id: event._id }, { $inc: { pageViews: 1 } }).catch(() => {});
@@ -375,16 +350,7 @@ export async function legacyEventDetails(req, res) {
             type: handler.type,
             status: handler.status
         })),
-        page_visits: (event.pageViews || 0) + 1,
-        _fee_settings: {
-            currency,
-            Online_Payment_Fee_percentage: Number(feeSetting.Online_Payment_Fee_percentage || 0),
-            Online_Payment_Fee_dollar_amount: Number(feeSetting.Online_Payment_Fee_dollar_amount || 0),
-            Online_Service_Fee_percentage: Number(feeSetting.Online_Service_Fee_percentage || 0),
-            Online_Service_Fee_dollar_amount: Number(feeSetting.Online_Service_Fee_dollar_amount || 0),
-            buyer_ticket_fee_amount_percentage: Number(feeSetting.Online_Service_Fee_percentage || 0),
-            buyer_ticket_fee_dollar_amount: Number(feeSetting.Online_Service_Fee_dollar_amount || 0)
-        }
+        page_visits: (event.pageViews || 0) + 1
     };
 
     const body = { message: 'Event fetched successfully', result, event: result, code: 200 };
@@ -417,26 +383,23 @@ export async function getRelatedEvents(req, res) {
 }
 
 export async function getCountryList(req, res) {
-    const countryId = req.query.country_id || req.query.global_setting_id;
     const country = String(req.query.country || '').trim();
-    const cacheKey = listCacheKey(`cache:catalog:${await catalogGeneration()}:countries`, { countryId, country });
+    const cacheKey = listCacheKey(`cache:catalog:${await catalogGeneration()}:countries`, { country });
     const cached = await cacheGet(cacheKey);
     if (cached) return res.json(cached);
 
-    let settings;
-    if (countryId) {
-        settings = await GlobalSetting.find({ country_id: Number(countryId), type: 'country' }).lean();
-    } else if (country) {
-        settings = await GlobalSetting.find({ country: new RegExp(`^${escapeRegex(country)}$`, 'i'), type: 'country' }).lean();
-    } else {
-        settings = await GlobalSetting.find({ type: 'country' }).lean();
-    }
-
+    const filter = { type: 'country', ...(country ? { country: new RegExp(`^${escapeRegex(country)}$`, 'i') } : {}) };
+    const settings = await GlobalSetting.find(filter).sort({ country: 1 }).lean();
     const result = settings.map((item) => ({
-        ...item,
-        fee: `${item.Online_Service_Fee_percentage || 0} % + $ ${item.Online_Service_Fee_dollar_amount || 0}`,
-        card_process_fees: `${item.Online_Payment_Fee_percentage || 0} % + $ ${item.Online_Payment_Fee_dollar_amount || 0}`,
-        timezone: decodeCountryTimezones(item.timezone)
+        _id: item._id,
+        country: item.country,
+        currency: item.currency,
+        serviceFeePercent: item.serviceFeePercent,
+        serviceFeeFlat: item.serviceFeeFlat,
+        paymentFeePercent: item.paymentFeePercent,
+        paymentFeeFlat: item.paymentFeeFlat,
+        paymentGateway: item.paymentGateway,
+        timezones: item.timezones || []
     }));
 
     const body = { message: 'Success', result, code: 200 };

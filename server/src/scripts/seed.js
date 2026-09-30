@@ -97,24 +97,10 @@ async function ensureReferenceData() {
     for (const city of demoCities) {
         await EventCity.updateOne({ country: city.country, name: city.name }, { $set: { ...city, status: 1 } }, { upsert: true });
     }
+    // Only create the default country; never overwrite fees an admin has changed.
     await GlobalSetting.updateOne(
-        { country_id: 1 },
-        {
-            $set: {
-                type: 'country',
-                country_id: 1,
-                country: 'India',
-                currency: 'INR',
-                Online_Payment_Fee_percentage: 2,
-                Online_Payment_Fee_dollar_amount: 0,
-                Online_Service_Fee_percentage: 5,
-                Online_Service_Fee_dollar_amount: 0,
-                payment_gateway: 'razorpay',
-                timezone: JSON.stringify([
-                    { label: 'India Standard Time', value: 'Asia/Kolkata' }
-                ])
-            }
-        },
+        { country: 'India' },
+        { $setOnInsert: { type: 'country', country: 'India', currency: 'INR', serviceFeePercent: 5, serviceFeeFlat: 0, paymentFeePercent: 2, paymentFeeFlat: 0, paymentGateway: 'razorpay', timezones: [{ label: 'India Standard Time', value: 'Asia/Kolkata' }] } },
         { upsert: true }
     );
 }

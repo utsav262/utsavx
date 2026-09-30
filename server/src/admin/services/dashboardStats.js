@@ -40,7 +40,7 @@ function dayKeys(start, end) {
 
 async function platformFeePercent() {
     const setting = await GlobalSetting.findOne({ country: 'India' }).lean() || await GlobalSetting.findOne().lean();
-    return Number(setting?.Online_Service_Fee_percentage ?? 5);
+    return Number(setting?.serviceFeePercent ?? 5);
 }
 
 async function compute(start, end) {

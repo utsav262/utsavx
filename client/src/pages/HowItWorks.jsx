@@ -1,44 +1,59 @@
-import {
-    Banknote, Bell, Globe, Landmark, QrCode, ScanLine, ShieldCheck, Smartphone, Store, Ticket, UserCog, Users
-} from 'lucide-react';
+import { BarChart3, CalendarPlus, Megaphone, QrCode, ShieldCheck, Users, Wallet } from 'lucide-react';
 import OrganizerPage, { FeatureCard, SectionHead } from '../components/marketing/OrganizerPage.jsx';
 
-const CHANNELS = [
-    { icon: Globe, title: 'Online', text: 'Your event page on MXO takes UPI and card payments. Buyers get their QR ticket the moment they pay.' },
-    { icon: Smartphone, title: 'Ambassadors', text: 'Your street team sells from their phones and collects cash, only from the tickets you assign them.' },
-    { icon: Store, title: 'Ticket outlets', text: 'Shops you trust sell your tickets over the counter for cash, from an allocation you control.' },
-    { icon: ScanLine, title: 'At the gate', text: 'Sell walk-ups at the door, then scan everyone in from the same dashboard.' }
+/** The host's journey, told in order — the page is built around this timeline. */
+const JOURNEY = [
+    {
+        icon: CalendarPlus,
+        when: 'Weeks before',
+        title: 'Set up your event',
+        text: 'Add the date, venue, photos and as many ticket types as you need — early bird, VIP, group. Our team gives it a quick check before it goes live.'
+    },
+    {
+        icon: Megaphone,
+        when: 'On-sale day',
+        title: 'Open ticket sales',
+        text: 'Share your event link or QR code anywhere. Fans pay with UPI or card and get their ticket in their MXO account straight away.'
+    },
+    {
+        icon: Users,
+        when: 'The build-up',
+        title: 'Let your people sell too',
+        text: 'Invite friends, promoters and local shops to sell for you. Each one only gets the tickets you hand them, and every sale is credited to the right person.'
+    },
+    {
+        icon: QrCode,
+        when: 'Event night',
+        title: 'Scan guests in',
+        text: 'Your door staff scan each ticket from a phone. A ticket works once — screenshots and repeats are turned away.'
+    },
+    {
+        icon: Wallet,
+        when: 'After the show',
+        title: 'Settle up',
+        text: 'See exactly what was sold, by whom and for how much. Online earnings go to your bank account; cash sales are totalled for a simple settlement.'
+    }
 ];
 
-const ROLES = [
-    { icon: UserCog, title: 'Event managers', text: 'Trusted co-pilots who run day-to-day operations: tickets, coupons, team and sales. Only you can edit or cancel the event itself.' },
-    { icon: Users, title: 'Ambassadors', text: 'A mobile sales force. They see and sell only the ticket types and quantities you assign, and every sale is tracked to them.' },
-    { icon: Store, title: 'Ticket outlets', text: 'Physical stores selling for cash from their allocation, with sales recorded against the outlet.' },
-    { icon: ScanLine, title: 'Scanners', text: 'Gate staff with one job: check tickets in fast. A ticket can only be scanned once.' }
+const TEAM = [
+    ['Co-organizers', 'Handle tickets, discount codes, team and sales alongside you. Editing or cancelling the event stays with you.'],
+    ['Promoters', 'Sell from their phone and collect cash, limited to the tickets you give them.'],
+    ['Partner shops', 'Sell over the counter from their own allocation of tickets.'],
+    ['Door staff', 'Only check tickets in. No access to sales or money.']
 ];
 
-const STEPS = [
-    ['Create your event', 'Add details, ticket types and prices, then submit it for a quick review.'],
-    ['Go live', 'Once approved, your event page opens for sales and you can share its link and QR code.'],
-    ['Build your team', 'Invite managers, ambassadors, outlets and scanners by email, each with their own permissions.'],
-    ['Sell everywhere', 'Online, cash through your team, and at the gate — all counted in one live dashboard.'],
-    ['Check guests in', 'Scan QR tickets at the entrance. Duplicates and cancelled tickets are refused.'],
-    ['Get paid', 'Online earnings are paid to your bank account; cash sales settle the platform fee.']
-];
-
-function ChannelDiagram() {
+function JourneyPreview() {
     return (
-        <div className="grid grid-cols-2 gap-2">
-            {CHANNELS.map(({ icon: Icon, title }) => (
-                <div key={title} className="flex items-center gap-3 border border-ink/10 bg-cream p-4">
-                    <Icon size={18} className="text-coral" />
+        <ol className="space-y-2">
+            {JOURNEY.map(({ icon: Icon, when, title }, i) => (
+                <li key={title} className="flex items-center gap-3 border border-ink/10 bg-cream px-4 py-3">
+                    <span className="grid h-7 w-7 shrink-0 place-items-center bg-ink text-xs font-extrabold text-white">{i + 1}</span>
+                    <Icon size={16} className="shrink-0 text-coral" />
                     <span className="text-sm font-extrabold">{title}</span>
-                </div>
+                    <span className="ml-auto hidden text-[11px] text-ink/45 sm:inline">{when}</span>
+                </li>
             ))}
-            <div className="col-span-2 flex items-center justify-center gap-2 bg-ink p-4 text-sm font-extrabold uppercase tracking-wider text-white">
-                <Ticket size={16} /> One live sales dashboard
-            </div>
-        </div>
+        </ol>
     );
 }
 
@@ -46,57 +61,46 @@ export default function HowItWorks() {
     return (
         <OrganizerPage
             eyebrow="How it works"
-            title="One platform. Every sales channel."
-            lead="Sell tickets online, through your team for cash, at partner shops and at the gate — and see every sale in one place."
-            aside={<ChannelDiagram />}
+            title="From first ticket to last guest in."
+            lead="MXO follows your event from the day you announce it to the night you open the doors — and after, when it's time to count the money."
+            aside={<JourneyPreview />}
         >
             <section className="space-y-8">
-                <SectionHead eyebrow="Sales channels" title="Reach buyers wherever they are" />
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    {CHANNELS.map((c) => <FeatureCard key={c.title} icon={c.icon} title={c.title}>{c.text}</FeatureCard>)}
-                </div>
-            </section>
-
-            <section className="grid gap-10 lg:grid-cols-2">
-                <SectionHead
-                    eyebrow="Online"
-                    title="Your event page, ready to sell"
-                    text="Every approved event gets its own page with a stable link that doesn’t change when you edit the event, so shared links and printed QR codes keep working."
-                />
-                <div className="grid gap-4 sm:grid-cols-2">
-                    <FeatureCard icon={ShieldCheck} title="Secure payments">Payments run through Razorpay, and seats are held while the buyer pays, so you never oversell.</FeatureCard>
-                    <FeatureCard icon={QrCode} title="Instant QR tickets">Each ticket has a unique code in the buyer’s account, ready to scan at the gate.</FeatureCard>
-                </div>
-            </section>
-
-            <section className="space-y-8">
-                <SectionHead
-                    eyebrow="Team"
-                    title="Roles that keep your money safe"
-                    text="Delegate the work without handing over your finances or event settings. Everyone gets exactly the access their job needs."
-                />
-                <div className="grid gap-4 sm:grid-cols-2">
-                    {ROLES.map((r) => <FeatureCard key={r.title} icon={r.icon} title={r.title}>{r.text}</FeatureCard>)}
-                </div>
-            </section>
-
-            <section className="space-y-8">
-                <SectionHead eyebrow="Step by step" title="From idea to sold out" />
-                <ol className="grid gap-px border border-ink/10 bg-ink/10 sm:grid-cols-2 lg:grid-cols-3">
-                    {STEPS.map(([title, text], i) => (
-                        <li key={title} className="bg-white p-6">
-                            <span className="serif text-4xl text-coral">{String(i + 1).padStart(2, '0')}</span>
-                            <h3 className="mt-2 font-extrabold">{title}</h3>
-                            <p className="mt-1 text-sm text-ink/60">{text}</p>
+                <SectionHead eyebrow="Your event, step by step" title="What running an event on MXO looks like" />
+                <ol className="relative space-y-6 border-l-2 border-ink/10 pl-8">
+                    {JOURNEY.map(({ icon: Icon, when, title, text }) => (
+                        <li key={title} className="relative">
+                            <span className="absolute -left-[45px] top-0 grid h-8 w-8 place-items-center border-2 border-cream bg-coral text-white">
+                                <Icon size={15} />
+                            </span>
+                            <p className="text-[11px] font-extrabold uppercase tracking-[.18em] text-ink/45">{when}</p>
+                            <h3 className="mt-1 text-lg font-extrabold">{title}</h3>
+                            <p className="mt-1 max-w-2xl text-ink/60">{text}</p>
                         </li>
                     ))}
                 </ol>
             </section>
 
+            <section className="grid gap-10 lg:grid-cols-[1fr_1.3fr]">
+                <SectionHead
+                    eyebrow="Your team"
+                    title="Share the work, keep control"
+                    text="Give each person access to exactly their job. Nobody sees more than they need, and your event settings and payouts stay yours."
+                />
+                <dl className="divide-y divide-ink/10 border border-ink/10 bg-white">
+                    {TEAM.map(([role, text]) => (
+                        <div key={role} className="grid gap-1 p-5 sm:grid-cols-[160px_1fr]">
+                            <dt className="font-extrabold">{role}</dt>
+                            <dd className="text-sm text-ink/60">{text}</dd>
+                        </div>
+                    ))}
+                </dl>
+            </section>
+
             <section className="grid gap-4 sm:grid-cols-3">
-                <FeatureCard icon={Bell} title="Live notifications">Hear about approvals, team invites, refunds and settlements as they happen.</FeatureCard>
-                <FeatureCard icon={Banknote} title="Cash you can trust">Every cash sale is logged against the person who made it, so collections are easy to reconcile.</FeatureCard>
-                <FeatureCard icon={Landmark} title="Payouts to your bank">Add your bank account once in your profile and earnings are paid there.</FeatureCard>
+                <FeatureCard icon={ShieldCheck} title="No overselling">Seats are held while a buyer pays, so two people can never get the same last ticket.</FeatureCard>
+                <FeatureCard icon={BarChart3} title="Numbers you can trust">Sales, check-ins and cash collected update live on your dashboard.</FeatureCard>
+                <FeatureCard icon={QrCode} title="One link, one QR">Your event link stays the same even after edits, so posters and shared links keep working.</FeatureCard>
             </section>
         </OrganizerPage>
     );

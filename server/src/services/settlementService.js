@@ -22,7 +22,7 @@ const round2 = (n) => Math.round(n * 100) / 100;
 
 async function feePercent() {
     const setting = await GlobalSetting.findOne({ country: 'India' }).lean() || await GlobalSetting.findOne().lean();
-    return Number(setting?.Online_Service_Fee_percentage ?? 5);
+    return Number(setting?.serviceFeePercent ?? 5);
 }
 
 /** Platform bank details hosts deposit into (configured via env until an admin setting exists). */

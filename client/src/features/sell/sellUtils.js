@@ -32,8 +32,8 @@ export function filterTicketsForMode(tickets, mode) {
         return rows.filter(
             (tier) =>
                 tier.is_complimentary
-                || /apsession.?complimentary/i.test(String(tier.name || ''))
-                || String(tier.type || '').toLowerCase() === 'apsession_complimentary'
+                || /^complimentary$/i.test(String(tier.name || '').trim())
+                || String(tier.type || '').toLowerCase() === 'complimentary'
         );
     }
     if (mode === 'gate') {

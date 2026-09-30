@@ -47,7 +47,7 @@ beforeAll(async () => {
 });
 beforeEach(async () => {
     await Promise.all([User, Event, BookingOrder, Settlement, AdminUser, AuditLog, Notification, GlobalSetting].map((m) => m.deleteMany({})));
-    await GlobalSetting.create({ country_id: 101, country: 'India', Online_Service_Fee_percentage: 5 });
+    await GlobalSetting.create({ country: 'India', serviceFeePercent: 5 });
     host = await User.create({ name: 'Host', email: 'host@t.dev', passwordHash: 'x', role: 'organizer' });
     other = await User.create({ name: 'Other', email: 'other@t.dev', passwordHash: 'x', role: 'organizer' });
     event = await Event.create({ organizer: host._id, title: 'Gig', slug: `gig-${Date.now()}`, description: 'd', category: 'Music', startsAt: new Date(), status: 'published' });

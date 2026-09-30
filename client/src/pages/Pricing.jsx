@@ -1,29 +1,25 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-    BarChart3, Banknote, ChevronDown, CreditCard, Headset, QrCode, ShieldCheck, Ticket, UserCheck, Users
+    BarChart3, Banknote, ChevronDown, CreditCard, QrCode, Ticket, Users
 } from 'lucide-react';
 import { apiClient } from '../api/index.js';
 import { unwrapList } from '../lib/unwrap.js';
 import OrganizerPage, { SectionHead } from '../components/marketing/OrganizerPage.jsx';
 
 const FEATURES = [
-    { icon: Ticket, title: 'Basics', items: ['Unlimited event listings', 'Unlimited ticket types per event', 'Mobile-friendly checkout', 'Sell from your phone and collect cash', 'Discount coupons'] },
-    { icon: QrCode, title: 'Ticketing', items: ['Unique QR code on every ticket', 'Tickets delivered to the buyer’s account', 'Seats held during checkout — no overselling', 'Optional printed tickets'] },
-    { icon: CreditCard, title: 'Payments', items: ['UPI and cards via Razorpay', 'Cash sales through your team', 'Payouts to your bank account', 'Clear cash settlements'] },
-    { icon: BarChart3, title: 'Sales tracking', items: ['Live sales dashboard', 'Sales by ticket type', 'Sales by team member', 'Check-in counts'] },
-    { icon: Users, title: 'Team & roles', items: ['Event managers', 'Ticket ambassadors', 'Ticket outlets', 'Gate scanners'] },
-    { icon: UserCheck, title: 'Entry', items: ['QR scanning at the gate', 'Duplicate scans refused', 'Cancelled tickets refused'] },
-    { icon: ShieldCheck, title: 'Security', items: ['Role-based access for every team member', 'Owner-only event edits and cancellation', 'Admin review before events go live'] },
-    { icon: Headset, title: 'Support', items: ['Help centre and FAQs', 'Email support'] }
+    { icon: Ticket, title: 'Selling', items: ['As many events and ticket types as you like', 'Online payments with UPI and cards', 'Cash sales by you and your team', 'Discount codes'] },
+    { icon: Users, title: 'Your team', items: ['Co-organizers, promoters, partner shops and door staff', 'Each person sees only their own job', 'Every sale credited to the person who made it'] },
+    { icon: QrCode, title: 'At the door', items: ['A unique QR code on every ticket', 'Codes work once — repeats are refused', 'Phone and paper tickets scan the same way'] },
+    { icon: BarChart3, title: 'Money & reports', items: ['Live sales and check-in numbers', 'Earnings paid to your bank account', 'Cash totals ready for settlement'] }
 ];
 
 const FAQS = [
-    ['How do I start selling tickets?', 'Create a host account, add your event with ticket types and prices, and submit it for review. Once approved, it goes live and you can sell online and through your team. Getting started is free.'],
-    ['Can I sell online and for cash?', 'Yes. Buyers can pay online on your event page, and your managers, ambassadors and outlets can sell for cash from their phones.'],
-    ['How do buyers get their tickets?', 'Each ticket, with its own QR code, appears in the buyer’s MXO account straight after purchase. You can resend tickets if a buyer needs them again.'],
-    ['Are free events free to run?', 'Yes. Fees only apply to paid tickets — there’s no charge for free tickets.'],
-    ['How do cash sales work?', 'Cash stays with you and your team. The MXO service fee on cash sales is totalled per event, and you settle it from the Settlements page.'],
-    ['How do I get paid for online sales?', 'Add your bank account in your Profile. Online earnings, after fees, are paid out to that account.']
+    ['Is there a monthly charge?', 'No. Creating an account and listing events is free. A fee is only taken when a paid ticket sells.'],
+    ['Do free events cost anything?', 'No. Free tickets carry no fees at all.'],
+    ['Who pays the fee — me or my buyers?', 'The fee comes out of the ticket price, so buyers pay exactly the price you set.'],
+    ['How are cash sales handled?', 'The cash stays with you and your team. MXO adds up the service fee on those sales per event, and you settle it from your Settlements page.'],
+    ['When do I get my online earnings?', 'Online earnings, minus fees, are paid to the bank account you add in your Profile.'],
+    ['Can the fees change?', 'Current fees are always shown on this page. The calculator above uses the live rates.']
 ];
 
 const fmt = (n) => new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
@@ -115,10 +111,10 @@ export default function Pricing() {
                 const row = rows.find((r) => /india/i.test(r.country)) || rows[0];
                 if (!row) throw new Error('No fee settings');
                 setFees({
-                    servicePct: Number(row.Online_Service_Fee_percentage) || 0,
-                    serviceFlat: Number(row.Online_Service_Fee_dollar_amount) || 0,
-                    paymentPct: Number(row.Online_Payment_Fee_percentage) || 0,
-                    paymentFlat: Number(row.Online_Payment_Fee_dollar_amount) || 0
+                    servicePct: Number(row.serviceFeePercent) || 0,
+                    serviceFlat: Number(row.serviceFeeFlat) || 0,
+                    paymentPct: Number(row.paymentFeePercent) || 0,
+                    paymentFlat: Number(row.paymentFeeFlat) || 0
                 });
             })
             .catch(() => setFailed(true));
@@ -147,7 +143,7 @@ export default function Pricing() {
             </section>
 
             <section className="space-y-8">
-                <SectionHead eyebrow="Everything included" title="Every feature, on every event" />
+                <SectionHead eyebrow="No plans, no tiers" title="Every event gets everything" />
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {FEATURES.map(({ icon: Icon, title, items }) => (
                         <article key={title} className="border border-ink/10 bg-white p-6">
@@ -162,7 +158,7 @@ export default function Pricing() {
             </section>
 
             <section className="space-y-6">
-                <SectionHead eyebrow="FAQ" title="Questions about fees" />
+                <SectionHead eyebrow="Fee questions" title="Straight answers" />
                 <div className="divide-y divide-ink/10 border-y border-ink/10">
                     {FAQS.map(([q, a], i) => (
                         <div key={q}>

@@ -60,7 +60,7 @@ export function isSystemComplimentary(ticket) {
     if (ticket.is_complimentary) return true;
     const name = String(ticket.name || '');
     const type = String(ticket.type || '');
-    return /apsession.?complimentary/i.test(name) || type.toLowerCase() === 'apsession_complimentary';
+    return /^complimentary$/i.test(name.trim()) || type.toLowerCase() === 'complimentary';
 }
 
 export function isEditableTicket(ticket) {

@@ -281,8 +281,8 @@ export async function listSellableTickets(user, eventId) {
             currency: type.currency || 'INR',
             type: type.type || null,
             ticket_type: type.ticketType || (Number(type.price) === 0 ? 'free' : 'paid'),
-            is_complimentary: /apsession.?complimentary|complimentary/i.test(String(type.name || ''))
-                || String(type.type || '').toLowerCase() === 'apsession_complimentary'
+            is_complimentary: /complimentary/i.test(String(type.name || ''))
+                || String(type.type || '').toLowerCase() === 'complimentary'
                 || Number(type.price) === 0 && /complimentary/i.test(String(type.name || ''))
         })),
         handler: handler
