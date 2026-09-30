@@ -17,6 +17,7 @@ import adminRoutes from './admin/routes/index.js';
 import { notFound, errorHandler } from './middleware/error.js';
 import { webhook } from './controllers/paymentController.js';
 import { seedIfEmpty } from './scripts/seed.js';
+import { bootstrapSuperAdmin } from './admin/bootstrap.js';
 import { asyncHandler } from './middleware/asyncHandler.js';
 import { setupSwagger } from './docs/swagger.js';
 import { startHoldExpiryJob } from './jobs/expireHolds.js';
@@ -108,6 +109,7 @@ async function start() {
     await mongoose.connect(env.mongoUri);
     // Ensure README demo accounts exist in every environment (including Render).
     await seedIfEmpty();
+    await bootstrapSuperAdmin();
     await connectRedis();
     await configureRateLimiter();
     startHoldExpiryJob({ intervalMs: 30_000 });
