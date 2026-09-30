@@ -3,15 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { setUser } from '../store/index.js';
 import { apiClient } from '../api/index.js';
-
-function destinationAfterAuth(user, from) {
-    if (from && from !== '/login') return from;
-    if (user?.role === 'admin') return '/admin-legacy';
-    if (user?.role === 'organizer') return '/dashboard';
-    // Pure customers land on Discover home — not Invitations / staff dashboard.
-    if (user?.role === 'customer' && user?.staffEvents?.length) return '/dashboard';
-    return '/';
-}
+import { destinationAfterAuth } from '../lib/afterAuth.js';
 
 export default function Login() {
     const dispatch = useDispatch();

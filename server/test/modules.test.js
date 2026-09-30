@@ -17,6 +17,8 @@ import Coupon from '../src/models/Coupon.js';
 import Notification from '../src/models/Notification.js';
 import Broadcast from '../src/models/Broadcast.js';
 import EventCategory from '../src/models/EventCategory.js';
+import GlobalSetting from '../src/models/GlobalSetting.js';
+import SiteSetting from '../src/models/SiteSetting.js';
 
 const TEST_URI = process.env.MONGO_URI_TEST_MODULES || 'mongodb://127.0.0.1:27017/utsavx_test_modules';
 const app = express();
@@ -43,7 +45,7 @@ const api = (method, path, who, body) => {
 let host, buyer, event, order;
 beforeAll(async () => { await mongoose.connect(TEST_URI); });
 beforeEach(async () => {
-    await Promise.all([AdminUser, AuditLog, User, Event, BookingOrder, Ticket, Coupon, Notification, Broadcast, EventCategory].map((m) => m.deleteMany({})));
+    await Promise.all([AdminUser, AuditLog, User, Event, BookingOrder, Ticket, Coupon, Notification, Broadcast, EventCategory, GlobalSetting, SiteSetting].map((m) => m.deleteMany({})));
     tokens.support = await adminAs('support');
     tokens.admin = await adminAs('admin');
     tokens.super = await adminAs('super_admin');
@@ -237,5 +239,57 @@ describe('admin users & audit', () => {
         expect(res.status).toBe(200);
         expect(res.body.result.every((r) => r.action.startsWith('user.'))).toBe(true);
         expect(res.body.actions).toContain('user.host_verify');
+    });
+});
+
+describe('countries & fees', () => {
+    const IN = {
+        country: 'India', currency: 'inr', payment_gateway: 'razorpay',
+        Online_Service_Fee_percentage: 5, Online_Service_Fee_dollar_amount: 0,
+        Online_Payment_Fee_percentage: 2, Online_Payment_Fee_dollar_amount: 0,
+        timezones: [{ label: 'India Standard Time', value: 'Asia/Kolkata' }]
+    };
+
+    it('only super admins change fees; everyone can read', async () => {
+        expect((await api('post', '/catalog/countries', 'admin', IN)).status).toBe(403);
+        const created = await api('post', '/catalog/countries', 'super', IN);
+        expect(created.status).toBe(201);
+        expect(created.body.result).toMatchObject({ currency: 'INR', country_id: 1, timezones: IN.timezones });
+        expect((await api('get', '/catalog/countries', 'support')).body.result).toHaveLength(1);
+        expect((await api('post', '/catalog/countries', 'super', { ...IN, country: 'india' })).status).toBe(409);
+    });
+
+    it('validates fees and time zones, and audits edits', async () => {
+        const bad = await api('post', '/catalog/countries', 'super', { ...IN, Online_Service_Fee_percentage: 80, timezones: [{ label: 'x', value: 'Mars/Base' }] });
+        expect(bad.status).toBe(422);
+        const { body } = await api('post', '/catalog/countries', 'super', IN);
+        const edited = await api('patch', `/catalog/countries/${body.result._id}`, 'super', { ...IN, Online_Service_Fee_percentage: 4.5 });
+        expect(edited.body.result.Online_Service_Fee_percentage).toBe(4.5);
+        expect(await AuditLog.exists({ action: 'country.update' })).toBeTruthy();
+    });
+
+    it('refuses to delete or rename a country that events use', async () => {
+        const { body } = await api('post', '/catalog/countries', 'super', IN);
+        await api('post', '/catalog/countries', 'super', { ...IN, country: 'Nepal', currency: 'NPR' });
+        await Event.updateOne({ _id: event._id }, { $set: { 'venue.country': 'India' } });
+        expect((await api('delete', `/catalog/countries/${body.result._id}`, 'super')).status).toBe(409);
+        expect((await api('patch', `/catalog/countries/${body.result._id}`, 'super', { ...IN, country: 'Bharat' })).status).toBe(409);
+    });
+});
+
+describe('site settings', () => {
+    const SITE = {
+        locations: 'Pune · Goa', support_email: 'help@utsavx.in', support_phone: '+91 80000 00000',
+        support_hours: 'Daily 9–9', office_address: 'Pune 411001',
+        social: { instagram: 'https://instagram.com/utsavx', twitter: '', facebook: '', youtube: '', linkedin: '' }
+    };
+    it('super admin edits contact details; others read only; bad links rejected', async () => {
+        expect((await api('get', '/settings/site', 'support')).body.result.support_email).toBe('hello@utsavx.com');
+        expect((await api('put', '/settings/site', 'admin', SITE)).status).toBe(403);
+        const bad = await api('put', '/settings/site', 'super', { ...SITE, support_email: 'nope', social: { ...SITE.social, twitter: 'javascript:alert(1)' } });
+        expect(bad.status).toBe(422);
+        const ok = await api('put', '/settings/site', 'super', SITE);
+        expect(ok.body.result).toMatchObject({ locations: 'Pune · Goa', support_email: 'help@utsavx.in' });
+        expect(await AuditLog.exists({ action: 'site_settings.update' })).toBeTruthy();
     });
 });

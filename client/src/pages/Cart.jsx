@@ -1,9 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Trash2, Minus, Plus, Ticket, ShieldCheck,
-  Tag, ArrowRight, ShoppingBag, Calendar, MapPin, AlertCircle
+  ArrowRight, ShoppingBag, Calendar, MapPin, AlertCircle
 } from 'lucide-react';
 import { remove, updateQuantity } from '../store/index.js';
 import { money } from '../lib/money.js';
@@ -13,9 +13,6 @@ export default function Cart() {
   const items = useSelector((state) => state.cart.items);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [coupon, setCoupon] = useState('');
-  const [couponApplied, setCouponApplied] = useState(false);
-  const [couponError, setCouponError] = useState('');
 
   // ---------- DERIVED ----------
   const subtotal = useMemo(
@@ -23,13 +20,8 @@ export default function Cart() {
     [items]
   );
 
-  const platformFee = useMemo(
-    () => items.length ? Math.round(subtotal * 0.02) + items.length * 5 : 0,
-    [subtotal, items.length]
-  );
-
-  const discount = couponApplied ? Math.round(subtotal * 0.1) : 0;
-  const total = subtotal + platformFee - discount;
+  // Buyers pay the ticket price only; this must match what the server charges.
+  const total = subtotal;
   const totalTickets = items.reduce((sum, i) => sum + i.quantity, 0);
 
   // ---------- HANDLERS ----------
@@ -43,16 +35,6 @@ export default function Cart() {
   const handleRemove = (id, title) => {
     if (window.confirm(`Remove "${title}" from cart?`)) {
       dispatch(remove(id));
-    }
-  };
-
-  const handleCoupon = () => {
-    setCouponError('');
-    if (coupon.trim().toUpperCase() === 'UTSAV10') {
-      setCouponApplied(true);
-    } else {
-      setCouponApplied(false);
-      setCouponError('Invalid coupon code. Try UTSAV10.');
     }
   };
 
@@ -150,62 +132,11 @@ export default function Cart() {
 
                 <div className="mt-5 space-y-2 text-sm">
                   <Row label={`Subtotal (${totalTickets} tickets)`} value={money(subtotal)} />
-                  <Row label="Platform fee" value={money(platformFee)} />
-                  {couponApplied && (
-                    <Row
-                      label="Coupon (UTSAV10)"
-                      value={`− ${money(discount)}`}
-                      accent="text-green-600"
-                    />
-                  )}
+                  <Row label="Booking fee" value="None" />
                   <div className="mt-3 flex justify-between border-t border-ink/10 pt-3 text-lg font-extrabold">
                     <span>Total</span>
                     <span>{money(total)}</span>
                   </div>
-                </div>
-
-                {/* Coupon */}
-                <div className="mt-5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-ink/55">
-                    Have a coupon?
-                  </label>
-                  {couponApplied ? (
-                    <div className="mt-2 flex items-center justify-between bg-green-50 px-4 py-2.5 text-sm">
-                      <span className="font-bold text-green-700">
-                        UTSAV10 applied
-                      </span>
-                      <button
-                        onClick={() => {
-                          setCouponApplied(false);
-                          setCoupon('');
-                        }}
-                        className="text-xs font-bold text-green-700 hover:underline"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="mt-2 flex gap-2">
-                      <div className="relative flex-1">
-                        <Tag className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
-                        <input
-                          value={coupon}
-                          onChange={(e) => setCoupon(e.target.value)}
-                          placeholder="Enter code"
-                          className="w-full border border-ink/20 bg-transparent pl-9 pr-3 py-2.5 text-sm outline-none focus:border-coral"
-                        />
-                      </div>
-                      <button
-                        onClick={handleCoupon}
-                        className="bg-ink px-4 py-2.5 text-sm font-bold text-white hover:opacity-90"
-                      >
-                        Apply
-                      </button>
-                    </div>
-                  )}
-                  {couponError && (
-                    <p className="mt-1.5 text-xs text-red-600">{couponError}</p>
-                  )}
                 </div>
 
                 {/* CTA */}

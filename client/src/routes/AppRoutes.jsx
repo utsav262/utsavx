@@ -6,6 +6,7 @@ import { apiClient } from '../api/index.js';
 import { unwrap } from '../lib/unwrap.js';
 import Header from '../components/layout/Header.jsx';
 import Footer from '../components/layout/Footer.jsx';
+import ManagerShell, { useInManagerShell } from '../components/layout/ManagerShell.jsx';
 import RequireAuth from '../components/auth/RequireAuth.jsx';
 import RequireRole from '../components/auth/RequireRole.jsx';
 import RequireGuest from '../components/auth/RequireGuest.jsx';
@@ -29,6 +30,7 @@ import AddTeamMember from '../features/team/AddTeamMember.jsx';
 import TeamMemberPage from '../features/team/TeamMemberPage.jsx';
 import Notifications from '../pages/Notifications.jsx';
 import Settlements from '../pages/Settlements.jsx';
+import Profile from '../pages/Profile.jsx';
 import Sell from '../pages/Sell.jsx';
 
 import About from '../pages/About.jsx';
@@ -36,6 +38,9 @@ import Careers from '../pages/Careers.jsx';
 import Blog from '../pages/Blog.jsx';
 import Press from '../pages/Press.jsx';
 import Pricing from '../pages/Pricing.jsx';
+import HowItWorks from '../pages/HowItWorks.jsx';
+import TicketOutlets from '../pages/TicketOutlets.jsx';
+import PhysicalTickets from '../pages/PhysicalTickets.jsx';
 import Help from '../pages/Help.jsx';
 import Contact from '../pages/Contact.jsx';
 import Refunds from '../pages/Refunds.jsx';
@@ -49,6 +54,7 @@ import Unauthorized from '../pages/Unauthorized.jsx';
 
 export default function AppRoutes() {
   const dispatch = useDispatch();
+  const inShell = useInManagerShell();
 
   useEffect(() => {
     if (!localStorage.getItem('utsavx_token')) return;
@@ -70,9 +76,7 @@ export default function AppRoutes() {
       });
   }, [dispatch]);
 
-  return (
-    <>
-      <Header />
+  const routes = (
       <Routes>
         {/* ---------- PUBLIC ---------- */}
         <Route path="/" element={<Home />} />
@@ -88,6 +92,9 @@ export default function AppRoutes() {
         <Route path="/blog/:slug" element={<Blog />} />
         <Route path="/press" element={<Press />} />
         <Route path="/pricing" element={<Pricing />} />
+        <Route path="/how-it-works" element={<HowItWorks />} />
+        <Route path="/ticket-outlets" element={<TicketOutlets />} />
+        <Route path="/physical-tickets" element={<PhysicalTickets />} />
         <Route path="/help" element={<Help />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/refunds" element={<Refunds />} />
@@ -113,6 +120,7 @@ export default function AppRoutes() {
         <Route path="/dashboard/events/:eventId/team/add" element={<RequireAuth><AddTeamMember /></RequireAuth>} />
         <Route path="/dashboard/events/:eventId/team/:handlerId" element={<RequireAuth><TeamMemberPage /></RequireAuth>} />
         <Route path="/notifications" element={<RequireAuth><Notifications /></RequireAuth>} />
+        <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
         <Route path="/dashboard/settlements" element={<RequireRole roles={['organizer']}><Settlements /></RequireRole>} />
         <Route path="/dashboard/sell/:eventId" element={<RequireAuth><Sell /></RequireAuth>} />
 
@@ -125,6 +133,14 @@ export default function AppRoutes() {
         {/* ---------- FALLBACK ---------- */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+  );
+
+  if (inShell) return <ManagerShell>{routes}</ManagerShell>;
+
+  return (
+    <>
+      <Header />
+      {routes}
       <Footer />
     </>
   );

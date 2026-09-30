@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import {
-    BadgePercent, CalendarDays, FileClock, LayoutGrid, LogOut, Megaphone, Menu,
-    Moon, Receipt, Shield, Sun, Users, Wallet, X
+    BadgePercent, CalendarDays, FileClock, Globe2, LayoutGrid, LogOut, Megaphone, Menu,
+    Moon, Receipt, Settings, Shield, Sun, Users, Wallet, X
 } from 'lucide-react';
 import { AdminAuthProvider, canSee, useAdminAuth } from './AdminAuth.jsx';
 import AdminLogin from './pages/Login.jsx';
@@ -15,6 +15,8 @@ import AdminCoupons from './pages/Coupons.jsx';
 import AdminNotifications from './pages/Notifications.jsx';
 import AdminAdmins from './pages/AdminUsers.jsx';
 import AdminAuditLog from './pages/AuditLog.jsx';
+import AdminCountries from './pages/Countries.jsx';
+import AdminSiteSettings from './pages/SiteSettings.jsx';
 
 /** Menu is role-filtered to match the server's role matrix (admin/routes/index.js). */
 const ALL = ['super_admin', 'admin', 'support'];
@@ -26,6 +28,8 @@ const MENU = [
     { to: '/admin/orders', label: 'Orders & tickets', Icon: Receipt, roles: ALL },
     { to: '/admin/settlements', label: 'Settlements', Icon: Wallet, roles: ALL },
     { to: '/admin/coupons', label: 'Coupons', Icon: BadgePercent, roles: ALL },
+    { to: '/admin/countries', label: 'Countries & fees', Icon: Globe2, roles: ALL },
+    { to: '/admin/site', label: 'Site settings', Icon: Settings, roles: ALL },
     { to: '/admin/notifications', label: 'Notifications', Icon: Megaphone, roles: STAFF },
     { to: '/admin/admins', label: 'Admin users', Icon: Shield, roles: ['super_admin'] },
     { to: '/admin/audit', label: 'Audit log', Icon: FileClock, roles: STAFF }
@@ -172,6 +176,8 @@ export default function AdminApp() {
                             <Route path="orders" element={<AdminOrders />} />
                             <Route path="settlements" element={<AdminSettlements />} />
                             <Route path="coupons" element={<AdminCoupons />} />
+                            <Route path="countries" element={<AdminCountries />} />
+                            <Route path="site" element={<AdminSiteSettings />} />
                             <Route path="notifications" element={<RoleGate roles={STAFF}><AdminNotifications /></RoleGate>} />
                             <Route path="admins" element={<RoleGate roles={['super_admin']}><AdminAdmins /></RoleGate>} />
                             <Route path="audit" element={<RoleGate roles={STAFF}><AdminAuditLog /></RoleGate>} />

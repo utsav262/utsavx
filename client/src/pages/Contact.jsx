@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Mail, Phone, MapPin, Send } from 'lucide-react';
 import StaticPage from '../components/layout/StaticPage.jsx';
+import { telHref, useSiteSettings } from '../lib/useSiteSettings.js';
 
 export default function Contact() {
+  const site = useSiteSettings();
   const [sent, setSent] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', subject: 'General', message: '' });
 
@@ -19,26 +21,26 @@ export default function Contact() {
       <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr]">
         {/* Info */}
         <div className="space-y-4">
-          <a href="mailto:hello@utsavx.com" className="flex items-start gap-3 border border-ink/10 bg-white p-5 hover:border-coral">
+          <a href={`mailto:${site.support_email}`} className="flex items-start gap-3 border border-ink/10 bg-white p-5 hover:border-coral">
             <Mail className="mt-0.5 h-5 w-5 text-coral" />
             <div>
               <p className="font-bold">Email</p>
-              <p className="text-sm text-ink/60">hello@utsavx.com</p>
+              <p className="text-sm text-ink/60">{site.support_email}</p>
             </div>
           </a>
-          <a href="tel:+919999999999" className="flex items-start gap-3 border border-ink/10 bg-white p-5 hover:border-coral">
+          <a href={telHref(site.support_phone)} className="flex items-start gap-3 border border-ink/10 bg-white p-5 hover:border-coral">
             <Phone className="mt-0.5 h-5 w-5 text-coral" />
             <div>
               <p className="font-bold">Phone</p>
-              <p className="text-sm text-ink/60">+91 99999 99999</p>
-              <p className="text-xs text-ink/45">Mon–Sat, 10am–7pm IST</p>
+              <p className="text-sm text-ink/60">{site.support_phone}</p>
+              {site.support_hours ? <p className="text-xs text-ink/45">{site.support_hours}</p> : null}
             </div>
           </a>
           <div className="flex items-start gap-3 border border-ink/10 bg-white p-5">
             <MapPin className="mt-0.5 h-5 w-5 text-coral" />
             <div>
               <p className="font-bold">Office</p>
-              <p className="text-sm text-ink/60">UTSAVX Pvt Ltd<br />Bandra West, Mumbai 400050</p>
+              <p className="whitespace-pre-line text-sm text-ink/60">{site.office_address}</p>
             </div>
           </div>
         </div>

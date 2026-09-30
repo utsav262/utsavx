@@ -3,13 +3,13 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import {
   LogOut, Menu, ShoppingBag, UserRound, X, ChevronDown,
   Ticket, LayoutDashboard, Sparkles, ShieldCheck, Mail,
-  Calendar, Plus, Bell, Search, Landmark
+  Calendar, Plus, Bell, Search, Landmark, Settings
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { signOut } from '../../store/index.js';
 
 /* ----------------------------- helpers ----------------------------- */
-function roleLabel(user) {
+export function roleLabel(user) {
   if (!user) return 'Guest';
   if (user.role === 'admin') return 'Admin';
   if (user.role === 'organizer') return 'Manager';
@@ -91,6 +91,8 @@ export default function Header() {
     }
   } else {
     links.push({ to: '/organizer', label: 'For organizers' });
+    links.push({ to: '/how-it-works', label: 'How it works' });
+    links.push({ to: '/pricing', label: 'Pricing' });
   }
 
   const close = () => setMobileOpen(false);
@@ -229,6 +231,9 @@ export default function Header() {
 
                   {/* Menu items */}
                   <div className="p-1.5">
+                    <MenuItem to="/profile" icon={<Settings size={15} />} onClick={() => setUserMenuOpen(false)}>
+                      Profile
+                    </MenuItem>
                     <MenuItem to="/tickets" icon={<Ticket size={15} />} onClick={() => setUserMenuOpen(false)}>
                       My tickets
                     </MenuItem>
@@ -392,6 +397,11 @@ export default function Header() {
                   {l.label}
                 </NavLink>
               ))}
+              {user && (
+                <MobileLink to="/profile" icon={<Settings size={16} />} onClick={close}>
+                  Profile
+                </MobileLink>
+              )}
               <MobileLink to="/tickets" icon={<Ticket size={16} />} onClick={close}>
                 My tickets
               </MobileLink>

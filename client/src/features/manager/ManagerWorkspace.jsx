@@ -68,6 +68,9 @@ export default function ManagerWorkspace() {
     if (location.state?.view === 'create') {
       setView('create');
       setEditEventId(location.state?.eventId || null);
+    } else if (location.state?.view === 'home') {
+      setView('home');
+      setEditEventId(null);
     }
   }, [location.state]);
 

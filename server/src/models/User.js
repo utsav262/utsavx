@@ -6,6 +6,21 @@ const userSchema = new mongoose.Schema({
     passwordHash: { type: String, required: true, select: false },
     role: { type: String, enum: ['customer', 'organizer', 'admin'], default: 'customer', index: true },
     avatarUrl: String,
+    phone: { type: String, trim: true, default: null },
+    /** Where the platform pays out this host. Only organizers can set it. */
+    payoutBank: {
+        type: new mongoose.Schema({
+            accountHolderName: { type: String, trim: true },
+            bankName: { type: String, trim: true },
+            branch: { type: String, trim: true },
+            accountNumber: { type: String, trim: true },
+            ifsc: { type: String, trim: true, uppercase: true },
+            accountType: { type: String, enum: ['savings', 'current'] },
+            upiId: { type: String, trim: true },
+            updatedAt: Date
+        }, { _id: false }),
+        default: null
+    },
     /** Suspended accounts cannot sign in or use the API. */
     status: { type: String, enum: ['active', 'suspended'], default: 'active', index: true },
     suspendedAt: Date,

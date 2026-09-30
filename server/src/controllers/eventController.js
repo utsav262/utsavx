@@ -419,7 +419,7 @@ export async function getRelatedEvents(req, res) {
 export async function getCountryList(req, res) {
     const countryId = req.query.country_id || req.query.global_setting_id;
     const country = String(req.query.country || '').trim();
-    const cacheKey = listCacheKey('cache:catalog:countries', { countryId, country });
+    const cacheKey = listCacheKey(`cache:catalog:${await catalogGeneration()}:countries`, { countryId, country });
     const cached = await cacheGet(cacheKey);
     if (cached) return res.json(cached);
 
@@ -491,7 +491,7 @@ export async function eventBooking(req, res) {
 
 export async function getCities(req, res) {
     const country = req.params.country;
-    const cacheKey = listCacheKey('cache:catalog:cities', { country });
+    const cacheKey = listCacheKey(`cache:catalog:${await catalogGeneration()}:cities`, { country });
     const cached = await cacheGet(cacheKey);
     if (cached) return res.json(cached);
 
@@ -502,7 +502,7 @@ export async function getCities(req, res) {
 }
 
 export async function getCategories(req, res) {
-    const cacheKey = 'cache:catalog:categories';
+    const cacheKey = `cache:catalog:${await catalogGeneration()}:categories`;
     const cached = await cacheGet(cacheKey);
     if (cached) return res.json(cached);
 

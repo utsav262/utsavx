@@ -135,14 +135,19 @@ export async function refund(req, res) {
     }
 
     // Money has moved: record it, cancel tickets and return seats atomically.
+    const record = async (session) => {
+        await BookingOrder.updateOne({ _id: order._id }, {
+            $set: { status: 'refunded', refundedAt: new Date(), refundedBy: req.admin._id, refundReason: data.reason, refundMethod: result.method, refundReference: result.reference }
+        }, { session });
+        await Ticket.updateMany({ order: order._id, status: 'valid' }, { $set: { status: 'cancelled' } }, { session });
+    };
     const session = await mongoose.startSession();
     try {
-        await session.withTransaction(async () => {
-            await BookingOrder.updateOne({ _id: order._id }, {
-                $set: { status: 'refunded', refundedAt: new Date(), refundedBy: req.admin._id, refundReason: data.reason, refundMethod: result.method, refundReference: result.reference }
-            }, { session });
-            await Ticket.updateMany({ order: order._id, status: 'valid' }, { $set: { status: 'cancelled' } }, { session });
-        });
+        await session.withTransaction(() => record(session));
+    } catch (error) {
+        // Standalone MongoDB (no replica set) can't run transactions; the money already moved, so still record it.
+        if (error.code !== 20 && !/replica set|Transaction numbers/i.test(error.message)) throw error;
+        await record(undefined);
     } finally {
         await session.endSession();
     }

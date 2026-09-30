@@ -94,11 +94,26 @@ function UserDrawer({ id, onClose, onChanged }) {
                     <div className="mt-6">
                         <Facts items={[
                             ['Joined', day(user.created_at)],
+                            ['Phone', user.phone || '—'],
                             ['Paid orders', user.stats.paid_orders],
                             ['Total spent', money(user.stats.total_spent)],
                             ['Events hosted', user.stats.events_hosted]
                         ]} />
                     </div>
+                    {user.role === 'organizer' ? (
+                        <Section title="Payout bank account">
+                            {user.payout_bank ? (
+                                <Facts items={[
+                                    ['Name on account', user.payout_bank.account_holder_name],
+                                    ['Bank', [user.payout_bank.bank_name, user.payout_bank.branch].filter(Boolean).join(' · ')],
+                                    ['Account no.', <span key="n" className="font-mono">{user.payout_bank.account_number || user.payout_bank.account_number_masked}</span>],
+                                    ['IFSC', <span key="i" className="font-mono">{user.payout_bank.ifsc}</span>],
+                                    ['Type', user.payout_bank.account_type],
+                                    ['UPI', user.payout_bank.upi_id || '—']
+                                ]} />
+                            ) : <p className="text-sm text-ink/50 dark:text-white/50">No bank account added yet.</p>}
+                        </Section>
+                    ) : null}
                     {user.events.length ? (
                         <Section title="Hosted events">
                             <ul className="divide-y divide-ink/10 text-sm dark:divide-white/10">

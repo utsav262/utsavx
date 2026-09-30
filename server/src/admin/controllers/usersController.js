@@ -1,3 +1,4 @@
+import { serializeBank } from '../../controllers/accountController.js';
 import { z } from 'zod';
 import mongoose from 'mongoose';
 import User from '../../models/User.js';
@@ -55,7 +56,10 @@ export async function detail(req, res) {
             stats: { paid_orders: orderStats[0]?.n || 0, total_spent: orderStats[0]?.spent || 0, events_hosted: hosted.length },
             orders: orders.map((o) => ({ _id: o._id, order_number: o.orderNumber, event: o.event?.title, total: o.total, status: o.status, created_at: o.createdAt })),
             events: hosted.map((e) => ({ _id: e._id, title: e.title, status: e.status, starts_at: e.startsAt })),
-            team_roles: handlerRoles.map((h) => ({ event: h.event?.title, role: h.userType, status: h.invitationStatus }))
+            team_roles: handlerRoles.map((h) => ({ event: h.event?.title, role: h.userType, status: h.invitationStatus })),
+            phone: user.phone || null,
+            // Full number for staff who send payouts; support sees it masked.
+            payout_bank: serializeBank(user.payoutBank, { full: req.admin.role !== 'support' })
         }
     });
 }

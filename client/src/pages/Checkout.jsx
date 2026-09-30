@@ -66,30 +66,16 @@ export default function Checkout() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [showTestInfo, setShowTestInfo] = useState(true);
-  const [secondsLeft, setSecondsLeft] = useState(15 * 60);
 
   /* ---------- Derived ---------- */
   const subtotal = useMemo(
     () => items.reduce((sum, i) => sum + i.price * i.quantity, 0),
     [items]
   );
-  const platformFee = useMemo(
-    () => items.length ? Math.round(subtotal * 0.02) + items.length * 5 : 0,
-    [subtotal, items.length]
-  );
-  const total = subtotal + platformFee;
+  // Buyers pay the ticket price only; this must match what the server charges.
+  const total = subtotal;
   const totalTickets = items.reduce((sum, i) => sum + i.quantity, 0);
 
-  /* ---------- Hold timer ---------- */
-  useEffect(() => {
-    const t = setInterval(() => {
-      setSecondsLeft((s) => (s > 0 ? s - 1 : 0));
-    }, 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  const mm = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
-  const ss = String(secondsLeft % 60).padStart(2, '0');
 
   /* ---------- Guards ---------- */
   if (!user) {
@@ -154,7 +140,7 @@ export default function Checkout() {
         }
 
         setMessage(
-          'Online payment gateway is required. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to server/.env, then restart the API.'
+          'Online payments are unavailable right now. Please try again later or contact support.'
         );
         return;
       }
@@ -212,27 +198,17 @@ export default function Checkout() {
           {/* ============ LEFT ============ */}
           <div className="space-y-6">
 
-            {/* Timer banner */}
-            <div className="flex items-center justify-between border border-amber-200 bg-amber-50 px-5 py-3.5">
-              <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-amber-600" />
-                <span className="font-bold text-amber-800">
-                  Tickets reserved
-                </span>
-                <span className="text-amber-700">· Complete payment soon</span>
-              </div>
-              <span className="bg-amber-600 px-3 py-1 text-xs font-bold text-white tabular-nums">
-                {mm}:{ss}
-              </span>
+            {/* Hold notice: seats are only held once the order is created on Pay. */}
+            <div className="flex items-center gap-2 border border-amber-200 bg-amber-50 px-5 py-3.5 text-sm text-amber-800">
+              <Clock className="h-4 w-4 shrink-0 text-amber-600" />
+              <span><span className="font-bold">Seats are held for 15 minutes</span> once you tap Pay, while you complete payment.</span>
             </div>
 
             {/* User card */}
             <div className="border border-ink/10 bg-white p-6">
               <div className="flex items-center justify-between">
                 <h2 className="serif text-2xl">Contact details</h2>
-                <button className="text-xs font-bold text-coral hover:underline">
-                  Edit
-                </button>
+                <Link to="/profile" className="text-xs font-bold text-coral hover:underline">Edit</Link>
               </div>
               <div className="mt-4 flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-coral/10 text-lg font-extrabold text-coral">
@@ -245,7 +221,7 @@ export default function Checkout() {
                 <CheckCircle2 className="ml-auto h-5 w-5 text-green-600" />
               </div>
               <p className="mt-4 text-xs text-ink/45">
-                Tickets will be sent to this email after payment.
+                Your tickets appear in My tickets right after payment.
               </p>
             </div>
 
@@ -253,7 +229,7 @@ export default function Checkout() {
             <div className="border border-ink/10 bg-white p-6">
               <h2 className="serif text-2xl">Payment method</h2>
               <p className="mt-1 text-sm text-ink/55">
-                Razorpay ke through secure payment — UPI, cards, netbanking.
+                Pay securely with Razorpay — UPI, cards or netbanking.
               </p>
 
               <div className="mt-5 grid grid-cols-3 gap-3">
@@ -262,7 +238,8 @@ export default function Checkout() {
                 <PayChip icon={<Building2 className="h-4 w-4" />} label="Netbanking" />
               </div>
 
-              {/* Test-mode card */}
+              {/* Test-mode card: dev builds only, never on the live site */}
+              {import.meta.env.DEV && (
               <div className="mt-5 overflow-hidden border border-dashed border-coral/40 bg-coral/5">
                 <button
                   type="button"
@@ -292,6 +269,7 @@ export default function Checkout() {
                   </div>
                 )}
               </div>
+              )}
             </div>
 
             {/* Error */}
@@ -349,8 +327,8 @@ export default function Checkout() {
                       <span>{money(subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-ink/60">
-                      <span>Platform fee</span>
-                      <span>{money(platformFee)}</span>
+                      <span>Booking fee</span>
+                      <span>None</span>
                     </div>
                     <div className="mt-2 flex justify-between border-t border-ink/10 pt-3 text-base font-extrabold">
                       <span>Total</span>

@@ -3,9 +3,20 @@ import {
   Instagram, Twitter, Facebook, Youtube, Linkedin,
   Mail, MapPin, Phone, ArrowUpRight, ShieldCheck
 } from 'lucide-react';
+import { telHref, useSiteSettings } from '../../lib/useSiteSettings.js';
+
+const SOCIALS = [
+  ['instagram', 'Instagram', Instagram],
+  ['twitter', 'X / Twitter', Twitter],
+  ['facebook', 'Facebook', Facebook],
+  ['youtube', 'YouTube', Youtube],
+  ['linkedin', 'LinkedIn', Linkedin]
+];
 
 export default function Footer() {
   const year = new Date().getFullYear();
+  const site = useSiteSettings();
+  const socials = SOCIALS.filter(([key]) => site.social?.[key]);
 
   return (
     <footer className="border-t border-ink/10 bg-cream">
@@ -22,15 +33,21 @@ export default function Footer() {
 
             {/* Contact chips */}
             <div className="mt-5 flex flex-wrap gap-2 text-xs">
-              <span className="inline-flex items-center gap-1.5 border border-ink/10 bg-white px-3 py-1.5 text-ink/70">
-                <MapPin className="h-3.5 w-3.5 text-coral" /> Mumbai · Delhi · Bengaluru
-              </span>
-              <a href="mailto:hello@utsavx.com" className="inline-flex items-center gap-1.5 border border-ink/10 bg-white px-3 py-1.5 text-ink/70 hover:border-coral">
-                <Mail className="h-3.5 w-3.5 text-coral" /> hello@utsavx.com
-              </a>
-              <a href="tel:+919999999999" className="inline-flex items-center gap-1.5 border border-ink/10 bg-white px-3 py-1.5 text-ink/70 hover:border-coral">
-                <Phone className="h-3.5 w-3.5 text-coral" /> +91 99999 99999
-              </a>
+              {site.locations ? (
+                <span className="inline-flex items-center gap-1.5 border border-ink/10 bg-white px-3 py-1.5 text-ink/70">
+                  <MapPin className="h-3.5 w-3.5 text-coral" /> {site.locations}
+                </span>
+              ) : null}
+              {site.support_email ? (
+                <a href={`mailto:${site.support_email}`} className="inline-flex items-center gap-1.5 border border-ink/10 bg-white px-3 py-1.5 text-ink/70 hover:border-coral">
+                  <Mail className="h-3.5 w-3.5 text-coral" /> {site.support_email}
+                </a>
+              ) : null}
+              {site.support_phone ? (
+                <a href={telHref(site.support_phone)} className="inline-flex items-center gap-1.5 border border-ink/10 bg-white px-3 py-1.5 text-ink/70 hover:border-coral">
+                  <Phone className="h-3.5 w-3.5 text-coral" /> {site.support_phone}
+                </a>
+              ) : null}
             </div>
           </div>
 
@@ -76,6 +93,9 @@ export default function Footer() {
 
           <FooterCol title="For Organizers">
             <FooterLink to="/organizer">Host an event</FooterLink>
+            <FooterLink to="/how-it-works">How it works</FooterLink>
+            <FooterLink to="/ticket-outlets">Ticket outlets</FooterLink>
+            <FooterLink to="/physical-tickets">Physical tickets</FooterLink>
             <FooterLink to="/manager/login">Manager sign in</FooterLink>
             <FooterLink to="/manager/signup">Become a partner</FooterLink>
             <FooterLink to="/pricing">Pricing</FooterLink>
@@ -99,14 +119,14 @@ export default function Footer() {
         {/* ---------- SOCIAL + PAYMENTS ---------- */}
         <div className="mt-10 flex flex-col gap-6 border-t border-ink/10 pt-8 sm:flex-row sm:items-center sm:justify-between">
           {/* Socials */}
-          <div className="flex items-center gap-2">
-            <span className="mr-2 text-xs font-bold uppercase tracking-wider text-ink/45">Follow</span>
-            <SocialIcon href="https://instagram.com" label="Instagram"><Instagram className="h-4 w-4" /></SocialIcon>
-            <SocialIcon href="https://twitter.com" label="Twitter"><Twitter className="h-4 w-4" /></SocialIcon>
-            <SocialIcon href="https://facebook.com" label="Facebook"><Facebook className="h-4 w-4" /></SocialIcon>
-            <SocialIcon href="https://youtube.com" label="YouTube"><Youtube className="h-4 w-4" /></SocialIcon>
-            <SocialIcon href="https://linkedin.com" label="LinkedIn"><Linkedin className="h-4 w-4" /></SocialIcon>
-          </div>
+          {socials.length ? (
+            <div className="flex items-center gap-2">
+              <span className="mr-2 text-xs font-bold uppercase tracking-wider text-ink/45">Follow</span>
+              {socials.map(([key, label, Icon]) => (
+                <SocialIcon key={key} href={site.social[key]} label={label}><Icon className="h-4 w-4" /></SocialIcon>
+              ))}
+            </div>
+          ) : <span />}
 
           {/* Payments */}
           <div className="flex flex-wrap items-center gap-2 text-xs text-ink/50">

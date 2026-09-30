@@ -77,14 +77,8 @@ export default function EventDetail() {
   const maxQty = stock !== null ? Math.min(stock, 10) : 10;
   const canBuy = isBuyer && !isSoldOut && !isPast && selected;
 
-  const fees = event?._fee_settings;
-  const subtotal = price * quantity;
-  const feeAmount = fees
-    ? (subtotal * (Number(fees.Online_Payment_Fee_percentage) || 0)) / 100
-      + Number(fees.Online_Payment_Fee_dollar_amount || 0) * quantity
-      + (subtotal * (Number(fees.Online_Service_Fee_percentage) || 0)) / 100
-    : 0;
-  const total = subtotal + feeAmount;
+  // Buyers pay the ticket price only (fees come out of the host's share), matching the server's order total.
+  const total = price * quantity;
 
   const handleAddToCart = () => {
     if (!canBuy || adding) return;
@@ -149,7 +143,7 @@ export default function EventDetail() {
   const startDate = formatDate(event.startsAt || event.date);
 
   return (
-    <main className="bg-cream">
+    <main className="bg-cream pb-20 lg:pb-0">
       {/* ================= HERO ================= */}
       <section className="relative">
         <div className="relative h-[55vh] min-h-[400px] w-full overflow-hidden">
@@ -280,7 +274,7 @@ export default function EventDetail() {
           </div>
 
           {/* ---------- RIGHT COLUMN (STICKY BUY BOX) ---------- */}
-          <div>
+          <div id="tickets" className="scroll-mt-20">
             <div className="sticky top-24 space-y-4 border border-ink/10 bg-white p-6 shadow-sm">
               <div>
                 <p className="text-xs font-extrabold uppercase tracking-wider text-ink/45">Tickets</p>
@@ -332,13 +326,9 @@ export default function EventDetail() {
               </div>
 
               {/* Fee breakdown */}
-              {fees && canBuy && (
-                <div className="space-y-1 bg-ink/5 p-3 text-xs text-ink/60">
-                  <div className="flex justify-between"><span>Subtotal</span><span>{money(subtotal)}</span></div>
-                  <div className="flex justify-between"><span>Fees</span><span>{money(feeAmount)}</span></div>
-                  <div className="mt-1 flex justify-between border-t border-ink/10 pt-2 font-bold text-ink">
-                    <span>Total</span><span>{money(total)}</span>
-                  </div>
+              {canBuy && (
+                <div className="flex justify-between bg-ink/5 px-3 py-2.5 text-sm font-bold">
+                  <span>Total · no booking fee</span><span>{money(total)}</span>
                 </div>
               )}
 
@@ -380,6 +370,22 @@ export default function EventDetail() {
             </div>
           </div>
         </section>
+      )}
+
+      {/* ================= MOBILE BUY BAR ================= */}
+      {isBuyer && !isPast && (
+        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-ink/10 bg-white px-4 py-3 shadow-[0_-8px_24px_rgba(0,0,0,0.06)] lg:hidden">
+          <div className="min-w-0">
+            <p className="text-[10px] font-extrabold uppercase tracking-wider text-ink/45">{isSoldOut ? 'Sold out' : 'From'}</p>
+            <p className="text-lg font-extrabold leading-tight">{money(price)}</p>
+          </div>
+          <a
+            href="#tickets"
+            className={`shrink-0 px-6 py-3 text-sm font-extrabold text-white ${isSoldOut ? 'pointer-events-none bg-ink/30' : 'bg-coral'}`}
+          >
+            {isSoldOut ? 'Sold out' : 'Get tickets'}
+          </a>
+        </div>
       )}
     </main>
   );

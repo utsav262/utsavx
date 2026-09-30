@@ -15,6 +15,8 @@ import * as couponsFns from '../controllers/couponsController.js';
 import * as notificationsFns from '../controllers/notificationsController.js';
 import * as adminsFns from '../controllers/adminsController.js';
 import * as auditFns from '../controllers/auditController.js';
+import * as countriesFns from '../controllers/countriesController.js';
+import * as siteSettingsFns from '../controllers/siteSettingsController.js';
 
 const auth = wrapControllers(authFns);
 const dashboard = wrapControllers(dashboardFns);
@@ -77,6 +79,8 @@ const coupons = w(couponsFns);
 const notifications = w(notificationsFns);
 const admins = w(adminsFns);
 const auditLog = w(auditFns);
+const countries = w(countriesFns);
+const siteSettings = w(siteSettingsFns);
 
 router.get('/users', anyAdmin, validateQuery(usersFns.usersQuery), users.list);
 router.get('/users/:id', anyAdmin, users.detail);
@@ -89,6 +93,13 @@ router.patch('/catalog/categories/:id', reviewers, events.saveCategory);
 router.get('/catalog/cities', anyAdmin, events.cities);
 router.post('/catalog/cities', reviewers, events.saveCity);
 router.patch('/catalog/cities/:id', reviewers, events.saveCity);
+// Countries carry the platform fee settings, so only super admins change them.
+router.get('/catalog/countries', anyAdmin, countries.list);
+router.post('/catalog/countries', superOnly, countries.create);
+router.patch('/catalog/countries/:id', superOnly, countries.update);
+router.delete('/catalog/countries/:id', superOnly, countries.remove);
+router.get('/settings/site', anyAdmin, siteSettings.get);
+router.put('/settings/site', superOnly, siteSettings.update);
 router.get('/events/:id', anyAdmin, events.detail);
 router.post('/events/:id/moderate', reviewers, events.moderate);
 router.post('/events/:id/feature', reviewers, events.feature);

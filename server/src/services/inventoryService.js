@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Event from '../models/Event.js';
+import { invalidateEventDetailCache } from './cacheService.js';
 
 function asObjectId(id) {
     return new mongoose.Types.ObjectId(String(id));
@@ -79,6 +80,8 @@ export async function reserveTicketType(eventId, ticketTypeId, quantity, { gate 
     }
 
     if (!gate) await syncSoldOutFlags(updated._id);
+    // The public event page shows seats left, so drop its cached copy.
+    await invalidateEventDetailCache({ id: updated._id, slug: updated.slug });
     return Event.findById(updated._id);
 }
 
@@ -106,6 +109,7 @@ export async function releaseTicketType(eventId, ticketTypeId, quantity) {
     );
 
     if (!updated) return null;
+    await invalidateEventDetailCache({ id: updated._id, slug: updated.slug });
 
     // Re-open sold-out events when stock returns.
     if (updated.status === 'sold-out') {

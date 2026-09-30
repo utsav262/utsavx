@@ -43,6 +43,7 @@ export const admin = {
     get: (path, params) => adminApi.get(path, { params }),
     post: (path, body) => adminApi.post(path, body),
     patch: (path, body) => adminApi.patch(path, body),
+    put: (path, body) => adminApi.put(path, body),
     del: (path) => adminApi.delete(path),
     login: (email, password) => adminApi.post('/auth/login', { email, password }),
     me: () => adminApi.get('/auth/me'),
