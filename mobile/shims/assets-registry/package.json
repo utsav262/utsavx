@@ -1,0 +1,11 @@
+{
+  "name": "@react-native/assets-registry",
+  "version": "0.87.1-shim",
+  "private": true,
+  "description": "Shim: React Native 0.87 moved this into react-native/asset-registry, but react-native-svg still imports @react-native/assets-registry/registry.",
+  "main": "registry.js",
+  "exports": {
+    "./registry": "./registry.js",
+    "./package.json": "./package.json"
+  }
+}

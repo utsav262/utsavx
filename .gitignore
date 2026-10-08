@@ -8,3 +8,4 @@ coverage
 
 # Private uploads (settlement receipts) — never commit
 server/storage/
+mobile/android/app/debug.keystore
