@@ -24,6 +24,9 @@ export default function TicketDetailScreen({ route }) {
 
   let hint =
     'Show this QR at the entrance — staff will scan it to check you in.';
+  const admits = Math.max(1, Number(ticket.admits) || 1);
+  if (admits > 1)
+    hint = `One scan lets ${admits} people in — please enter together.`;
   if (ticket.status === 'used')
     hint = 'This ticket has already been scanned at the door.';
   else if (!usable) hint = 'This ticket is no longer valid for entry.';
@@ -69,6 +72,9 @@ export default function TicketDetailScreen({ route }) {
                 label="Ticket"
                 value={ticket.ticketType || 'General Admission'}
               />
+              {admits > 1 ? (
+                <Info label="Entry for" value={`${admits} people`} />
+              ) : null}
               <Info label="Status" value={status.label} />
             </View>
           </View>

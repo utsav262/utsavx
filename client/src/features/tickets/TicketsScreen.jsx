@@ -1,5 +1,5 @@
 import { Pencil, Plus, Trash2 } from 'lucide-react';
-import { formatQty, formatTicketPrice, isEditableTicket, isSystemComplimentary } from './ticketUtils.js';
+import { formatAdmits, formatQty, formatTicketPrice, isEditableTicket, isSystemComplimentary } from './ticketUtils.js';
 
 export default function TicketsScreen({
     tickets = [],
@@ -46,6 +46,7 @@ export default function TicketsScreen({
                                 <p className="font-bold">{ticket.name}</p>
                                 <p className="mt-1 text-sm text-ink/55">
                                     {formatTicketPrice(ticket)} · {formatQty(ticket.quantity)}
+                                    {formatAdmits(ticket.admits) ? ` · ${formatAdmits(ticket.admits)}` : ''}
                                     {Number(ticket.doorPrice || ticket.door_price) > 0
                                         ? ` · door ${formatTicketPrice({ price: ticket.doorPrice || ticket.door_price, ticketType: 'paid' })}`
                                         : ''}

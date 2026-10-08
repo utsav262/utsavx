@@ -1,5 +1,5 @@
 import { money } from '../../lib/money.js';
-import { feePreview } from './ticketUtils.js';
+import { feePreview, toAdmits } from './ticketUtils.js';
 
 const input =
     'w-full border-0 border-b border-ink/20 bg-transparent px-0 py-3 text-base outline-none transition placeholder:text-ink/35 focus:border-coral';
@@ -8,6 +8,8 @@ const label = 'block text-[11px] font-extrabold uppercase tracking-[0.16em] text
 export default function PaidTicketScreen({ draft, setDraft, onBack, onContinue, error }) {
     const fees = feePreview(draft);
     const isPaid = draft.ticketType !== 'free';
+    const admits = toAdmits(draft.admits);
+    const quantity = Math.floor(Number(draft.quantity) || 0);
 
     const patch = (partial) => setDraft((prev) => ({ ...prev, ...partial }));
 
@@ -109,6 +111,24 @@ export default function PaidTicketScreen({ draft, setDraft, onBack, onContinue, 
                             />
                         </div>
                     ) : null}
+                </div>
+
+                <div>
+                    <label className={label}>People per ticket</label>
+                    <input
+                        type="number"
+                        min="1"
+                        max="20"
+                        step="1"
+                        className={input}
+                        value={draft.admits}
+                        onChange={(e) => patch({ admits: e.target.value })}
+                    />
+                    <p className="mt-2 text-sm text-ink/55">
+                        Keep 1 for normal tickets. For a group pass, such as Student + 2 Parents, enter 3:
+                        one QR lets all of them in together with a single scan.
+                        {admits > 1 && quantity > 0 ? ` ${quantity} tickets = ${quantity * admits} people.` : ''}
+                    </p>
                 </div>
 
                 {isPaid ? (

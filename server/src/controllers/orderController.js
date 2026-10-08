@@ -14,7 +14,13 @@ export async function createOrder(req, res) {
     const event = await reserveInventory(eventId, items);
     const selected = items.map((item) => {
         const type = event.ticketTypes.id(item.ticketTypeId);
-        return { ticketTypeId: type._id, name: type.name, quantity: item.quantity, unitPrice: type.price };
+        return {
+            ticketTypeId: type._id,
+            name: type.name,
+            quantity: item.quantity,
+            unitPrice: type.price,
+            admits: type.admits || 1
+        };
     });
     const total = selected.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
     const onlinePayments = env.hasRazorpay || env.hasStripe;

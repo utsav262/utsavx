@@ -150,6 +150,7 @@ export async function sellTicketOrders({ user, eventId, tickets, purchaseSource,
             ticketTypeId: type._id,
             name: type.name,
             unitPrice,
+            admits: type.admits || 1,
             attendee
         });
     }
@@ -195,7 +196,8 @@ export async function sellTicketOrders({ user, eventId, tickets, purchaseSource,
                 ticketTypeId: row.ticketTypeId,
                 name: row.name,
                 quantity: 0,
-                unitPrice: row.unitPrice
+                unitPrice: row.unitPrice,
+                admits: row.admits
             };
             bucket.lines.push(line);
         }
@@ -220,7 +222,8 @@ export async function sellTicketOrders({ user, eventId, tickets, purchaseSource,
                     ticketTypeId: line.ticketTypeId,
                     name: line.name,
                     quantity: line.quantity,
-                    unitPrice: line.unitPrice
+                    unitPrice: line.unitPrice,
+                    admits: line.admits
                 })),
                 total,
                 currency: 'INR',
@@ -270,6 +273,7 @@ export async function listSellableTickets(user, eventId) {
             door_price: type.doorPrice ?? 0,
             quantity: type.quantity,
             sold: type.sold || 0,
+            admits: type.admits || 1,
             remaining: (() => {
                 const stock = Number(type.quantity || 0) === 0
                     ? 999999

@@ -242,6 +242,11 @@ export default function StaffCheckIn({ invite, onNotice, onBack }) {
                                             Type · {lastResult.detail.ticket_type}
                                         </p>
                                     ) : null}
+                                    {lastResult.ok && Number(lastResult.detail?.admits) > 1 ? (
+                                        <p className="mt-2 inline-block bg-moss px-3 py-1 text-sm font-extrabold uppercase tracking-wider text-white">
+                                            Admit {lastResult.detail.admits} people
+                                        </p>
+                                    ) : null}
                                     {lastResult.status ? (
                                         <p className="mt-2 text-[10px] font-bold uppercase tracking-wider opacity-70">
                                             Status · {String(lastResult.status).replaceAll('_', ' ')}

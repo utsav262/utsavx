@@ -194,6 +194,7 @@ function CartItem({ item, onQty, onRemove }) {
               <p className="serif text-2xl leading-tight">{item.title}</p>
               <p className="mt-1 text-sm text-ink/55">
                 {item.ticketName || 'General Admission'}
+                {Number(item.admits) > 1 ? ` · admits ${item.admits} per ticket` : ''}
               </p>
             </div>
             <button

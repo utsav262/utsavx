@@ -11,6 +11,7 @@ import { unwrap } from '../lib/unwrap.js';
 import { money } from '../lib/money.js';
 import { formatDate } from '../lib/datetime.js';
 import { canPurchase } from '../lib/roles.js';
+import { admitsNote, admitsOf } from '../lib/admits.js';
 import EventCard from '../components/events/EventCard.jsx';
 import { EVENT_PLACEHOLDER } from '../lib/placeholder.js';
 
@@ -91,6 +92,7 @@ export default function EventDetail() {
       eventId: event._id || event.id,
       ticketTypeId: selected._id || selected.id,
       ticketName: selected?.name || 'General Admission',
+      admits: admitsOf(selected),
     }));
     navigate('/cart');
   };
@@ -279,7 +281,10 @@ export default function EventDetail() {
               <div>
                 <p className="text-xs font-extrabold uppercase tracking-wider text-ink/45">Tickets</p>
                 <p className="mt-1 text-3xl font-extrabold">
-                  {money(price)} <span className="text-sm font-medium text-ink/50">/ person</span>
+                  {money(price)}{' '}
+                  <span className="text-sm font-medium text-ink/50">
+                    {admitsOf(selected) > 1 ? `/ ${admitsOf(selected)} people` : '/ person'}
+                  </span>
                 </p>
               </div>
 
@@ -297,6 +302,7 @@ export default function EventDetail() {
                     return (
                       <option key={t._id || t.id} value={t._id || t.id} disabled={soldOut}>
                         {t.name} · {money(t.price)}
+                        {admitsOf(t) > 1 ? ` · admits ${admitsOf(t)}` : ''}
                         {left !== undefined ? (soldOut ? ' · Sold out' : ` · ${left} left`) : ''}
                       </option>
                     );
@@ -307,6 +313,11 @@ export default function EventDetail() {
                   {selected?.name || 'General Admission'}
                 </p>
               )}
+              {admitsNote(selected) ? (
+                <p className="flex items-center gap-2 bg-coral/10 px-4 py-2.5 text-sm font-bold text-coral">
+                  <Users className="h-4 w-4" /> {admitsNote(selected)} · one QR per ticket
+                </p>
+              ) : null}
 
               {/* Qty */}
               <div className="flex items-center justify-between border border-ink/20 px-2">

@@ -8,6 +8,8 @@ const ticketTypeSchema = new mongoose.Schema({
     doorPrice: { type: Number, min: 0, default: 0 },
     quantity: { type: Number, min: 0, required: true },
     sold: { type: Number, default: 0, min: 0 },
+    /** People one ticket lets in, e.g. 3 = student + mummy + papa. Inventory still counts tickets. */
+    admits: { type: Number, min: 1, max: 20, default: 1 },
     currency: { type: String, default: 'INR' },
     salesStatus: { type: String, enum: ['on-sale', 'paused', 'sold-out'], default: 'on-sale' },
     /** gate | complimentary | null */

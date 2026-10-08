@@ -11,6 +11,7 @@ export function emptyTicketDraft() {
         hideDescription: false,
         ticketType: 'paid',
         quantity: '100',
+        admits: '1',
         price: '499',
         doorPrice: '',
         saleStartsAt: '',
@@ -31,6 +32,7 @@ export function ticketFromApi(row = {}) {
         hideDescription: Boolean(row.hideDescription ?? row.hide_description),
         ticketType: row.ticketType || row.ticket_type || (Number(row.price) === 0 ? 'free' : 'paid'),
         quantity: String(row.quantity ?? 0),
+        admits: String(row.admits ?? 1),
         price: String(row.price ?? 0),
         doorPrice: row.doorPrice != null || row.door_price != null
             ? String(row.doorPrice ?? row.door_price)
@@ -98,6 +100,8 @@ export function validateTicketDraft(draft) {
     if (!String(draft.name || '').trim()) return 'Ticket name is required.';
     const qty = draft.quantity === '' ? NaN : Number(draft.quantity);
     if (Number.isNaN(qty) || qty < 0) return 'Quantity must be 0 (unlimited) or a positive number.';
+    const admits = Number(draft.admits);
+    if (!Number.isInteger(admits) || admits < 1 || admits > 20) return 'People per ticket must be a whole number from 1 to 20.';
     if (draft.ticketType === 'paid') {
         const price = Number(draft.price);
         if (!price || price <= 0) return 'Paid tickets need a price greater than 0.';
@@ -124,6 +128,7 @@ export function toApiPayload(draft, eventId) {
             ? undefined
             : Number(draft.doorPrice) || 0,
         quantity: Math.max(0, Math.floor(Number(draft.quantity) || 0)),
+        admits: toAdmits(draft.admits),
         currency: draft.currency || 'INR',
         salesStatus: draft.salesStatus || 'on-sale',
         type: draft.type || 'gate',
@@ -145,6 +150,7 @@ export function toLocalTicket(draft) {
         price: ticketType === 'free' ? 0 : Number(draft.price) || 0,
         doorPrice: draft.doorPrice === '' || draft.doorPrice == null ? 0 : Number(draft.doorPrice) || 0,
         quantity: Math.max(0, Math.floor(Number(draft.quantity) || 0)),
+        admits: toAdmits(draft.admits),
         currency: draft.currency || 'INR',
         salesStatus: draft.salesStatus || 'on-sale',
         type: draft.type || 'gate',
@@ -155,6 +161,17 @@ export function toLocalTicket(draft) {
         sold: draft.sold || 0,
         is_complimentary: false
     };
+}
+
+/** People per ticket, 1–20 (group / family passes). */
+export function toAdmits(value) {
+    return Math.min(20, Math.max(1, Math.floor(Number(value)) || 1));
+}
+
+/** "Admits 3" for group passes, empty for normal one-person tickets. */
+export function formatAdmits(value) {
+    const admits = toAdmits(value);
+    return admits > 1 ? `Admits ${admits}` : '';
 }
 
 export function formatQty(quantity) {

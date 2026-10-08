@@ -78,7 +78,8 @@ function publicTicketTypes(ticketTypes = []) {
             : Math.max(0, (ticket.quantity || 0) - (ticket.sold || 0)),
         currency: ticket.currency || 'INR',
         salesStatus: ticket.salesStatus,
-        type: ticket.type || null
+        type: ticket.type || null,
+        admits: ticket.admits || 1
     }));
 }
 

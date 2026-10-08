@@ -275,7 +275,10 @@ export default function EventDashboard({
                                 <li key={tier._id || tier.name} className="flex items-center justify-between py-3 text-sm">
                                     <div>
                                         <p className="font-bold">{tier.name}</p>
-                                        <p className="text-xs text-ink/45">{tier.salesStatus || 'on-sale'}</p>
+                                        <p className="text-xs text-ink/45">
+                                            {tier.salesStatus || 'on-sale'}
+                                            {Number(tier.admits) > 1 ? ` · Admits ${tier.admits}` : ''}
+                                        </p>
                                     </div>
                                     <div className="text-right">
                                         <p className="font-bold">{money(tier.price)}</p>

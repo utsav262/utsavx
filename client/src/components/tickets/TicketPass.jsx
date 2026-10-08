@@ -163,7 +163,11 @@ const TicketPass = forwardRef(function TicketPass({ ticket }, ref) {
             />
             <InfoBlock
               label="Ticket type"
-              value={ticket.ticketType || 'General Admission'}
+              value={
+                Number(ticket.admits) > 1
+                  ? `${ticket.ticketType || 'General Admission'} · Admits ${ticket.admits}`
+                  : ticket.ticketType || 'General Admission'
+              }
               icon={<Ticket size={14} />}
             />
             <InfoBlock

@@ -39,6 +39,10 @@ export function minPrice(event) {
   return prices.length ? Math.min(...prices) : Number(event?.price ?? 0);
 }
 
+/** People one ticket lets in (group / family passes); 1 for normal tickets. */
+export const ticketAdmits = ticket =>
+  Math.max(1, Math.floor(Number(ticket?.admits)) || 1);
+
 /** quantity_left is null when the host set no cap. */
 export function ticketLeft(ticket) {
   const left = ticket?.quantity_left;

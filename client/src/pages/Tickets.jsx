@@ -428,7 +428,8 @@ function TicketRow({ ticket, active, onClick }) {
             </span>
           </div>
           <p className="mt-1 text-xs text-ink/55">
-            {ticket.ticketType || 'General'} · Qty 1
+            {ticket.ticketType || 'General'} ·{' '}
+            {Number(ticket.admits) > 1 ? `Admits ${ticket.admits}` : 'Qty 1'}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-ink/55">
             {ticket.event?.startsAt && (
@@ -556,6 +557,9 @@ function ScreenPassView({ ticket, qrValue }) {
         <dl className="mt-5 space-y-2.5 text-sm">
           {ticket.ticketType && (
             <Row label="Type" value={ticket.ticketType} />
+          )}
+          {Number(ticket.admits) > 1 && (
+            <Row label="Entry" value={`${ticket.admits} people, together`} />
           )}
           {when && <Row label="When" value={when} />}
           {venue && <Row label="Venue" value={venue} />}

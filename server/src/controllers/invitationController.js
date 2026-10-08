@@ -6,6 +6,7 @@ import { success } from '../utils/response.js';
 import { listSellableTickets, sellTicketOrders } from '../services/sellService.js';
 import Notification from '../models/Notification.js';
 import { notifyUser } from '../services/notificationService.js';
+import { admitNote, admitsOf } from '../services/admits.js';
 
 async function notifyOwner(handler, req, accepted) {
     const event = await Event.findById(handler.event).select('title organizer').lean();
@@ -366,13 +367,15 @@ export async function scanAsStaff(req, res) {
         return res.json({
             status: 'success',
             ticket_status: 'scanned',
-            message: 'Ticket scanned successfully!',
+            message: `Ticket scanned successfully!${admitNote(claimed)}`,
             code: 200,
             result: {
                 ticket_id: claimed._id,
                 confirmation_id: claimed.confirmationCode,
                 event_id: event._id,
-                event_title: event.title
+                event_title: event.title,
+                ticket_type: claimed.ticketType,
+                admits: admitsOf(claimed)
             }
         });
     }
@@ -380,14 +383,15 @@ export async function scanAsStaff(req, res) {
     return res.json({
         status: 'success',
         ticket_status: 'valid',
-        message: 'Ticket is valid.',
+        message: `Ticket is valid.${admitNote(ticket)}`,
         code: 200,
         result: {
             ticket_id: ticket._id,
             confirmation_id: ticket.confirmationCode,
             event_id: event._id,
             event_title: event.title,
-            ticket_type: ticket.ticketType
+            ticket_type: ticket.ticketType,
+            admits: admitsOf(ticket)
         }
     });
 }

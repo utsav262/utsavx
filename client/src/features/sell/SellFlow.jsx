@@ -62,6 +62,7 @@ export default function SellFlow() {
                             quantity: qty,
                             sold,
                             remaining: qty === 0 ? 999999 : Math.max(0, qty - sold),
+                            admits: Number(tier.admits) || 1,
                             salesStatus: tier.salesStatus,
                             is_complimentary:
                                 Boolean(tier.is_complimentary)
@@ -262,6 +263,7 @@ export default function SellFlow() {
                                             {money(price)}
                                             {mode === 'gate' ? ' door' : ''}
                                             {mode !== 'gate' ? ` · ${tier.remaining ?? max} left` : ' · up to 20'}
+                                            {Number(tier.admits) > 1 ? ` · admits ${tier.admits} per ticket` : ''}
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-2">

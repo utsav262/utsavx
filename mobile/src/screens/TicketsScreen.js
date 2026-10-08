@@ -185,6 +185,7 @@ function TicketStub({ ticket, onPress }) {
           <Text style={text.caption}>Ticket</Text>
           <Text style={styles.type}>
             {ticket.ticketType || 'General Admission'}
+            {Number(ticket.admits) > 1 ? ` · Admits ${ticket.admits}` : ''}
           </Text>
         </View>
         <StatusPill label={status.label} tone={status.tone} />

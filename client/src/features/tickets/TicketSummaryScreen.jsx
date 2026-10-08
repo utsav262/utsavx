@@ -1,5 +1,5 @@
 import { money } from '../../lib/money.js';
-import { feePreview, formatQty, formatTicketPrice } from './ticketUtils.js';
+import { feePreview, formatQty, formatTicketPrice, toAdmits } from './ticketUtils.js';
 
 export default function TicketSummaryScreen({ draft, onBack, onSave, busy, error }) {
     const fees = feePreview(draft);
@@ -10,6 +10,12 @@ export default function TicketSummaryScreen({ draft, onBack, onSave, busy, error
         { label: 'Type', value: isPaid ? 'Paid' : 'Free' },
         { label: 'Price', value: formatTicketPrice(draft) },
         { label: 'Quantity', value: formatQty(draft.quantity) },
+        {
+            label: 'People per ticket',
+            value: toAdmits(draft.admits) > 1
+                ? `${toAdmits(draft.admits)} (one QR, enter together)`
+                : '1'
+        },
         {
             label: 'Door price',
             value: draft.doorPrice !== '' && draft.doorPrice != null

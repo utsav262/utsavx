@@ -47,6 +47,7 @@ import {
   eventKey,
   eventMongoId,
   eventTitle,
+  ticketAdmits,
   ticketLeft,
   ticketState,
   ticketTypeId,
@@ -178,6 +179,7 @@ export default function EventDetailScreen({ route, navigation }) {
       ticketTypeId: ticketTypeId(selected),
       title,
       ticketName: selected.name || 'General Admission',
+      admits: ticketAdmits(selected),
       price,
       quantity,
       maxQty,
@@ -278,6 +280,14 @@ export default function EventDetailScreen({ route, navigation }) {
                   </View>
                   <View style={styles.flex}>
                     <Text style={styles.ticketName}>{ticket.name}</Text>
+                    {ticketAdmits(ticket) > 1 ? (
+                      <View style={styles.admits}>
+                        <Users size={12} color={colors.primary} />
+                        <Text style={styles.admitsText}>
+                          Admits {ticketAdmits(ticket)} · one QR
+                        </Text>
+                      </View>
+                    ) : null}
                     <Text
                       style={[
                         styles.ticketMeta,
@@ -549,6 +559,18 @@ const styles = StyleSheet.create({
   },
   checkActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   ticketName: { fontSize: 15, fontWeight: '700', color: colors.text },
+  admits: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: colors.primarySoft,
+  },
+  admitsText: { fontSize: 11, fontWeight: '700', color: colors.primary },
   ticketMeta: { ...text.caption, marginTop: 3 },
   ticketLow: { color: colors.orange },
   ticketPrice: { fontSize: 17, fontWeight: '800', color: colors.text },

@@ -1,6 +1,7 @@
 import {
   eventAvailability,
   minPrice,
+  ticketAdmits,
   ticketLeft,
   ticketState,
 } from '../src/lib/events';
@@ -48,6 +49,15 @@ describe('ticket availability', () => {
       450,
     );
     expect(minPrice({ price: 0 })).toBe(0);
+  });
+});
+
+describe('group tickets', () => {
+  test('one ticket can admit several people; missing or bad values mean 1', () => {
+    expect(ticketAdmits({ admits: 3 })).toBe(3);
+    expect(ticketAdmits({})).toBe(1);
+    expect(ticketAdmits({ admits: 0 })).toBe(1);
+    expect(ticketAdmits(null)).toBe(1);
   });
 });
 

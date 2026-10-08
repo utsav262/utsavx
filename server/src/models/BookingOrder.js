@@ -10,7 +10,9 @@ const bookingOrderSchema = new mongoose.Schema({
         ticketTypeId: mongoose.Schema.Types.ObjectId,
         name: String,
         quantity: Number,
-        unitPrice: Number
+        unitPrice: Number,
+        /** Copied from the ticket type at purchase so later edits don't change sold passes. */
+        admits: { type: Number, default: 1 }
     }],
     total: { type: Number, required: true, min: 0 },
     currency: { type: String, default: 'INR' },

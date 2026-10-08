@@ -79,7 +79,10 @@ export default function CartScreen({ navigation }) {
                   <Trash2 size={18} color={colors.textFaint} />
                 </Pressable>
               </View>
-              <Text style={styles.ticketName}>{item.ticketName}</Text>
+              <Text style={styles.ticketName}>
+                {item.ticketName}
+                {Number(item.admits) > 1 ? ` · admits ${item.admits}` : ''}
+              </Text>
               {item.startsAt ? (
                 <View style={styles.row}>
                   <CalendarDays size={13} color={colors.textFaint} />

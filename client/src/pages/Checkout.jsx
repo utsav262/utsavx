@@ -66,6 +66,8 @@ export default function Checkout() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [showTestInfo, setShowTestInfo] = useState(true);
+  // Set once payment succeeds so the empty-cart guard doesn't send the buyer to /cart.
+  const [completed, setCompleted] = useState(false);
 
   /* ---------- Derived ---------- */
   const subtotal = useMemo(
@@ -82,6 +84,7 @@ export default function Checkout() {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
   if (!items.length) {
+    if (completed) return <Navigate to="/tickets" replace />;
     return <Navigate to="/cart" replace />;
   }
 
@@ -145,8 +148,9 @@ export default function Checkout() {
         return;
       }
 
+      setCompleted(true);
       dispatch(clear());
-      navigate('/tickets');
+      navigate('/tickets', { replace: true });
     } catch (error) {
       setMessage(
         error.response?.data?.message ||
@@ -313,6 +317,7 @@ export default function Checkout() {
                         <p className="font-bold leading-tight">{item.title}</p>
                         <p className="text-xs text-ink/55">
                           {item.ticketName || 'General'} · Qty {item.quantity}
+                          {Number(item.admits) > 1 ? ` · admits ${item.admits} each` : ''}
                         </p>
                       </div>
                       <p className="shrink-0 font-bold">

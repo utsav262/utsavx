@@ -183,6 +183,9 @@ export default function CheckoutScreen({ navigation }) {
                 </Text>
                 <Text style={styles.lineMeta}>
                   {item.ticketName} · {item.quantity} × {money(item.price)}
+                  {Number(item.admits) > 1
+                    ? ` · admits ${item.admits} each`
+                    : ''}
                 </Text>
               </View>
               <Text style={styles.linePrice}>

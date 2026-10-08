@@ -43,7 +43,8 @@ export default function GateView({ event, notice }) {
       const response = await apiClient.scanTicket({ event_id: event._id, code: normalized, action });
       const message = response.data.message || 'Ticket processed.';
       const status = response.data.ticket_status || response.data.status;
-      setResult({ ok: true, message, status });
+      const admits = Number(response.data.result?.admits) || 1;
+      setResult({ ok: true, message, status, admits });
       if (toast?.success) toast.success(message);
       setHistory((h) => [{ code: normalized, ok: true, message, at: new Date() }, ...h].slice(0, 8));
       if (action === 'scan') setCode('');
@@ -127,6 +128,11 @@ export default function GateView({ event, notice }) {
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
               <div>
                 <p className="font-bold text-emerald-800">Valid ticket</p>
+                {result.admits > 1 ? (
+                  <p className="mt-1 inline-block bg-emerald-700 px-3 py-1 text-base font-extrabold uppercase tracking-wider text-white">
+                    Admit {result.admits} people
+                  </p>
+                ) : null}
                 <p className="text-emerald-700">{result.message}</p>
               </div>
             </div>

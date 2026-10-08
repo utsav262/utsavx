@@ -129,6 +129,14 @@ export const openApiSpec = {
                     price: { type: 'number', example: 499 },
                     door_price: { type: 'number', example: 599 },
                     quantity: { type: 'integer', description: '0 = unlimited', example: 100 },
+                    admits: {
+                        type: 'integer',
+                        minimum: 1,
+                        maximum: 20,
+                        default: 1,
+                        description: 'People one ticket lets in together (e.g. 3 = student + two parents). Quantity still counts tickets.',
+                        example: 1
+                    },
                     currency: { type: 'string', example: 'INR' },
                     type: { type: 'string', example: 'gate' },
                     sale_start: { type: 'string', format: 'date-time' },
