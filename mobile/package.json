@@ -3,9 +3,9 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "android": "(adb reverse tcp:5050 tcp:5050 || true) && react-native run-android",
+    "android": "(adb reverse tcp:5050 tcp:5050 || true) && react-native run-android --port 8082",
     "lint": "eslint .",
-    "start": "react-native start",
+    "start": "react-native start --port 8082",
     "test": "jest"
   },
   "dependencies": {

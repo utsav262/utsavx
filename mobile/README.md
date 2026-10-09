@@ -25,6 +25,8 @@ Sign-up always creates a `customer` account.
 3. Start an Android emulator (or plug in a phone with USB debugging on)
 4. `npm start` in one terminal, `npm run android` in another
 
+Metro for this app runs on port **8082** (set in `package.json` and `android/gradle.properties`), so it can run next to another React Native project on the default 8081. If the phone was reconnected, run `adb reverse tcp:8082 tcp:8082`.
+
 ### Pointing the app at the API
 
 By default the app (debug and release) talks to the deployed API, `https://utsavx.onrender.com/api/v1`, which is the same base URL as the manager app. You don't need a local server for that.
