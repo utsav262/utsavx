@@ -1,9 +1,10 @@
-import { Plus, Ticket as TicketIcon, AlertCircle, Check } from 'lucide-react';
+import { Plus, Ticket as TicketIcon, AlertCircle, Check, QrCode } from 'lucide-react';
 import { money } from '../../../lib/money.js';
 import { formatQty, formatTicketPrice, isNonComplimentary } from '../../tickets/ticketUtils.js';
 
-export default function StepTickets({ tickets, capacity, minPrice, onOpenFlow, busy }) {
+export default function StepTickets({ tickets, capacity, minPrice, onOpenFlow, busy, mode = 'paid', error }) {
   const sellable = tickets.filter(isNonComplimentary);
+  const free = mode === 'free';
 
   return (
     <div className="space-y-6">
@@ -11,11 +12,13 @@ export default function StepTickets({ tickets, capacity, minPrice, onOpenFlow, b
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[11px] font-extrabold uppercase tracking-wider text-coral">
-              Event type
+              {free ? 'Free registration' : 'Paid tickets'}
             </p>
             <h3 className="serif mt-2 text-3xl leading-none">Tickets</h3>
             <p className="mt-2 max-w-md text-sm text-ink/55">
-              Add at least one paid ticket for review. Sales and team allotments will use these tiers.
+              {free
+                ? 'Add at least one ticket — free passes, participant passes or paid add-ons. Sales and team allotments use these tiers.'
+                : 'Add at least one paid ticket for review. Sales and team allotments will use these tiers.'}
             </p>
           </div>
           <button
@@ -32,22 +35,20 @@ export default function StepTickets({ tickets, capacity, minPrice, onOpenFlow, b
         {tickets.length > 0 && (
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
             <Stat label="Tiers" value={tickets.length} />
-            <Stat label="Capacity" value={capacity || '∞'} />
+            <Stat label="People" value={capacity || '∞'} />
             <Stat label="From" value={money(minPrice)} />
           </div>
         )}
 
         {/* Validation hint */}
-        {!sellable.length && tickets.length > 0 && (
-          <div className="mt-5 flex items-start gap-2 border border-amber-200 bg-amber-50 p-3 text-xs">
+        {error && (
+          <div role="alert" className="mt-5 flex items-start gap-2 border border-amber-200 bg-amber-50 p-3 text-xs">
             <AlertCircle size={14} className="mt-0.5 shrink-0 text-amber-600" />
-            <p className="text-amber-800">
-              Add at least one paid ticket before continuing.
-            </p>
+            <p className="text-amber-800">{error}</p>
           </div>
         )}
 
-        {sellable.length > 0 && (
+        {!error && sellable.length > 0 && (
           <div className="mt-5 flex items-start gap-2 border border-emerald-200 bg-emerald-50 p-3 text-xs">
             <Check size={14} className="mt-0.5 shrink-0 text-emerald-600" />
             <p className="text-emerald-800">
@@ -57,6 +58,11 @@ export default function StepTickets({ tickets, capacity, minPrice, onOpenFlow, b
           </div>
         )}
       </div>
+
+      <p className="flex items-start gap-2 text-xs text-ink/50">
+        <QrCode size={14} className="mt-0.5 shrink-0" />
+        Every ticket gets a QR code that gate staff scan at check-in. Promo codes for these tiers are below.
+      </p>
 
       {/* Ticket list */}
       {tickets.length > 0 ? (
@@ -76,7 +82,9 @@ export default function StepTickets({ tickets, capacity, minPrice, onOpenFlow, b
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-bold">{ticket.name}</p>
                   <p className="mt-0.5 text-xs text-ink/55">
-                    {formatTicketPrice(ticket)} · {formatQty(ticket.quantity)} seats
+                    {formatTicketPrice(ticket)} · {formatQty(ticket.quantity)} tickets
+                    {Number(ticket.admits) > 1 ? ` · admits ${ticket.admits} each` : ''}
+                    {ticket.includesLunch ? ' · lunch included' : ''}
                   </p>
                 </div>
                 {!isNonComplimentary(ticket) && (

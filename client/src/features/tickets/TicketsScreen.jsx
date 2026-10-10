@@ -1,5 +1,5 @@
 import { Pencil, Plus, Trash2 } from 'lucide-react';
-import { formatAdmits, formatQty, formatTicketPrice, isEditableTicket, isSystemComplimentary } from './ticketUtils.js';
+import { formatAdmits, formatQty, formatTicketPrice, isEditableTicket, isNonComplimentary, isSystemComplimentary, peopleCapacity } from './ticketUtils.js';
 
 export default function TicketsScreen({
     tickets = [],
@@ -8,8 +8,12 @@ export default function TicketsScreen({
     onAdd,
     onEdit,
     onDelete,
-    busy
+    busy,
+    context = {}
 }) {
+    const sellable = tickets.filter(isNonComplimentary);
+    const unlimited = sellable.some((t) => peopleCapacity(t) === null);
+    const people = sellable.reduce((sum, t) => sum + (peopleCapacity(t) || 0), 0);
     return (
         <section className="space-y-6">
             <div className="flex items-start justify-between gap-4">
@@ -26,6 +30,12 @@ export default function TicketsScreen({
                     <p className="mt-2 text-sm text-ink/55">
                         Add paid or free tiers. Door price unlocks gate sell later.
                     </p>
+                    {sellable.length > 0 && (
+                        <p className="mt-2 text-sm font-bold text-ink/70">
+                            Admits {unlimited ? 'unlimited' : people} people
+                            {context.maxPeople != null ? ` · event maximum ${context.maxPeople}` : ''}
+                        </p>
+                    )}
                 </div>
                 <button
                     type="button"
@@ -50,6 +60,7 @@ export default function TicketsScreen({
                                     {Number(ticket.doorPrice || ticket.door_price) > 0
                                         ? ` · door ${formatTicketPrice({ price: ticket.doorPrice || ticket.door_price, ticketType: 'paid' })}`
                                         : ''}
+                                    {ticket.includesLunch ? ' · lunch' : ''}
                                     {isSystemComplimentary(ticket) ? ' · system' : ''}
                                 </p>
                             </div>

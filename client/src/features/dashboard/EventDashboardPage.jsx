@@ -436,6 +436,7 @@ export default function EventDashboardPage() {
                     <StaffCheckIn
                         invite={{
                             userType: 'Manager',
+                            asOwner: true,
                             event: eventItem,
                             canScan: true,
                             permissions: { canCheckIn: true }

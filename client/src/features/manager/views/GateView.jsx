@@ -3,6 +3,7 @@ import { ScanLine, Check, XCircle, CheckCircle2, RotateCcw } from 'lucide-react'
 import PanelHeader from '../components/PanelHeader.jsx';
 import { useToast } from '../../../components/ui/Toast.jsx';
 import { apiClient } from '../../../api/index.js';
+import { CHECKPOINT_COPY, CheckpointPicker, describeScanError, eventHasLunch } from '../../tickets/checkpoints.jsx';
 
 function normalizeScanCode(raw) {
   const value = String(raw || '').trim();
@@ -25,6 +26,9 @@ export default function GateView({ event, notice }) {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [history, setHistory] = useState([]);
+  const [checkpoint, setCheckpoint] = useState('entry');
+  const hasLunch = eventHasLunch(event);
+  const copy = CHECKPOINT_COPY[checkpoint];
 
   const scan = async (action) => {
     setFieldError('');
@@ -40,26 +44,27 @@ export default function GateView({ event, notice }) {
     }
     setBusy(true);
     try {
-      const response = await apiClient.scanTicket({ event_id: event._id, code: normalized, action });
+      const response = await apiClient.scanTicket({
+        event_id: event._id,
+        code: normalized,
+        action,
+        ...(checkpoint === 'lunch' ? { checkpoint: 'lunch' } : {}),
+      });
       const message = response.data.message || 'Ticket processed.';
       const status = response.data.ticket_status || response.data.status;
       const admits = Number(response.data.result?.admits) || 1;
-      setResult({ ok: true, message, status, admits });
+      setResult({ ok: true, message, status, admits, checkpoint });
       if (toast?.success) toast.success(message);
-      setHistory((h) => [{ code: normalized, ok: true, message, at: new Date() }, ...h].slice(0, 8));
+      setHistory((h) => [{ code: normalized, ok: true, message, checkpoint, at: new Date() }, ...h].slice(0, 8));
       if (action === 'scan') setCode('');
     } catch (error) {
       const data = error.response?.data || {};
       const status = data.ticket_status || data.status;
-      const message =
-        status === 'invalid'
-          ? 'Invalid ticket — confirmation code not found for this event.'
-          : status === 'already_claimed'
-            ? 'Ticket already claimed.'
-            : data.message || 'Ticket scan failed.';
-      setFieldError(message);
-      setResult({ ok: false, message, status });
-      setHistory((h) => [{ code: normalizeScanCode(code), ok: false, message, at: new Date() }, ...h].slice(0, 8));
+      const described = describeScanError(data, checkpoint);
+      const message = `${described.title} — ${described.body}`;
+      setFieldError(described.title);
+      setResult({ ok: false, message, status, checkpoint });
+      setHistory((h) => [{ code: normalizeScanCode(code), ok: false, message, checkpoint, at: new Date() }, ...h].slice(0, 8));
     } finally {
       setBusy(false);
     }
@@ -76,12 +81,21 @@ export default function GateView({ event, notice }) {
       <PanelHeader
         eyebrow="Gate"
         title="Check-in"
-        subtitle="Scan or paste confirmation codes to validate entry."
+        subtitle={hasLunch ? 'Scan entry at the gate, then the same QR at the lunch counter.' : 'Scan or paste confirmation codes to validate entry.'}
       />
 
       <div className="grid gap-8 lg:grid-cols-[1.2fr_1fr]">
         {/* Scanner */}
         <div className="border border-ink/10 bg-white p-6">
+          {hasLunch && (
+            <div className="mb-5">
+              <CheckpointPicker
+                value={checkpoint}
+                disabled={busy}
+                onChange={(next) => { setCheckpoint(next); setResult(null); setFieldError(''); }}
+              />
+            </div>
+          )}
           <label className="text-xs font-extrabold uppercase tracking-wider text-ink/45">
             Confirmation code
           </label>
@@ -107,7 +121,8 @@ export default function GateView({ event, notice }) {
               disabled={busy}
               onClick={() => scan('validate')}
               className="border border-ink/15 px-4 hover:border-coral hover:text-coral disabled:opacity-60"
-              title="Validate only"
+              title={copy.validate}
+              aria-label={copy.validate}
             >
               <ScanLine size={18} />
             </button>
@@ -117,7 +132,7 @@ export default function GateView({ event, notice }) {
               onClick={() => scan('scan')}
               className="inline-flex items-center gap-1.5 bg-coral px-5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60"
             >
-              <Check size={16} /> Claim
+              <Check size={16} /> {checkpoint === 'lunch' ? 'Serve' : 'Claim'}
             </button>
           </div>
 
@@ -127,8 +142,8 @@ export default function GateView({ event, notice }) {
             <div className="mt-4 flex items-start gap-3 border border-emerald-200 bg-emerald-50 p-4 text-sm">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
               <div>
-                <p className="font-bold text-emerald-800">Valid ticket</p>
-                {result.admits > 1 ? (
+                <p className="font-bold text-emerald-800">{result.checkpoint === 'lunch' ? 'Lunch counter' : 'Valid ticket'}</p>
+                {result.checkpoint !== 'lunch' && result.admits > 1 ? (
                   <p className="mt-1 inline-block bg-emerald-700 px-3 py-1 text-base font-extrabold uppercase tracking-wider text-white">
                     Admit {result.admits} people
                   </p>
@@ -170,6 +185,7 @@ export default function GateView({ event, notice }) {
                     <XCircle size={13} className="shrink-0 text-red-600" />
                   )}
                   <span className="flex-1 truncate font-mono font-bold">{h.code}</span>
+                  {h.checkpoint === 'lunch' && <span className="shrink-0 text-ink/45">lunch</span>}
                   <span className={`shrink-0 ${h.ok ? 'text-emerald-700' : 'text-red-600'}`}>
                     {h.ok ? 'OK' : 'Fail'}
                   </span>

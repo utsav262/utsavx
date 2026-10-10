@@ -14,7 +14,7 @@ import CreateEventFlow from './CreateEventFlow.jsx';
 import EventDashboard from './EventDashboard.jsx';
 import AdminHome from '../admin/AdminHome.jsx';
 import TicketFlow from '../tickets/TicketFlow.jsx';
-import { ticketFromApi } from '../tickets/ticketUtils.js';
+import { ticketFromApi, ticketContextFromEvent } from '../tickets/ticketUtils.js';
 
 export default function ManagerWorkspace() {
   const user = useSelector((s) => s.auth.user);
@@ -266,7 +266,8 @@ export default function ManagerWorkspace() {
           <TicketFlow
             eventId={selected._id}
             eventTitle={selected.title || 'Event'}
-            tickets={(data.tickets || []).map(ticketFromApi)}
+            tickets={(data.tickets || []).map((row) => ticketFromApi(row, ticketContextFromEvent(selected)))}
+            context={ticketContextFromEvent(selected)}
             onTicketsChange={async (rows) => {
               if (Array.isArray(rows)) setData((prev) => ({ ...prev, tickets: rows }));
               await reloadSelected();

@@ -10,6 +10,8 @@ import BookingOrder from '../models/BookingOrder.js';
 import Ticket from '../models/Ticket.js';
 import { success } from '../utils/response.js';
 import { env } from '../config/env.js';
+import { findOrganizerType, publicTaxonomy } from '../config/eventTaxonomy.js';
+import { EVENT_WRITABLE, firstError, makeSlug, publicDetails, sanitizeEventProfile } from '../services/eventProfile.js';
 import {
     cacheGet,
     cacheSet,
@@ -79,8 +81,18 @@ function publicTicketTypes(ticketTypes = []) {
         currency: ticket.currency || 'INR',
         salesStatus: ticket.salesStatus,
         type: ticket.type || null,
-        admits: ticket.admits || 1
+        admits: ticket.admits || 1,
+        includesLunch: Boolean(ticket.includesLunch)
     }));
+}
+
+/** Private events are reachable by link only — never in listings, search, related or city counts. */
+const LISTED = { visibility: { $ne: 'private' } };
+
+function pickWritable(source = {}) {
+    const out = {};
+    for (const key of EVENT_WRITABLE) if (source[key] !== undefined) out[key] = source[key];
+    return out;
 }
 
 function toListItem(event, coverUrl = null) {
@@ -96,7 +108,11 @@ function toListItem(event, coverUrl = null) {
         event_link: event.slug,
         description: event.description,
         category: event.category,
+        subcategory: event.subcategory || '',
         genre: event.category,
+        organizerType: event.organizerType || 'other',
+        organizationName: event.organizationName || '',
+        eventFormat: event.eventFormat || 'in_person',
         city,
         country,
         venue: event.venue || {},
@@ -131,6 +147,7 @@ function buildPublishedFilter(query = {}) {
     cutoff.setDate(cutoff.getDate() - 1);
     const filter = {
         status: { $in: ['published', 'sold-out'] },
+        ...LISTED,
         $or: [
             { endsAt: { $gt: cutoff } },
             { endsAt: null, startsAt: { $gt: cutoff } }
@@ -212,10 +229,17 @@ export async function getEvent(req, res) {
 }
 
 export async function createEvent(req, res) {
-    const payload = { ...req.body, organizer: req.user._id };
+    const payload = pickWritable(req.body);
+    if (req.user.role === 'admin' && req.body?.featured !== undefined) payload.featured = Boolean(req.body.featured);
     if (req.user.role !== 'admin' && (payload.status === 'published' || payload.status === 'sold-out')) {
         payload.status = 'review_pending';
     }
+    const profile = sanitizeEventProfile(payload, null, { targetStatus: payload.status || 'draft' });
+    if (Object.keys(profile.errors).length) {
+        return res.status(422).json({ message: firstError(profile.errors), errors: profile.errors, code: 422 });
+    }
+    Object.assign(payload, profile.updates, { organizer: req.user._id });
+    if (!payload.slug) payload.slug = makeSlug(payload.title);
     const event = await Event.create(payload);
     await invalidateEventCaches(event);
     res.status(201).json({
@@ -230,11 +254,17 @@ export async function updateEvent(req, res) {
     const filter = { _id: req.params.id, ...(req.user.role === 'admin' ? {} : { organizer: req.user._id }) };
     const existing = await Event.findOne(filter);
     if (!existing) return res.status(404).json({ message: 'Event not found', code: 404 });
-    const payload = { ...req.body };
+    const payload = pickWritable(req.body);
+    if (req.user.role === 'admin' && req.body?.featured !== undefined) payload.featured = Boolean(req.body.featured);
     if (req.user.role !== 'admin' && (payload.status === 'published' || payload.status === 'sold-out')) {
         const alreadyLive = existing.status === 'published' || existing.status === 'sold-out';
         payload.status = alreadyLive && payload.status === 'sold-out' ? 'sold-out' : alreadyLive ? existing.status : 'review_pending';
     }
+    const profile = sanitizeEventProfile(payload, existing, { targetStatus: payload.status || existing.status });
+    if (Object.keys(profile.errors).length) {
+        return res.status(422).json({ message: firstError(profile.errors), errors: profile.errors, code: 422 });
+    }
+    Object.assign(payload, profile.updates);
     const event = await Event.findOneAndUpdate(filter, { $set: payload }, { new: true, runValidators: true });
     await invalidateEventCaches(event || existing);
     res.json({ event, result: event, code: 200, message: 'Event updated successfully' });
@@ -306,7 +336,8 @@ export async function legacyEventDetails(req, res) {
 
     const [images, guests, handlers] = await Promise.all([
         EventImage.find({ event: event._id }).sort({ sortOrder: 1, createdAt: 1 }).lean(),
-        EventGuest.find({ event: event._id }).sort({ createdAt: 1 }).lean(),
+        // Private events keep their guest list to the organizer.
+        event.visibility === 'private' ? [] : EventGuest.find({ event: event._id }).select('name image status').sort({ createdAt: 1 }).lean(),
         EventHandler.find({ event: event._id, invitationStatus: 'A', userType: 'Outlet' }).lean()
     ]);
     let setting = await GlobalSetting.findOne({ type: 'country', country: event.venue?.country || 'India' }).lean();
@@ -342,6 +373,18 @@ export async function legacyEventDetails(req, res) {
         images,
         guests,
         tickets,
+        organizerTypeLabel: findOrganizerType(event.organizerType)?.label || null,
+        visibility: event.visibility || 'public',
+        timezone: event.timezone || 'Asia/Kolkata',
+        academicSession: event.academicSession || '',
+        logoUrl: event.logoUrl || null,
+        targetAudience: event.audience?.targetAudience || '',
+        registration: {
+            mode: event.registration?.mode || 'paid',
+            opensAt: event.registration?.opensAt || null,
+            closesAt: event.registration?.closesAt || null
+        },
+        details: publicDetails(event),
         ticketTypes: tickets,
         host,
         organizer: host,
@@ -371,6 +414,7 @@ export async function getRelatedEvents(req, res) {
     const relatedFilter = {
         _id: { $ne: event._id },
         status: { $in: ['published', 'sold-out'] },
+        ...LISTED,
         category: event.category,
         $or: [{ endsAt: { $gte: today } }, { endsAt: null, startsAt: { $gte: today } }]
     };
@@ -421,6 +465,7 @@ export async function cityEventCounts(req, res) {
 
     const match = {
         status: { $in: ['published', 'sold-out'] },
+        ...LISTED,
         'venue.city': { $nin: [null, ''] },
         $or: [{ endsAt: { $gt: cutoff } }, { endsAt: null, startsAt: { $gt: cutoff } }]
     };
@@ -473,7 +518,7 @@ export async function getCategories(req, res) {
     const categories = await EventCategory.find({ status: 1 }).select('name slug').sort({ name: 1 }).lean();
     const result = categories.length
         ? categories
-        : (await Event.distinct('category', { status: { $in: ['published', 'sold-out'] } }))
+        : (await Event.distinct('category', { status: { $in: ['published', 'sold-out'] }, ...LISTED }))
             .filter(Boolean)
             .map((name) => ({
                 name,
@@ -580,4 +625,10 @@ export async function listByEventType(req, res) {
             has_next_page: page * length < total
         }
     });
+}
+
+/** Organizer types, categories and detail-field specs that drive the create-event wizard. */
+export async function getEventTaxonomy(req, res) {
+    res.set('Cache-Control', 'public, max-age=300');
+    return success(res, publicTaxonomy(), 'Event taxonomy fetched successfully');
 }

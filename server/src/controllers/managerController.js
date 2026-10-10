@@ -14,6 +14,9 @@ import { sellTicketOrders } from '../services/sellService.js';
 import { invalidateEventCaches } from '../services/cacheService.js';
 import { notifyUser } from '../services/notificationService.js';
 import { admitNote, admitsOf, enteredNote, enteredOf, peopleEnteredFrom } from '../services/admits.js';
+import { lunchCheckpoint, lunchStats } from '../services/checkpoints.js';
+import { feePercent } from '../services/settlementService.js';
+import { EVENT_WRITABLE, firstError, isHttpUrl, makeSlug, sanitizeEventProfile } from '../services/eventProfile.js';
 
 // Admins, the organizer, and accepted Manager handlers can run an event.
 const eventFor = async (req, eventId) => {
@@ -39,7 +42,6 @@ const pick = (source, keys) => {
     }
     return out;
 };
-const EVENT_WRITABLE = ['title', 'slug', 'description', 'category', 'tags', 'venue', 'startsAt', 'endsAt', 'imageUrl', 'status', 'ticketTypes'];
 const TICKET_WRITABLE = [
     'name',
     'description',
@@ -55,7 +57,8 @@ const TICKET_WRITABLE = [
     'saleEndsAt',
     'passServiceFeeToBuyer',
     'passPaymentFeeToBuyer',
-    'admits'
+    'admits',
+    'includesLunch'
 ];
 
 /** People per ticket (1–20). undefined when the request didn't send it, so edits keep the old value. */
@@ -101,8 +104,20 @@ function normalizeTicketPayload(data = {}) {
         ),
         passPaymentFeeToBuyer: Boolean(
             data.pass_payment_fee_to_buyer ?? data.passPaymentFeeToBuyer
-        )
+        ),
+        includesLunch: Boolean(data.includes_lunch ?? data.includesLunch)
     };
+}
+
+/** Sale window must be ordered and close by the time the event ends. */
+function saleWindowError(ticket, event) {
+    const start = ticket.saleStartsAt ? new Date(ticket.saleStartsAt) : null;
+    const end = ticket.saleEndsAt ? new Date(ticket.saleEndsAt) : null;
+    if ((start && Number.isNaN(start.getTime())) || (end && Number.isNaN(end.getTime()))) return 'Sale dates are invalid';
+    if (start && end && end <= start) return 'Sale end must be after sale start';
+    const eventEnd = event.endsAt || event.startsAt;
+    if (end && eventEnd && end > new Date(eventEnd)) return 'Ticket sales must end before the event ends';
+    return '';
 }
 
 function serializeTicket(ticket) {
@@ -119,6 +134,7 @@ function serializeTicket(ticket) {
         pass_service_fee_to_buyer: Boolean(row.passServiceFeeToBuyer),
         pass_payment_fee_to_buyer: Boolean(row.passPaymentFeeToBuyer),
         admits: row.admits || 1,
+        includes_lunch: Boolean(row.includesLunch),
         is_complimentary: /complimentary/i.test(String(row.name || ''))
             || String(row.type || '').toLowerCase() === 'complimentary'
     };
@@ -165,7 +181,7 @@ export async function createOrUpdateEvent(req, res) {
     // Keep the public URL stable: only generate a slug for new events (or ones missing it).
     if (event?.slug && !data.slug) delete payload.slug;
     if (!event?.slug && !payload.slug) {
-        payload.slug = data.slug || `${String(data.title || event?.title || 'event').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}-${crypto.randomBytes(3).toString('hex')}`;
+        payload.slug = data.slug || makeSlug(data.title || event?.title);
     }
 
     // Organizers cannot publish directly — admin must approve first.
@@ -178,6 +194,12 @@ export async function createOrUpdateEvent(req, res) {
             payload.status = event?.status || 'draft';
         }
     }
+
+    const profile = sanitizeEventProfile(data, event, { targetStatus: payload.status || event?.status || 'draft' });
+    if (Object.keys(profile.errors).length) {
+        return res.status(422).json({ message: firstError(profile.errors), errors: profile.errors, code: 422 });
+    }
+    Object.assign(payload, profile.updates);
 
     if (Array.isArray(payload.ticketTypes)) {
         const existingById = new Map((event?.ticketTypes || []).map((ticket) => [String(ticket._id), ticket]));
@@ -260,7 +282,14 @@ export async function deleteEvent(req, res) {
 export async function upgradeEvent(req, res) {
     const event = await eventFor(req, req.params.id);
     if (!event) return res.status(404).json({ message: 'Event not found', code: 404 });
+    // Same rule as create-or-update: invited Managers run the event but don't edit its details.
+    if (!isEventOwnerUser(req, event)) return res.status(403).json({ message: 'Only the event owner can edit this event', code: 403 });
     const updates = pick(body(req), ['title', 'description', 'category', 'tags', 'venue', 'startsAt', 'endsAt', 'imageUrl']);
+    const profile = sanitizeEventProfile(updates, event);
+    if (Object.keys(profile.errors).length) {
+        return res.status(422).json({ message: firstError(profile.errors), errors: profile.errors, code: 422 });
+    }
+    Object.assign(updates, profile.updates);
     if (req.user.role === 'admin') {
         const privileged = pick(body(req), ['status', 'featured', 'slug']);
         Object.assign(updates, privileged);
@@ -302,6 +331,8 @@ export async function createTicket(req, res) {
     if (ticket.ticketType === 'paid' && ticket.price <= 0) {
         return res.status(422).json({ message: 'Paid tickets must have price > 0', code: 422 });
     }
+    const windowError = saleWindowError(ticket, event);
+    if (windowError) return res.status(422).json({ message: windowError, code: 422 });
     event.ticketTypes.push(ticket);
     await event.save();
     await invalidateEventCaches(event);
@@ -323,6 +354,8 @@ export async function updateTicket(req, res) {
     if (updates.ticketType === 'paid' && updates.price <= 0) {
         return res.status(422).json({ message: 'Paid tickets must have price > 0', code: 422 });
     }
+    const windowError = saleWindowError(updates, event);
+    if (windowError) return res.status(422).json({ message: windowError, code: 422 });
     Object.assign(ticket, updates);
     await event.save();
     await invalidateEventCaches(event);
@@ -373,9 +406,9 @@ const orderRows = (orders, search = '') => orders.flatMap((order) => order.items
     group_fee_breakdown: feeBreakdown(order.total, 0, order.total * 0.05)
 }))).filter((row) => !search || [row.confirmation_id, row.ticket_type, row.username, row.email].some((value) => String(value).toLowerCase().includes(search.toLowerCase())));
 const paged = (rows, page, length) => ({ rows: rows.slice((page - 1) * length, page * length), pagination: { current_page: page, last_page: Math.max(1, Math.ceil(rows.length / length)), has_next_page: page * length < rows.length } });
-const eventTotals = (event, orders, tickets) => { const gross = orders.reduce((sum, order) => sum + order.total, 0); const sold = orders.reduce((sum, order) => sum + order.items.reduce((count, item) => count + item.quantity, 0), 0); const checkIns = tickets.filter((ticket) => ticket.status === 'used').length; const peopleCheckedIn = tickets.reduce((sum, ticket) => sum + enteredOf(ticket), 0); return { gross_sales: money(gross), fees: money(gross * 0.05), earnings: money(gross * 0.95), platform_earnings: money(gross * 0.05), outlet_earnings: 0, ambassador_earnings: 0, commission: 0, cash_sales: 0, payout_due: money(gross * 0.95), remitted: 0, remittance: { remitted: 0, pending: 0, last_remitted_at: null }, total_sold: sold, claimed_tickets: checkIns, claimed_people: peopleCheckedIn, unclaimed_tickets: Math.max(0, sold - checkIns), sales_by_type: event.ticketTypes.map((type) => ({ ticket_type: type.name, name: type.name, sold: orders.reduce((sum, order) => sum + order.items.filter((item) => String(item.ticketTypeId) === String(type._id)).reduce((count, item) => count + item.quantity, 0), 0), available: type.quantity, percent: type.quantity ? Math.round((type.sold / type.quantity) * 100) : 0 })) }; };
-export async function listOrders(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const orders = await BookingOrder.find({ event: event._id, status: 'paid' }).populate('user', 'name email').sort({ createdAt: -1 }).lean(); const type = ['summary', 'purchase_history', 'transactions'].includes(req.query.type) ? req.query.type : 'summary'; const rows = orderRows(orders, String(req.query.search || '').trim()); const page = Math.max(1, Number(req.query.page || 1)); const length = Math.min(100, Math.max(1, Number(req.query.length || 20))); const tickets = await Ticket.find({ event: event._id }).lean(); const result = { type, event_link: event.slug, ...eventTotals(event, orders, tickets), table_data: type === 'summary' ? null : paged(rows, page, length).rows }; return success(res, result, 'Dashboard data fetched successfully', 200, type === 'summary' ? {} : paged(rows, page, length).pagination); }
-export async function salesByType(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const orders = await BookingOrder.find({ event: event._id, status: 'paid' }).lean(); const tickets = await Ticket.find({ event: event._id }).lean(); const summary = eventTotals(event, orders, tickets); const type = ['summary', 'purchase_history', 'transactions'].includes(req.query.type) ? req.query.type : 'purchase_history'; const rows = orderRows(orders, String(req.query.search || '').trim()); const page = Math.max(1, Number(req.query.page || 1)); const length = Math.min(100, Math.max(1, Number(req.query.length || 20))); return success(res, { type, event_link: event.slug, ...summary, table_data: type === 'summary' ? null : paged(rows, page, length).rows }, 'Sales by type fetched successfully', 200, type === 'summary' ? {} : paged(rows, page, length).pagination); }
+const eventTotals = (event, orders, tickets, pct = 5) => { const rate = pct / 100; const gross = orders.reduce((sum, order) => sum + order.total, 0); const sold = orders.reduce((sum, order) => sum + order.items.reduce((count, item) => count + item.quantity, 0), 0); const checkIns = tickets.filter((ticket) => ticket.status === 'used').length; const peopleCheckedIn = tickets.reduce((sum, ticket) => sum + enteredOf(ticket), 0); return { gross_sales: money(gross), fees: money(gross * rate), earnings: money(gross * (1 - rate)), platform_earnings: money(gross * rate), outlet_earnings: 0, ambassador_earnings: 0, commission: 0, cash_sales: 0, payout_due: money(gross * (1 - rate)), remitted: 0, remittance: { remitted: 0, pending: 0, last_remitted_at: null }, total_sold: sold, claimed_tickets: checkIns, claimed_people: peopleCheckedIn, unclaimed_tickets: Math.max(0, sold - checkIns), sales_by_type: event.ticketTypes.map((type) => ({ ticket_type: type.name, name: type.name, sold: orders.reduce((sum, order) => sum + order.items.filter((item) => String(item.ticketTypeId) === String(type._id)).reduce((count, item) => count + item.quantity, 0), 0), available: type.quantity, percent: type.quantity ? Math.round((type.sold / type.quantity) * 100) : 0 })) }; };
+export async function listOrders(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const orders = await BookingOrder.find({ event: event._id, status: 'paid' }).populate('user', 'name email').sort({ createdAt: -1 }).lean(); const type = ['summary', 'purchase_history', 'transactions'].includes(req.query.type) ? req.query.type : 'summary'; const rows = orderRows(orders, String(req.query.search || '').trim()); const page = Math.max(1, Number(req.query.page || 1)); const length = Math.min(100, Math.max(1, Number(req.query.length || 20))); const tickets = await Ticket.find({ event: event._id }).lean(); const result = { type, event_link: event.slug, ...eventTotals(event, orders, tickets, await feePercent()), table_data: type === 'summary' ? null : paged(rows, page, length).rows }; return success(res, result, 'Dashboard data fetched successfully', 200, type === 'summary' ? {} : paged(rows, page, length).pagination); }
+export async function salesByType(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const orders = await BookingOrder.find({ event: event._id, status: 'paid' }).lean(); const tickets = await Ticket.find({ event: event._id }).lean(); const summary = eventTotals(event, orders, tickets, await feePercent()); const type = ['summary', 'purchase_history', 'transactions'].includes(req.query.type) ? req.query.type : 'purchase_history'; const rows = orderRows(orders, String(req.query.search || '').trim()); const page = Math.max(1, Number(req.query.page || 1)); const length = Math.min(100, Math.max(1, Number(req.query.length || 20))); return success(res, { type, event_link: event.slug, ...summary, table_data: type === 'summary' ? null : paged(rows, page, length).rows }, 'Sales by type fetched successfully', 200, type === 'summary' ? {} : paged(rows, page, length).pagination); }
 /** Tickets sold per team role (managers / ambassadors / outlets), matched via order.soldBy. */
 async function soldByRole(eventId, orders) {
     const handlers = await EventHandler.find({ event: eventId, invitationStatus: 'A', user: { $ne: null } }).select('user userType').lean();
@@ -390,8 +423,8 @@ async function soldByRole(eventId, orders) {
     return totals;
 }
 export async function salesOverview(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const orders = await BookingOrder.find({ event: event._id, status: 'paid' }).lean(); const sold = orders.reduce((sum, order) => sum + order.items.reduce((count, item) => count + item.quantity, 0), 0); const peopleSold = orders.reduce((sum, order) => sum + order.items.reduce((count, item) => count + item.quantity * admitsOf(item), 0), 0); const available = event.ticketTypes.reduce((sum, type) => sum + type.quantity, 0); return ok(res, { event_name: event.title, tickets_sold: sold, people_sold: peopleSold, tickets_available: available, sold_percent: available ? Math.round((sold / available) * 100) : 0, ticket_types: event.ticketTypes.map((type) => ({ ticket_type: type.name, name: type.name, admits: type.admits || 1, sold: type.sold, available: type.quantity, percent: type.quantity ? Math.round((type.sold / type.quantity) * 100) : 0 })), sales_sources: [{ source: 'Online', count: sold }], sold_by: await soldByRole(event._id, orders) }, 'Sales overview fetched successfully'); }
-export async function payouts(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const orders = await BookingOrder.find({ event: event._id, status: 'paid' }).lean(); const gross = orders.reduce((sum, order) => sum + order.total, 0); return ok(res, { gross: money(gross), fees: money(gross * 0.05), payout_due: money(gross * 0.95), remitted: 0, pending: money(gross * 0.95) }, 'Payout information fetched successfully'); }
-export async function checkIns(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const tickets = await Ticket.find({ event: event._id }).populate('owner', 'name email').lean(); const claimed = tickets.filter((ticket) => ticket.status === 'used').length; const ofType = (name) => tickets.filter((ticket) => !name || ticket.ticketType === name); const entered = (name) => ofType(name).reduce((sum, ticket) => sum + enteredOf(ticket), 0); const waiting = (name) => ofType(name).filter((ticket) => ticket.status === 'valid').reduce((sum, ticket) => sum + admitsOf(ticket), 0); const noShows = (name) => ofType(name).filter((ticket) => ticket.status === 'used').reduce((sum, ticket) => sum + admitsOf(ticket) - enteredOf(ticket), 0); return ok(res, { event_name: event.title, claimed_tickets: claimed, unclaimed_tickets: tickets.filter((ticket) => ticket.status === 'valid').length, claimed_people: entered(), unclaimed_people: waiting(), no_show_people: noShows(), ticket_types: event.ticketTypes.map((type) => ({ name: type.name, admits: type.admits || 1, claimed: tickets.filter((ticket) => ticket.ticketType === type.name && ticket.status === 'used').length, claimed_people: entered(type.name), no_show_people: noShows(type.name) })), timeline: [] }, 'Check-in stats fetched successfully'); }
+export async function payouts(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const orders = await BookingOrder.find({ event: event._id, status: 'paid' }).lean(); const gross = orders.reduce((sum, order) => sum + order.total, 0); const rate = (await feePercent()) / 100; return ok(res, { gross: money(gross), fees: money(gross * rate), payout_due: money(gross * (1 - rate)), remitted: 0, pending: money(gross * (1 - rate)), service_fee_percent: rate * 100 }, 'Payout information fetched successfully'); }
+export async function checkIns(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const tickets = await Ticket.find({ event: event._id }).populate('owner', 'name email').lean(); const claimed = tickets.filter((ticket) => ticket.status === 'used').length; const ofType = (name) => tickets.filter((ticket) => !name || ticket.ticketType === name); const entered = (name) => ofType(name).reduce((sum, ticket) => sum + enteredOf(ticket), 0); const waiting = (name) => ofType(name).filter((ticket) => ticket.status === 'valid').reduce((sum, ticket) => sum + admitsOf(ticket), 0); const noShows = (name) => ofType(name).filter((ticket) => ticket.status === 'used').reduce((sum, ticket) => sum + admitsOf(ticket) - enteredOf(ticket), 0); return ok(res, { event_name: event.title, claimed_tickets: claimed, unclaimed_tickets: tickets.filter((ticket) => ticket.status === 'valid').length, claimed_people: entered(), unclaimed_people: waiting(), no_show_people: noShows(), ...lunchStats(event, tickets), ticket_types: event.ticketTypes.map((type) => ({ name: type.name, admits: type.admits || 1, includes_lunch: Boolean(type.includesLunch), claimed: tickets.filter((ticket) => ticket.ticketType === type.name && ticket.status === 'used').length, claimed_people: entered(type.name), no_show_people: noShows(type.name) })), timeline: [] }, 'Check-in stats fetched successfully'); }
 function normalizeTicketCode(raw) {
     let code = String(raw || '').trim();
     if (code.startsWith('{')) {
@@ -412,6 +445,10 @@ export async function scanTicket(req, res) {
     if (!event) return res.status(403).json({ message: 'You cannot scan tickets for this event', code: 403 });
     const ticket = await Ticket.findOne({ event: event._id, confirmationCode: code });
     if (!ticket) return res.status(422).json({ status: 'invalid', ticket_status: 'invalid', message: 'Invalid ticket.', code: 422, result: {} });
+    if (body(req).checkpoint === 'lunch') {
+        const lunch = await lunchCheckpoint({ event, ticket, body: body(req), action });
+        return res.status(lunch.httpStatus).json(lunch.body);
+    }
     if (ticket.status === 'used') {
         return res.status(422).json({
             status: 'already_claimed',
@@ -615,11 +652,13 @@ export async function createImage(req, res) {
     const data = body(req);
     const event = await eventFor(req, data.eventId || data.event_id || req.params.id);
     if (!event) return res.status(404).json({ message: 'Event not found', code: 404 });
+    if (!isHttpUrl(String(data.url || '').trim())) return res.status(422).json({ message: 'Image URL must be a full http(s) URL', code: 422 });
+    const type = ['cover', 'flyer', 'gallery'].includes(data.type) ? data.type : 'gallery';
     const image = await EventImage.create({
-        url: data.url,
+        url: String(data.url).trim(),
         alt: data.alt,
-        type: data.type || 'gallery',
-        sortOrder: data.sortOrder || 0,
+        type,
+        sortOrder: Number(data.sortOrder) || 0,
         event: event._id
     });
     return res.status(201).json({ message: 'Image created successfully', code: 200, result: image });
@@ -964,4 +1003,8 @@ export async function adminSetEventFeatured(req, res) {
     if (!event) return res.status(404).json({ message: 'Event not found', code: 404 });
     await invalidateEventCaches(event);
     return ok(res, event, featured ? 'Event featured' : 'Event unfeatured');
+}
+/** Platform fee the ticket editor previews — the same % that payouts and settlements deduct. */
+export async function fees(req, res) {
+    return ok(res, { service_fee_percent: await feePercent() }, 'Fees fetched successfully');
 }

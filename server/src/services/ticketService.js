@@ -14,6 +14,7 @@ export async function issueTickets(order) {
                 owner: order.user,
                 event: order.event,
                 ticketType: item.name,
+                ticketTypeId: item.ticketTypeId || null,
                 admits: Math.max(1, Number(item.admits) || 1),
                 confirmationCode,
                 qrPayload: JSON.stringify({ confirmationCode, order: order.orderNumber })

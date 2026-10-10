@@ -1,16 +1,18 @@
-import { CalendarDays, MapPin, Ticket, Star, Sparkles } from 'lucide-react';
-import { formatDateTime } from '../../../lib/datetime.js';
+import { CalendarDays, MapPin, Ticket, Star, Sparkles, Lock, Building2 } from 'lucide-react';
 import { money } from '../../../lib/money.js';
+import { findOrganizer, formatLocalInput, isHttpUrl } from './eventForm.js';
 import { EVENT_PLACEHOLDER } from '../../../lib/placeholder.js';
 
 const FALLBACK =
   EVENT_PLACEHOLDER;
 
-export default function LivePreview({ basics, imageUrl, tickets, capacity, minPrice, guests, handlers, coupons }) {
-  const cover = imageUrl || FALLBACK;
-  const place =
-    [basics.venue.name, basics.venue.city].filter(Boolean).join(' · ') || 'Venue TBA';
-  const when = formatDateTime(basics.startsAt) || 'Date TBA';
+export default function LivePreview({ form, taxonomy, tickets, capacity, minPrice, guests, team, coupons }) {
+  const cover = isHttpUrl(form.imageUrl.trim()) ? form.imageUrl.trim() : FALLBACK;
+  const formatLabel = taxonomy.eventFormats.find((row) => row.key === form.eventFormat)?.label;
+  const venue = [form.venue.name, form.venue.city].filter(Boolean).join(' · ');
+  const place = form.eventFormat === 'online' ? 'Online' : `${venue || 'Venue TBA'}${form.eventFormat === 'hybrid' ? ' + online' : ''}`;
+  const when = formatLocalInput(form.startsAt) || 'Date TBA';
+  const host = form.organizationName.trim() || findOrganizer(taxonomy, form.organizerType)?.label;
 
   return (
     <aside className="sticky top-24 space-y-4">
@@ -25,7 +27,15 @@ export default function LivePreview({ basics, imageUrl, tickets, capacity, minPr
             <span className="bg-coral px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider">
               Preview
             </span>
-            {basics.featured && (
+            {form.visibility === 'private' && (
+              <span className="inline-flex items-center gap-1 bg-ink/80 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider">
+                <Lock size={10} /> Private
+              </span>
+            )}
+            {formatLabel && form.eventFormat !== 'in_person' && (
+              <span className="bg-white/20 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider">{formatLabel}</span>
+            )}
+            {form.featured && (
               <span className="inline-flex items-center gap-1 bg-amber-500 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider">
                 <Star size={10} className="fill-white" /> Featured
               </span>
@@ -35,28 +45,29 @@ export default function LivePreview({ basics, imageUrl, tickets, capacity, minPr
           {/* Bottom content */}
           <div className="absolute bottom-0 left-0 right-0 p-5">
             <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-butter">
-              {basics.category || 'Event'}
+              {[form.category, form.subcategory].filter(Boolean).join(' · ') || 'Event'}
             </p>
             <h3 className="serif mt-2 line-clamp-2 text-3xl leading-none">
-              {basics.title.trim() || 'Untitled event'}
+              {form.title.trim() || 'Untitled event'}
             </h3>
           </div>
         </div>
 
         <div className="space-y-4 p-5">
           <p className="line-clamp-3 text-sm leading-6 text-white/70">
-            {basics.description.trim() ||
+            {form.description.trim() ||
               'Your description will preview here as you type.'}
           </p>
 
           <div className="grid gap-3 border-y border-white/10 py-4 text-sm">
+            {host && <PreviewRow icon={<Building2 size={15} />} text={host} />}
             <PreviewRow icon={<CalendarDays size={15} />} text={when} />
             <PreviewRow icon={<MapPin size={15} />} text={place} />
             <PreviewRow
               icon={<Ticket size={15} />}
               text={
                 tickets.length
-                  ? `${tickets.length} tier${tickets.length === 1 ? '' : 's'} · ${capacity || '∞'} seats · from ${money(minPrice)}`
+                  ? `${tickets.length} tier${tickets.length === 1 ? '' : 's'} · ${capacity || '∞'} people · from ${money(minPrice)}`
                   : 'No tickets added yet'
               }
             />
@@ -64,7 +75,7 @@ export default function LivePreview({ basics, imageUrl, tickets, capacity, minPr
 
           <div className="flex flex-wrap gap-2 text-[11px] font-bold uppercase tracking-wider text-white/55">
             <Chip>{guests.length} guests</Chip>
-            <Chip>{handlers.length} team</Chip>
+            <Chip>{team.length} team</Chip>
             <Chip>{coupons.length} offers</Chip>
           </div>
         </div>

@@ -3,7 +3,7 @@ import { Plus, Trash2, Tag, Percent, IndianRupee } from 'lucide-react';
 import Field, { inputCls } from './Field.jsx';
 import { money } from '../../../lib/money.js';
 
-export default function StepCoupons({ coupons, setCoupons, notice }) {
+export default function StepCoupons({ coupons, setCoupons, notice, newKey }) {
   const [draft, setDraft] = useState({
     code: '',
     discount_type: 'percentage',
@@ -11,16 +11,15 @@ export default function StepCoupons({ coupons, setCoupons, notice }) {
   });
 
   const add = () => {
-    if (!draft.code.trim()) return notice('Coupon code is required.');
+    const code = draft.code.trim().toUpperCase();
+    if (!code) return notice('Coupon code is required.');
+    if (coupons.some((c) => c.code === code)) return notice(`Coupon ${code} is already added.`);
     const value = Number(draft.discount_value);
     if (Number.isNaN(value) || value < 0) return notice('Coupon value is invalid.');
     if (draft.discount_type === 'percentage' && value > 100) {
       return notice('Percentage cannot exceed 100.');
     }
-    setCoupons((rows) => [
-      ...rows,
-      { ...draft, code: draft.code.trim().toUpperCase() },
-    ]);
+    setCoupons((rows) => [...rows, { ...draft, key: newKey(), code }]);
     setDraft({ code: '', discount_type: 'percentage', discount_value: '10' });
     notice('');
   };
@@ -91,8 +90,8 @@ export default function StepCoupons({ coupons, setCoupons, notice }) {
 
       {coupons.length > 0 ? (
         <ul className="mt-5 divide-y divide-ink/10 border border-ink/10 bg-cream/40">
-          {coupons.map((c, i) => (
-            <li key={`${c.code}-${i}`} className="flex items-center gap-3 px-4 py-3">
+          {coupons.map((c) => (
+            <li key={c.key} className="flex items-center gap-3 px-4 py-3">
               <span className="bg-coral/10 px-2.5 py-1 font-mono text-xs font-extrabold text-coral">
                 {c.code}
               </span>
@@ -103,7 +102,8 @@ export default function StepCoupons({ coupons, setCoupons, notice }) {
               </span>
               <button
                 type="button"
-                onClick={() => setCoupons((rows) => rows.filter((_, idx) => idx !== i))}
+                aria-label={`Remove ${c.code}`}
+                onClick={() => setCoupons((rows) => rows.filter((row) => row.key !== c.key))}
                 className="ml-auto p-1.5 text-ink/40 hover:bg-red-50 hover:text-red-600"
               >
                 <Trash2 size={14} />

@@ -1,4 +1,4 @@
-import { BarChart3, CalendarDays, Check, Coins, ExternalLink, MapPin, ScanLine, Ticket, Users } from 'lucide-react';
+import { BarChart3, CalendarDays, Check, Coins, ExternalLink, MapPin, ScanLine, Ticket, Users, UtensilsCrossed } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { money } from '../../lib/money.js';
 import { formatDateTimeLong } from '../../lib/datetime.js';
@@ -259,6 +259,14 @@ export default function EventDashboard({
                 <Metric label="Fees" value={money(payouts.fees ?? orders.fees)} Icon={BarChart3} />
                 <Metric label="Unclaimed" value={checkIns.unclaimed_tickets ?? orders.unclaimed_tickets ?? 0} Icon={ScanLine} />
             </div>
+
+            {checkIns.lunch_included_people > 0 && (
+                <div className="grid gap-3 sm:grid-cols-3">
+                    <Metric label="Lunch served" value={`${checkIns.lunch_served_people || 0} / ${checkIns.lunch_eligible_people || 0} checked in`} Icon={UtensilsCrossed} />
+                    <Metric label="Lunch not yet served" value={Math.max(0, (checkIns.lunch_eligible_people || 0) - (checkIns.lunch_served_people || 0))} Icon={UtensilsCrossed} />
+                    <Metric label="Lunch passes sold" value={`${checkIns.lunch_included_people} people`} Icon={Users} />
+                </div>
+            )}
 
             <div className="grid gap-6 lg:grid-cols-2">
                 <Section

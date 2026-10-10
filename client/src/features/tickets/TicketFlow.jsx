@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { apiClient } from '../../api/index.js';
 import { unwrap } from '../../lib/unwrap.js';
 import TicketsScreen from './TicketsScreen.jsx';
 import PaidTicketScreen from './PaidTicketScreen.jsx';
 import TicketSummaryScreen from './TicketSummaryScreen.jsx';
 import {
+    DEFAULT_SERVICE_FEE_PERCENT,
     emptyTicketDraft,
     isEditableTicket,
     ticketFromApi,
@@ -24,10 +25,23 @@ export default function TicketFlow({
     tickets = [],
     onTicketsChange,
     onClose,
-    notice
+    notice,
+    context = {}
 }) {
     const [screen, setScreen] = useState('list');
-    const [draft, setDraft] = useState(emptyTicketDraft());
+    const [draft, setDraft] = useState(() => emptyTicketDraft(context));
+    const [feePercent, setFeePercent] = useState(DEFAULT_SERVICE_FEE_PERCENT);
+
+    useEffect(() => {
+        let alive = true;
+        apiClient.managerFees()
+            .then((res) => {
+                const pct = Number(unwrap(res, null)?.service_fee_percent);
+                if (alive && Number.isFinite(pct)) setFeePercent(pct);
+            })
+            .catch(() => {});
+        return () => { alive = false; };
+    }, []);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
 
@@ -35,11 +49,11 @@ export default function TicketFlow({
         if (!eventId) return;
         const response = await apiClient.managerTickets(eventId);
         const rows = unwrap(response, []);
-        onTicketsChange(Array.isArray(rows) ? rows.map(ticketFromApi) : []);
+        onTicketsChange(Array.isArray(rows) ? rows.map((row) => ticketFromApi(row, context)) : []);
     };
 
     const openAdd = () => {
-        setDraft(emptyTicketDraft());
+        setDraft(emptyTicketDraft(context));
         setError('');
         setScreen('form');
     };
@@ -49,13 +63,13 @@ export default function TicketFlow({
             notice?.('System complimentary tickets cannot be edited.');
             return;
         }
-        setDraft(ticketFromApi(ticket));
+        setDraft({ ...ticket });
         setError('');
         setScreen('form');
     };
 
     const goSummary = () => {
-        const message = validateTicketDraft(draft);
+        const message = validateTicketDraft(draft, context, tickets);
         if (message) {
             setError(message);
             return;
@@ -65,7 +79,7 @@ export default function TicketFlow({
     };
 
     const save = async () => {
-        const message = validateTicketDraft(draft);
+        const message = validateTicketDraft(draft, context, tickets);
         if (message) {
             setError(message);
             setScreen('form');
@@ -75,7 +89,7 @@ export default function TicketFlow({
         setError('');
         try {
             if (eventId) {
-                const payload = toApiPayload(draft, eventId);
+                const payload = toApiPayload(draft, eventId, context);
                 if (draft._id) {
                     await apiClient.managerUpdateTicket(draft._id, payload);
                     notice?.('Ticket updated.');
@@ -100,7 +114,7 @@ export default function TicketFlow({
                 }
             }
             setScreen('list');
-            setDraft(emptyTicketDraft());
+            setDraft(emptyTicketDraft(context));
         } catch (failure) {
             setError(failure.response?.data?.message || 'Could not save ticket.');
         } finally {
@@ -136,6 +150,9 @@ export default function TicketFlow({
                 draft={draft}
                 setDraft={setDraft}
                 error={error}
+                context={context}
+                tickets={tickets}
+                feePercent={feePercent}
                 onBack={() => {
                     setError('');
                     setScreen('list');
@@ -151,6 +168,9 @@ export default function TicketFlow({
                 draft={draft}
                 busy={busy}
                 error={error}
+                context={context}
+                tickets={tickets}
+                feePercent={feePercent}
                 onBack={() => setScreen('form')}
                 onSave={save}
             />
@@ -166,6 +186,7 @@ export default function TicketFlow({
             onAdd={openAdd}
             onEdit={openEdit}
             onDelete={remove}
+            context={context}
         />
     );
 }

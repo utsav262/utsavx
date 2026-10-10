@@ -62,17 +62,17 @@ export async function createOrder(req, res) {
 }
 
 export async function myOrders(req, res) {
-    const orders = await BookingOrder.find({ user: req.user._id }).populate('event', 'title startsAt venue imageUrl').sort({ createdAt: -1 });
+    const orders = await BookingOrder.find({ user: req.user._id }).populate('event', 'title startsAt venue imageUrl eventFormat onlineUrl').sort({ createdAt: -1 });
     res.json({ orders, result: orders });
 }
 
 export async function myTickets(req, res) {
-    const tickets = await Ticket.find({ owner: req.user._id }).populate('event', 'title startsAt venue imageUrl').sort({ createdAt: -1 });
+    const tickets = await Ticket.find({ owner: req.user._id }).populate('event', 'title startsAt venue imageUrl eventFormat onlineUrl').sort({ createdAt: -1 });
     res.json({ tickets, result: tickets });
 }
 
 export async function legacyMyTickets(req, res) {
-    const tickets = await Ticket.find({ owner: req.user._id }).populate('event', 'title startsAt venue imageUrl').sort({ createdAt: -1 }).lean();
+    const tickets = await Ticket.find({ owner: req.user._id }).populate('event', 'title startsAt venue imageUrl eventFormat onlineUrl').sort({ createdAt: -1 }).lean();
     return success(res, tickets);
 }
 

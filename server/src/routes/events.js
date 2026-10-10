@@ -11,6 +11,7 @@ const {
     getCities,
     getCountryList,
     getEvent,
+    getEventTaxonomy,
     getRelatedEvents,
     legacyEventDetails,
     legacyListEvents,
@@ -37,6 +38,7 @@ export {
     getCategories,
     getCities,
     getCountryList,
+    getEventTaxonomy,
     cityEventCounts,
     listByEventType
 };

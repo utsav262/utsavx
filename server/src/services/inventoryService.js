@@ -20,9 +20,17 @@ export async function reserveTicketType(eventId, ticketTypeId, quantity, { gate 
 
     const eventOid = asObjectId(eventId);
     const typeOid = asObjectId(ticketTypeId);
+    const now = new Date();
+    // Online sales also respect the event's registration window; gate (door) sales don't.
     const statusFilter = gate
         ? { status: { $in: ['published', 'sold-out'] } }
-        : { status: 'published' };
+        : {
+            status: 'published',
+            $and: [
+                { $or: [{ 'registration.opensAt': null }, { 'registration.opensAt': { $lte: now } }] },
+                { $or: [{ 'registration.closesAt': null }, { 'registration.closesAt': { $gte: now } }] }
+            ]
+        };
 
     const typeCond = gate
         ? { $eq: ['$$t._id', typeOid] }
@@ -30,6 +38,9 @@ export async function reserveTicketType(eventId, ticketTypeId, quantity, { gate 
             $and: [
                 { $eq: ['$$t._id', typeOid] },
                 { $eq: ['$$t.salesStatus', 'on-sale'] },
+                // Each tier's own sale window (unset = always on sale).
+                { $or: [{ $eq: [{ $ifNull: ['$$t.saleStartsAt', null] }, null] }, { $lte: ['$$t.saleStartsAt', now] }] },
+                { $or: [{ $eq: [{ $ifNull: ['$$t.saleEndsAt', null] }, null] }, { $gte: ['$$t.saleEndsAt', now] }] },
                 {
                     $or: [
                         { $eq: ['$$t.quantity', 0] },
@@ -75,6 +86,19 @@ export async function reserveTicketType(eventId, ticketTypeId, quantity, { gate 
         const ticket = event?.ticketTypes?.find((row) => String(row._id) === String(ticketTypeId));
         if (!event || (!gate && event.status !== 'published')) {
             throw Object.assign(new Error('Event is not available'), { statusCode: 409 });
+        }
+        const { opensAt, closesAt } = event.registration || {};
+        if (!gate && opensAt && new Date(opensAt) > now) {
+            throw Object.assign(new Error('Registration has not opened yet'), { statusCode: 409 });
+        }
+        if (!gate && closesAt && new Date(closesAt) < now) {
+            throw Object.assign(new Error('Registration has closed'), { statusCode: 409 });
+        }
+        if (!gate && ticket?.saleStartsAt && new Date(ticket.saleStartsAt) > now) {
+            throw Object.assign(new Error(`${ticket.name} sales have not started yet`), { statusCode: 409 });
+        }
+        if (!gate && ticket?.saleEndsAt && new Date(ticket.saleEndsAt) < now) {
+            throw Object.assign(new Error(`${ticket.name} sales have ended`), { statusCode: 409 });
         }
         throw insufficient(ticket?.name);
     }

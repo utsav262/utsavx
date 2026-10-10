@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { CalendarDays, MapPin, Ticket, ShieldCheck } from 'lucide-react';
+import { CalendarDays, MapPin, Ticket, ShieldCheck, Video } from 'lucide-react';
 import { formatDateTime } from '../../lib/datetime.js';
 
 /* ----------------------------- helpers ----------------------------- */
@@ -35,7 +35,10 @@ const TicketPass = forwardRef(function TicketPass({ ticket }, ref) {
   if (!ticket) return null;
 
   const qrValue = ticketQrValue(ticket);
-  const venue = formatVenue(ticket.event?.venue);
+  const isOnline = ticket.event?.eventFormat === 'online';
+  const venue = isOnline ? 'Online event' : formatVenue(ticket.event?.venue);
+  // Only ticket owners receive onlineUrl from the API; it is never on the public event page.
+  const joinUrl = ticket.event?.eventFormat && ticket.event.eventFormat !== 'in_person' ? ticket.event?.onlineUrl : '';
   const when = formatDateTime(ticket.event?.startsAt);
   const status = statusLabel(ticket.status);
 
@@ -161,6 +164,13 @@ const TicketPass = forwardRef(function TicketPass({ ticket }, ref) {
               value={venue || 'TBA'}
               icon={<MapPin size={14} />}
             />
+            {joinUrl && (
+              <InfoBlock
+                label="Join online"
+                value={joinUrl}
+                icon={<Video size={14} />}
+              />
+            )}
             <InfoBlock
               label="Ticket type"
               value={

@@ -2,8 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   CalendarDays, MapPin, Share2, Heart, Clock,
-  Users, ShieldCheck, ChevronLeft, Info
+  Users, ShieldCheck, ChevronLeft, Info, UtensilsCrossed
 } from 'lucide-react';
+
+/** Tickets left in a tier; null = unlimited (quantity 0). The API sends quantity_left: null for unlimited. */
+function ticketsLeft(ticket) {
+  if (!ticket) return null;
+  if (ticket.quantity_left !== undefined) return ticket.quantity_left;
+  const quantity = Number(ticket.quantity) || 0;
+  return quantity ? Math.max(0, quantity - (Number(ticket.sold) || 0)) : null;
+}
 import { useDispatch, useSelector } from 'react-redux';
 import { add } from '../store/index.js';
 import { apiClient } from '../api/index.js';
@@ -13,6 +21,7 @@ import { formatDate } from '../lib/datetime.js';
 import { canPurchase } from '../lib/roles.js';
 import { admitsNote, admitsOf } from '../lib/admits.js';
 import EventCard from '../components/events/EventCard.jsx';
+import EventSpecifics from '../components/events/EventSpecifics.jsx';
 import { EVENT_PLACEHOLDER } from '../lib/placeholder.js';
 
 const PLACEHOLDER = EVENT_PLACEHOLDER;
@@ -72,7 +81,7 @@ export default function EventDetail() {
   );
 
   const price = selected?.price ?? event?.price ?? 0;
-  const stock = selected?.quantity_left ?? selected?.quantity ?? null;
+  const stock = ticketsLeft(selected);
   const isSoldOut = stock !== null && stock <= 0;
   const isPast = event?.startsAt ? new Date(event.startsAt) < new Date() : false;
   const maxQty = stock !== null ? Math.min(stock, 10) : 10;
@@ -141,7 +150,9 @@ export default function EventDetail() {
 
   const title = event.title || event.name;
   const cover = event.cover_image || event.image || event.imageUrl || event.horizontal_flyer || PLACEHOLDER;
-  const city = event.city || event.venue?.city || 'Location TBA';
+  const isOnline = event.eventFormat === 'online';
+  const city = isOnline ? 'Online' : event.city || event.venue?.city || 'Location TBA';
+  const kind = [event.category, event.subcategory].filter(Boolean).join(' · ');
   const startDate = formatDate(event.startsAt || event.date);
 
   return (
@@ -193,13 +204,17 @@ export default function EventDetail() {
                 <span className="bg-white/15 px-3 py-1 text-white backdrop-blur-md">
                   {city}
                 </span>
+                {event.eventFormat === 'hybrid' && (
+                  <span className="bg-white/15 px-3 py-1 text-white backdrop-blur-md">In-person + online</span>
+                )}
+                {kind && <span className="bg-white/15 px-3 py-1 text-white backdrop-blur-md">{kind}</span>}
               </div>
               <h1 className="serif mt-4 max-w-4xl text-5xl leading-[1] text-white sm:text-7xl lg:text-8xl">
                 {title}
               </h1>
-              {event.host && (
+              {(event.organizationName || event.host) && (
                 <p className="mt-3 text-sm text-white/80">
-                  Hosted by <b className="text-white">{event.host.name || event.host.username}</b>
+                  Hosted by <b className="text-white">{event.organizationName || event.host.name || event.host.username}</b>
                 </p>
               )}
             </div>
@@ -218,7 +233,7 @@ export default function EventDetail() {
             <div className="grid grid-cols-2 gap-4 border border-ink/10 bg-white p-5 sm:grid-cols-3">
               <Fact icon={<CalendarDays className="h-5 w-5 text-coral" />} label="Date" value={startDate || 'TBA'} />
               <Fact icon={<Clock className="h-5 w-5 text-coral" />} label="Time" value={event.startsAt ? new Date(event.startsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'TBA'} />
-              <Fact icon={<MapPin className="h-5 w-5 text-coral" />} label="Venue" value={event.venue?.name || city} />
+              <Fact icon={<MapPin className="h-5 w-5 text-coral" />} label="Venue" value={isOnline ? 'Online — link on your ticket' : event.venue?.name || city} />
             </div>
 
             {/* About */}
@@ -228,6 +243,8 @@ export default function EventDetail() {
                 {event.description || 'No description provided.'}
               </p>
             </div>
+
+            <EventSpecifics sections={Array.isArray(event.details) ? event.details : []} />
 
             {/* Gallery */}
             {(event.flyer1 || event.flyer2) && (
@@ -269,7 +286,7 @@ export default function EventDetail() {
               </div>
               <ul className="mt-4 space-y-2 text-sm text-ink/70">
                 <li className="flex items-start gap-2"><ShieldCheck className="mt-0.5 h-4 w-4 text-coral" /> Entry allowed with valid ID + ticket</li>
-                <li className="flex items-start gap-2"><Users className="mt-0.5 h-4 w-4 text-coral" /> {stock !== null ? `${stock} tickets left` : 'Limited tickets'}</li>
+                <li className="flex items-start gap-2"><Users className="mt-0.5 h-4 w-4 text-coral" /> {stock !== null ? `${stock} tickets left` : 'Tickets available'}</li>
                 <li className="flex items-start gap-2"><Clock className="mt-0.5 h-4 w-4 text-coral" /> Gates open 1 hour before start</li>
               </ul>
             </div>
@@ -297,13 +314,14 @@ export default function EventDetail() {
                   aria-label="Select ticket type"
                 >
                   {tickets.map((t) => {
-                    const left = t.quantity_left ?? t.quantity;
-                    const soldOut = left !== undefined && left <= 0;
+                    const left = ticketsLeft(t);
+                    const soldOut = left !== null && left <= 0;
                     return (
                       <option key={t._id || t.id} value={t._id || t.id} disabled={soldOut}>
                         {t.name} · {money(t.price)}
                         {admitsOf(t) > 1 ? ` · admits ${admitsOf(t)}` : ''}
-                        {left !== undefined ? (soldOut ? ' · Sold out' : ` · ${left} left`) : ''}
+                        {t.includesLunch ? ' · lunch included' : ''}
+                        {left !== null ? (soldOut ? ' · Sold out' : ` · ${left} left`) : ''}
                       </option>
                     );
                   })}
@@ -316,6 +334,11 @@ export default function EventDetail() {
               {admitsNote(selected) ? (
                 <p className="flex items-center gap-2 bg-coral/10 px-4 py-2.5 text-sm font-bold text-coral">
                   <Users className="h-4 w-4" /> {admitsNote(selected)} · one QR per ticket
+                </p>
+              ) : null}
+              {selected?.includesLunch ? (
+                <p className="flex items-center gap-2 bg-moss/10 px-4 py-2.5 text-sm font-bold text-moss">
+                  <UtensilsCrossed className="h-4 w-4" /> Lunch included · show the same QR at the lunch counter
                 </p>
               ) : null}
 

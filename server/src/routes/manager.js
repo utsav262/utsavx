@@ -12,6 +12,7 @@ router.use(requireAuth, requireRole('organizer', 'admin'));
 router.post('/uploads/presign', manager.presign);
 router.post('/uploads/image', manager.uploadImage);
 router.get('/dashboard/home', manager.dashboardHome);
+router.get('/fees', manager.fees);
 router.get('/events', manager.listEvents);
 router.post('/events/extract-from-images', manager.uploadImage);
 router.get('/events/download-qr', manager.uploadImage);

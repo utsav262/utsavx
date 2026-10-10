@@ -1,15 +1,21 @@
 import { money } from '../../lib/money.js';
-import { feePreview, formatQty, formatTicketPrice, toAdmits } from './ticketUtils.js';
+import { formatLocalInput } from '../manager/create/eventForm.js';
+import { StickyActions } from './PaidTicketScreen.jsx';
+import { feePreview, formatQty, formatTicketPrice, peopleCapacity, toAdmits } from './ticketUtils.js';
 
-export default function TicketSummaryScreen({ draft, onBack, onSave, busy, error }) {
-    const fees = feePreview(draft);
+export default function TicketSummaryScreen({ draft, onBack, onSave, busy, error, context = {}, feePercent }) {
+    const fees = feePreview(draft, feePercent);
     const isPaid = draft.ticketType !== 'free';
+    const people = peopleCapacity(draft);
+    const zone = context.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     const rows = [
         { label: 'Name', value: draft.name },
         { label: 'Type', value: isPaid ? 'Paid' : 'Free' },
         { label: 'Price', value: formatTicketPrice(draft) },
         { label: 'Quantity', value: formatQty(draft.quantity) },
+        { label: 'Admits in total', value: people ? `${people} people` : 'Unlimited' },
+        { label: 'Lunch', value: draft.includesLunch ? 'Included — scan the same QR at the lunch counter' : 'Not included' },
         {
             label: 'People per ticket',
             value: toAdmits(draft.admits) > 1
@@ -25,7 +31,7 @@ export default function TicketSummaryScreen({ draft, onBack, onSave, busy, error
         {
             label: 'Sale window',
             value: draft.saleStartsAt || draft.saleEndsAt
-                ? `${draft.saleStartsAt || '…'} → ${draft.saleEndsAt || '…'}`
+                ? `${formatLocalInput(draft.saleStartsAt) || 'now'} → ${formatLocalInput(draft.saleEndsAt) || 'event end'} (${zone})`
                 : 'Open'
         }
     ];
@@ -57,23 +63,31 @@ export default function TicketSummaryScreen({ draft, onBack, onSave, busy, error
                     </div>
                 ))}
                 {isPaid ? (
-                    <div className="flex justify-between gap-4 py-3 text-sm">
-                        <dt className="text-ink/45">You receive</dt>
-                        <dd className="font-bold">{money(fees.hostReceives)}</dd>
-                    </div>
+                    <>
+                        <div className="flex justify-between gap-4 py-3 text-sm">
+                            <dt className="text-ink/45">Platform fee ({fees.feePercent}%)</dt>
+                            <dd className="font-medium">− {money(fees.fee)} per ticket</dd>
+                        </div>
+                        <div className="flex justify-between gap-4 py-3 text-sm">
+                            <dt className="text-ink/45">You receive</dt>
+                            <dd className="font-bold">{money(fees.hostReceives)} per ticket</dd>
+                        </div>
+                    </>
                 ) : null}
             </dl>
 
             {error ? <p className="text-sm text-coral">{error}</p> : null}
 
-            <button
-                type="button"
-                disabled={busy}
-                onClick={onSave}
-                className="w-full bg-coral px-5 py-4 text-sm font-extrabold uppercase tracking-wider text-white disabled:opacity-60"
-            >
-                {busy ? 'Saving…' : draft._id ? 'Update ticket' : 'Save ticket'}
-            </button>
+            <StickyActions>
+                <button
+                    type="button"
+                    disabled={busy}
+                    onClick={onSave}
+                    className="w-full bg-coral px-5 py-4 text-sm font-extrabold uppercase tracking-wider text-white disabled:opacity-60"
+                >
+                    {busy ? 'Saving…' : draft._id ? 'Update ticket' : 'Save ticket'}
+                </button>
+            </StickyActions>
         </section>
     );
 }

@@ -3,6 +3,7 @@ import { AlertTriangle, Check, CheckCircle2, ScanLine, XCircle } from 'lucide-re
 import { apiClient } from '../../api/index.js';
 import { useToast } from '../../components/ui/Toast.jsx';
 import { eventCover, eventIdOf, EventMeta, roleLabel, SectionHeader } from './staffHelpers.jsx';
+import { CHECKPOINT_COPY, CheckpointPicker, describeScanError, eventHasLunch } from '../tickets/checkpoints.jsx';
 
 function normalizeScanCode(raw) {
     const value = String(raw || '').trim();
@@ -18,32 +19,6 @@ function normalizeScanCode(raw) {
     return value;
 }
 
-function describeScanError(data = {}) {
-    const status = data.ticket_status || data.status;
-    if (status === 'invalid') {
-        return {
-            title: 'Invalid ticket',
-            body: 'This confirmation code was not found for this event. Check the QR or ask the guest for another pass.'
-        };
-    }
-    if (status === 'already_claimed') {
-        return {
-            title: 'Already checked in',
-            body: 'This ticket was already claimed. Entry may have been used earlier.'
-        };
-    }
-    if (status === 'payment_not_done') {
-        return {
-            title: 'Ticket not valid',
-            body: 'Payment is incomplete or the ticket is not valid for entry yet.'
-        };
-    }
-    return {
-        title: 'Scan failed',
-        body: data.message || 'Could not validate this ticket.'
-    };
-}
-
 export default function StaffCheckIn({ invite, onNotice, onBack }) {
     const toast = useToast();
     const [code, setCode] = useState('');
@@ -52,6 +27,12 @@ export default function StaffCheckIn({ invite, onNotice, onBack }) {
     const [lastResult, setLastResult] = useState(null);
     const event = invite?.event || {};
     const eventId = eventIdOf(invite);
+    const hasLunch = eventHasLunch(event);
+    const [checkpoint, setCheckpoint] = useState('entry');
+    const copy = CHECKPOINT_COPY[checkpoint];
+    // The owner's dashboard isn't a team invite, so it scans through the manager endpoint
+    // (which allows owners, admins and Event Managers); invited staff use the staff endpoint.
+    const scanApi = invite?.asOwner ? apiClient.scanTicket : apiClient.staffScanTicket;
 
     const scan = async (action) => {
         const normalized = normalizeScanCode(code);
@@ -69,16 +50,18 @@ export default function StaffCheckIn({ invite, onNotice, onBack }) {
 
         setBusy(true);
         try {
-            const response = await apiClient.staffScanTicket({
+            const response = await scanApi({
                 event_id: eventId,
                 code: normalized,
-                action
+                action,
+                ...(checkpoint === 'lunch' ? { checkpoint: 'lunch' } : {})
             });
             const message = response.data.message || (action === 'scan' ? 'Ticket scanned successfully.' : 'Ticket is valid.');
             const detail = response.data.result || {};
             setLastResult({
                 ok: true,
-                title: action === 'scan' ? 'Checked in' : 'Valid ticket',
+                checkpoint,
+                title: action === 'scan' ? copy.done : checkpoint === 'lunch' ? 'Lunch included' : 'Valid ticket',
                 message,
                 detail,
                 action
@@ -88,7 +71,7 @@ export default function StaffCheckIn({ invite, onNotice, onBack }) {
             if (action === 'scan') setCode('');
         } catch (error) {
             const data = error.response?.data || {};
-            const described = describeScanError(data);
+            const described = describeScanError(data, checkpoint);
             setLastResult({
                 ok: false,
                 title: described.title,
@@ -159,8 +142,19 @@ export default function StaffCheckIn({ invite, onNotice, onBack }) {
                     <p className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-coral">Scan ticket</p>
                     <h3 className="serif mt-3 text-3xl">Confirmation code</h3>
                     <p className="mt-2 text-sm text-ink/55">
-                        Use Validate to preview, or Claim to check the guest in.
+                        {checkpoint === 'lunch'
+                            ? 'Scan the same ticket QR. Lunch is served once per ticket, after entry.'
+                            : 'Use Validate to preview, or Claim to check the guest in.'}
                     </p>
+                    {hasLunch ? (
+                        <div className="mt-5">
+                            <CheckpointPicker
+                                value={checkpoint}
+                                disabled={busy}
+                                onChange={(next) => { setCheckpoint(next); setLastResult(null); setFieldError(''); }}
+                            />
+                        </div>
+                    ) : null}
 
                     <label className="mt-8 block">
                         <span className="text-xs font-bold uppercase tracking-wider text-ink/45">Code</span>
@@ -199,7 +193,7 @@ export default function StaffCheckIn({ invite, onNotice, onBack }) {
                             onClick={() => scan('validate')}
                             className="inline-flex items-center justify-center gap-2 border border-ink/20 px-4 py-3.5 text-xs font-extrabold uppercase tracking-wider disabled:opacity-60"
                         >
-                            <ScanLine size={16} /> {busy ? 'Checking…' : 'Validate'}
+                            <ScanLine size={16} /> {busy ? 'Checking…' : copy.validate}
                         </button>
                         <button
                             type="button"
@@ -207,7 +201,7 @@ export default function StaffCheckIn({ invite, onNotice, onBack }) {
                             onClick={() => scan('scan')}
                             className="inline-flex items-center justify-center gap-2 bg-coral px-4 py-3.5 text-xs font-extrabold uppercase tracking-wider text-white disabled:opacity-60"
                         >
-                            <Check size={16} /> {busy ? 'Claiming…' : 'Claim entry'}
+                            <Check size={16} /> {busy ? copy.checking : copy.scan}
                         </button>
                     </div>
 
@@ -242,7 +236,13 @@ export default function StaffCheckIn({ invite, onNotice, onBack }) {
                                             Type · {lastResult.detail.ticket_type}
                                         </p>
                                     ) : null}
-                                    {lastResult.ok && Number(lastResult.detail?.admits) > 1 ? (
+                                    {lastResult.ok && lastResult.checkpoint === 'lunch' ? (
+                                        <p className="mt-2 inline-block bg-moss px-3 py-1 text-sm font-extrabold uppercase tracking-wider text-white">
+                                            {lastResult.detail?.lunch_served
+                                                ? `${lastResult.detail.lunch_served} lunch${lastResult.detail.lunch_served === 1 ? '' : 'es'}`
+                                                : `Lunch for ${lastResult.detail?.people_entered || 1}`}
+                                        </p>
+                                    ) : lastResult.ok && Number(lastResult.detail?.admits) > 1 ? (
                                         <p className="mt-2 inline-block bg-moss px-3 py-1 text-sm font-extrabold uppercase tracking-wider text-white">
                                             Admit {lastResult.detail.admits} people
                                         </p>

@@ -1,3 +1,4 @@
+import { lunchCheckpoint } from '../services/checkpoints.js';
 import Event from '../models/Event.js';
 import EventHandler from '../models/EventHandler.js';
 import Ticket from '../models/Ticket.js';
@@ -329,6 +330,10 @@ export async function scanAsStaff(req, res) {
             code: 422,
             result: {}
         });
+    }
+    if (body.checkpoint === 'lunch') {
+        const lunch = await lunchCheckpoint({ event, ticket, body, action });
+        return res.status(lunch.httpStatus).json(lunch.body);
     }
     if (ticket.status === 'used') {
         return res.status(422).json({

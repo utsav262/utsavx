@@ -20,7 +20,8 @@ export const MAX_RECEIPT_FILES = 5;
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
-async function feePercent() {
+/** Platform service fee % deducted from host payouts (admin country setting, default 5). */
+export async function feePercent() {
     const setting = await GlobalSetting.findOne({ country: 'India' }).lean() || await GlobalSetting.findOne().lean();
     return Number(setting?.serviceFeePercent ?? 5);
 }

@@ -11,12 +11,12 @@ export default function WizardProgress({ steps, current, onJump, canJumpTo }) {
             const isDone = i < current;
             const canJump = canJumpTo(i);
             return (
-              <div key={step.id} className="flex flex-1 items-center">
+              <div key={step.id} className={`flex min-w-0 items-center ${i < steps.length - 1 ? 'flex-1' : ''}`}>
                 <button
                   type="button"
                   disabled={!canJump}
                   onClick={() => canJump && onJump(i)}
-                  className={`group flex items-center gap-3 px-3 py-2 transition ${
+                  className={`group flex min-w-0 items-center gap-2 px-2 py-2 transition xl:gap-3 xl:px-3 ${
                     canJump ? 'cursor-pointer hover:bg-cream' : 'cursor-not-allowed'
                   }`}
                 >
@@ -39,12 +39,12 @@ export default function WizardProgress({ steps, current, onJump, canJumpTo }) {
                     >
                       {step.label}
                     </p>
-                    <p className="truncate text-[10px] text-ink/45">{step.hint}</p>
+                    <p className="hidden truncate text-[10px] text-ink/45 2xl:block">{step.hint}</p>
                   </div>
                 </button>
                 {i < steps.length - 1 && (
                   <div
-                    className={`mx-2 h-px flex-1 transition ${
+                    className={`mx-1 h-px min-w-2 flex-1 transition xl:mx-2 ${
                       i < current ? 'bg-emerald-500' : 'bg-ink/15'
                     }`}
                   />
