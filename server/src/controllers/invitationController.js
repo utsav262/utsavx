@@ -6,7 +6,7 @@ import { success } from '../utils/response.js';
 import { listSellableTickets, sellTicketOrders } from '../services/sellService.js';
 import Notification from '../models/Notification.js';
 import { notifyUser } from '../services/notificationService.js';
-import { admitNote, admitsOf } from '../services/admits.js';
+import { admitNote, admitsOf, enteredNote, peopleEnteredFrom } from '../services/admits.js';
 
 async function notifyOwner(handler, req, accepted) {
     const event = await Event.findById(handler.event).select('title organizer').lean();
@@ -350,9 +350,13 @@ export async function scanAsStaff(req, res) {
     }
 
     if (action === 'scan') {
+        const entry = peopleEnteredFrom(body, ticket);
+        if (entry.error) {
+            return res.status(422).json({ status: 'invalid_count', ticket_status: 'valid', message: entry.error, code: 422, result: { admits: admitsOf(ticket) } });
+        }
         const claimed = await Ticket.findOneAndUpdate(
             { _id: ticket._id, status: 'valid' },
-            { $set: { status: 'used', scannedAt: new Date() } },
+            { $set: { status: 'used', scannedAt: new Date(), peopleEntered: entry.people } },
             { new: true }
         );
         if (!claimed) {
@@ -367,7 +371,7 @@ export async function scanAsStaff(req, res) {
         return res.json({
             status: 'success',
             ticket_status: 'scanned',
-            message: `Ticket scanned successfully!${admitNote(claimed)}`,
+            message: `Ticket scanned successfully!${enteredNote(claimed, entry.people)}`,
             code: 200,
             result: {
                 ticket_id: claimed._id,
@@ -375,7 +379,8 @@ export async function scanAsStaff(req, res) {
                 event_id: event._id,
                 event_title: event.title,
                 ticket_type: claimed.ticketType,
-                admits: admitsOf(claimed)
+                admits: admitsOf(claimed),
+                people_entered: entry.people
             }
         });
     }

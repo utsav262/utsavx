@@ -13,7 +13,7 @@ import { success } from '../utils/response.js';
 import { sellTicketOrders } from '../services/sellService.js';
 import { invalidateEventCaches } from '../services/cacheService.js';
 import { notifyUser } from '../services/notificationService.js';
-import { admitNote, admitsOf } from '../services/admits.js';
+import { admitNote, admitsOf, enteredNote, enteredOf, peopleEnteredFrom } from '../services/admits.js';
 
 // Admins, the organizer, and accepted Manager handlers can run an event.
 const eventFor = async (req, eventId) => {
@@ -373,7 +373,7 @@ const orderRows = (orders, search = '') => orders.flatMap((order) => order.items
     group_fee_breakdown: feeBreakdown(order.total, 0, order.total * 0.05)
 }))).filter((row) => !search || [row.confirmation_id, row.ticket_type, row.username, row.email].some((value) => String(value).toLowerCase().includes(search.toLowerCase())));
 const paged = (rows, page, length) => ({ rows: rows.slice((page - 1) * length, page * length), pagination: { current_page: page, last_page: Math.max(1, Math.ceil(rows.length / length)), has_next_page: page * length < rows.length } });
-const eventTotals = (event, orders, tickets) => { const gross = orders.reduce((sum, order) => sum + order.total, 0); const sold = orders.reduce((sum, order) => sum + order.items.reduce((count, item) => count + item.quantity, 0), 0); const checkIns = tickets.filter((ticket) => ticket.status === 'used').length; const peopleCheckedIn = tickets.filter((ticket) => ticket.status === 'used').reduce((sum, ticket) => sum + admitsOf(ticket), 0); return { gross_sales: money(gross), fees: money(gross * 0.05), earnings: money(gross * 0.95), platform_earnings: money(gross * 0.05), outlet_earnings: 0, ambassador_earnings: 0, commission: 0, cash_sales: 0, payout_due: money(gross * 0.95), remitted: 0, remittance: { remitted: 0, pending: 0, last_remitted_at: null }, total_sold: sold, claimed_tickets: checkIns, claimed_people: peopleCheckedIn, unclaimed_tickets: Math.max(0, sold - checkIns), sales_by_type: event.ticketTypes.map((type) => ({ ticket_type: type.name, name: type.name, sold: orders.reduce((sum, order) => sum + order.items.filter((item) => String(item.ticketTypeId) === String(type._id)).reduce((count, item) => count + item.quantity, 0), 0), available: type.quantity, percent: type.quantity ? Math.round((type.sold / type.quantity) * 100) : 0 })) }; };
+const eventTotals = (event, orders, tickets) => { const gross = orders.reduce((sum, order) => sum + order.total, 0); const sold = orders.reduce((sum, order) => sum + order.items.reduce((count, item) => count + item.quantity, 0), 0); const checkIns = tickets.filter((ticket) => ticket.status === 'used').length; const peopleCheckedIn = tickets.reduce((sum, ticket) => sum + enteredOf(ticket), 0); return { gross_sales: money(gross), fees: money(gross * 0.05), earnings: money(gross * 0.95), platform_earnings: money(gross * 0.05), outlet_earnings: 0, ambassador_earnings: 0, commission: 0, cash_sales: 0, payout_due: money(gross * 0.95), remitted: 0, remittance: { remitted: 0, pending: 0, last_remitted_at: null }, total_sold: sold, claimed_tickets: checkIns, claimed_people: peopleCheckedIn, unclaimed_tickets: Math.max(0, sold - checkIns), sales_by_type: event.ticketTypes.map((type) => ({ ticket_type: type.name, name: type.name, sold: orders.reduce((sum, order) => sum + order.items.filter((item) => String(item.ticketTypeId) === String(type._id)).reduce((count, item) => count + item.quantity, 0), 0), available: type.quantity, percent: type.quantity ? Math.round((type.sold / type.quantity) * 100) : 0 })) }; };
 export async function listOrders(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const orders = await BookingOrder.find({ event: event._id, status: 'paid' }).populate('user', 'name email').sort({ createdAt: -1 }).lean(); const type = ['summary', 'purchase_history', 'transactions'].includes(req.query.type) ? req.query.type : 'summary'; const rows = orderRows(orders, String(req.query.search || '').trim()); const page = Math.max(1, Number(req.query.page || 1)); const length = Math.min(100, Math.max(1, Number(req.query.length || 20))); const tickets = await Ticket.find({ event: event._id }).lean(); const result = { type, event_link: event.slug, ...eventTotals(event, orders, tickets), table_data: type === 'summary' ? null : paged(rows, page, length).rows }; return success(res, result, 'Dashboard data fetched successfully', 200, type === 'summary' ? {} : paged(rows, page, length).pagination); }
 export async function salesByType(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const orders = await BookingOrder.find({ event: event._id, status: 'paid' }).lean(); const tickets = await Ticket.find({ event: event._id }).lean(); const summary = eventTotals(event, orders, tickets); const type = ['summary', 'purchase_history', 'transactions'].includes(req.query.type) ? req.query.type : 'purchase_history'; const rows = orderRows(orders, String(req.query.search || '').trim()); const page = Math.max(1, Number(req.query.page || 1)); const length = Math.min(100, Math.max(1, Number(req.query.length || 20))); return success(res, { type, event_link: event.slug, ...summary, table_data: type === 'summary' ? null : paged(rows, page, length).rows }, 'Sales by type fetched successfully', 200, type === 'summary' ? {} : paged(rows, page, length).pagination); }
 /** Tickets sold per team role (managers / ambassadors / outlets), matched via order.soldBy. */
@@ -391,7 +391,7 @@ async function soldByRole(eventId, orders) {
 }
 export async function salesOverview(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const orders = await BookingOrder.find({ event: event._id, status: 'paid' }).lean(); const sold = orders.reduce((sum, order) => sum + order.items.reduce((count, item) => count + item.quantity, 0), 0); const peopleSold = orders.reduce((sum, order) => sum + order.items.reduce((count, item) => count + item.quantity * admitsOf(item), 0), 0); const available = event.ticketTypes.reduce((sum, type) => sum + type.quantity, 0); return ok(res, { event_name: event.title, tickets_sold: sold, people_sold: peopleSold, tickets_available: available, sold_percent: available ? Math.round((sold / available) * 100) : 0, ticket_types: event.ticketTypes.map((type) => ({ ticket_type: type.name, name: type.name, admits: type.admits || 1, sold: type.sold, available: type.quantity, percent: type.quantity ? Math.round((type.sold / type.quantity) * 100) : 0 })), sales_sources: [{ source: 'Online', count: sold }], sold_by: await soldByRole(event._id, orders) }, 'Sales overview fetched successfully'); }
 export async function payouts(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const orders = await BookingOrder.find({ event: event._id, status: 'paid' }).lean(); const gross = orders.reduce((sum, order) => sum + order.total, 0); return ok(res, { gross: money(gross), fees: money(gross * 0.05), payout_due: money(gross * 0.95), remitted: 0, pending: money(gross * 0.95) }, 'Payout information fetched successfully'); }
-export async function checkIns(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const tickets = await Ticket.find({ event: event._id }).populate('owner', 'name email').lean(); const claimed = tickets.filter((ticket) => ticket.status === 'used').length; const people = (status, name) => tickets.filter((ticket) => ticket.status === status && (!name || ticket.ticketType === name)).reduce((sum, ticket) => sum + admitsOf(ticket), 0); return ok(res, { event_name: event.title, claimed_tickets: claimed, unclaimed_tickets: tickets.filter((ticket) => ticket.status === 'valid').length, claimed_people: people('used'), unclaimed_people: people('valid'), ticket_types: event.ticketTypes.map((type) => ({ name: type.name, admits: type.admits || 1, claimed: tickets.filter((ticket) => ticket.ticketType === type.name && ticket.status === 'used').length, claimed_people: people('used', type.name) })), timeline: [] }, 'Check-in stats fetched successfully'); }
+export async function checkIns(req, res) { const event = await eventFor(req, req.params.id); if (!event) return res.status(404).json({ message: 'Event not found', code: 404 }); const tickets = await Ticket.find({ event: event._id }).populate('owner', 'name email').lean(); const claimed = tickets.filter((ticket) => ticket.status === 'used').length; const ofType = (name) => tickets.filter((ticket) => !name || ticket.ticketType === name); const entered = (name) => ofType(name).reduce((sum, ticket) => sum + enteredOf(ticket), 0); const waiting = (name) => ofType(name).filter((ticket) => ticket.status === 'valid').reduce((sum, ticket) => sum + admitsOf(ticket), 0); const noShows = (name) => ofType(name).filter((ticket) => ticket.status === 'used').reduce((sum, ticket) => sum + admitsOf(ticket) - enteredOf(ticket), 0); return ok(res, { event_name: event.title, claimed_tickets: claimed, unclaimed_tickets: tickets.filter((ticket) => ticket.status === 'valid').length, claimed_people: entered(), unclaimed_people: waiting(), no_show_people: noShows(), ticket_types: event.ticketTypes.map((type) => ({ name: type.name, admits: type.admits || 1, claimed: tickets.filter((ticket) => ticket.ticketType === type.name && ticket.status === 'used').length, claimed_people: entered(type.name), no_show_people: noShows(type.name) })), timeline: [] }, 'Check-in stats fetched successfully'); }
 function normalizeTicketCode(raw) {
     let code = String(raw || '').trim();
     if (code.startsWith('{')) {
@@ -431,9 +431,13 @@ export async function scanTicket(req, res) {
         });
     }
     if (action === 'scan') {
+        const entry = peopleEnteredFrom(body(req), ticket);
+        if (entry.error) {
+            return res.status(422).json({ status: 'invalid_count', ticket_status: 'valid', message: entry.error, code: 422, result: { admits: admitsOf(ticket) } });
+        }
         const claimed = await Ticket.findOneAndUpdate(
             { _id: ticket._id, status: 'valid' },
-            { $set: { status: 'used', scannedAt: new Date() } },
+            { $set: { status: 'used', scannedAt: new Date(), peopleEntered: entry.people } },
             { new: true }
         );
         if (!claimed) {
@@ -448,13 +452,14 @@ export async function scanTicket(req, res) {
         return res.json({
             status: 'success',
             ticket_status: 'scanned',
-            message: `Ticket scanned successfully!${admitNote(claimed)}`,
+            message: `Ticket scanned successfully!${enteredNote(claimed, entry.people)}`,
             code: 200,
             result: {
                 ticket_id: claimed._id,
                 confirmation_id: claimed.confirmationCode,
                 ticket_type: claimed.ticketType,
                 admits: admitsOf(claimed),
+                people_entered: entry.people,
                 payment_status: 'Claimed',
                 scanned_at: claimed.scannedAt
             }

@@ -10,7 +10,9 @@ const ticketSchema = new mongoose.Schema({
     confirmationCode: { type: String, required: true, unique: true },
     qrPayload: String,
     status: { type: String, enum: ['valid', 'used', 'cancelled'], default: 'valid' },
-    scannedAt: Date
+    scannedAt: Date,
+    /** Set at check-in: how many of `admits` actually came in (e.g. 2 of 3). */
+    peopleEntered: { type: Number, min: 1, default: null }
 }, { timestamps: true });
 
 export default mongoose.model('Ticket', ticketSchema);

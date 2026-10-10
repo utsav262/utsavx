@@ -164,3 +164,61 @@ describe('group tickets (one ticket admits several people)', () => {
         expect(res.body.result.admits).toBe(1);
     });
 });
+
+describe('group tickets: counting who actually came', () => {
+    async function buyFamilyPasses(count) {
+        const ticket = await createFamilyTicket(3);
+        const order = await request(app)
+            .post('/api/v1/orders')
+            .set(auth(buyer))
+            .send({ eventId: event._id, idempotencyKey: `grp-${Date.now()}`, items: [{ ticketTypeId: ticket._id, quantity: count }] });
+        return Ticket.find({ order: order.body.order._id }).lean();
+    }
+    const scan = (code, extra = {}) => request(app)
+        .post('/api/v1/manager/ticket-orders/scan')
+        .set(auth(owner))
+        .send({ event_id: event._id, code, action: 'scan', ...extra });
+
+    it('records 2 of 3 when one parent does not come, and reports count people who came', async () => {
+        const [first, second, third] = await buyFamilyPasses(3);
+
+        const partial = await scan(first.confirmationCode, { companions_count: 1 }); // holder + 1
+        expect(partial.body.ticket_status).toBe('scanned');
+        expect(partial.body.result.people_entered).toBe(2);
+        expect(partial.body.message).toMatch(/2 of 3 people entered/);
+
+        const holderOnly = await scan(second.confirmationCode, { companions_count: 0 });
+        expect(holderOnly.body.result.people_entered).toBe(1);
+
+        // Scanners that send no count (e.g. older app versions) check in the whole group.
+        const full = await scan(third.confirmationCode);
+        expect(full.body.result.people_entered).toBe(3);
+        expect(full.body.message).toMatch(/Admit 3 people together/);
+
+        const stats = await request(app).get(`/api/v1/manager/ticket-orders/check-ins/${event._id}`).set(auth(owner));
+        expect(stats.body.result.claimed_tickets).toBe(3);
+        expect(stats.body.result.claimed_people).toBe(6); // 2 + 1 + 3
+        expect(stats.body.result.no_show_people).toBe(3); // 1 + 2 + 0
+        const family = stats.body.result.ticket_types.find((t) => t.name === 'Student + 2 Parents');
+        expect(family.claimed_people).toBe(6);
+    });
+
+    it('accepts people_entered too, and rejects counts the ticket does not allow without using it', async () => {
+        const [pass] = await buyFamilyPasses(1);
+
+        for (const bad of [{ people_entered: 4 }, { people_entered: 0 }, { companions_count: 3 }, { people_entered: 'two' }]) {
+            const res = await scan(pass.confirmationCode, bad);
+            expect(res.status).toBe(422);
+            expect(res.body.message).toBe('This ticket admits 1 to 3 people.');
+        }
+        expect((await Ticket.findById(pass._id).lean()).status).toBe('valid');
+
+        const ok = await scan(pass.confirmationCode, { people_entered: 2 });
+        expect(ok.body.result.people_entered).toBe(2);
+        expect((await Ticket.findById(pass._id).lean()).peopleEntered).toBe(2);
+
+        // Still one scan per pass: the missing parent can't use it later.
+        const later = await scan(pass.confirmationCode, { people_entered: 1 });
+        expect(later.body.status).toBe('already_claimed');
+    });
+});

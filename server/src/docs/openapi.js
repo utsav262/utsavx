@@ -549,7 +549,9 @@ export const openApiSpec = {
                                 properties: {
                                     event_id: { type: 'string' },
                                     code: { type: 'string' },
-                                    action: { type: 'string', enum: ['validate', 'claim'] }
+                                    action: { type: 'string', enum: ['validate', 'scan'] },
+                                    people_entered: { type: 'integer', minimum: 1, description: 'Group tickets, action "scan": how many people came in, holder included (1 to admits). Omit to check in the whole group.' },
+                                    companions_count: { type: 'integer', minimum: 0, description: 'Alternative to people_entered: guests who came with the holder.' }
                                 }
                             }
                         }
@@ -779,7 +781,9 @@ export const openApiSpec = {
                                 properties: {
                                     event_id: { type: 'string' },
                                     code: { type: 'string' },
-                                    action: { type: 'string' }
+                                    action: { type: 'string', enum: ['validate', 'scan'] },
+                                    people_entered: { type: 'integer', minimum: 1, description: 'Group tickets, action "scan": how many people came in, holder included (1 to admits). Omit to check in the whole group.' },
+                                    companions_count: { type: 'integer', minimum: 0, description: 'Alternative to people_entered: guests who came with the holder.' }
                                 }
                             }
                         }
